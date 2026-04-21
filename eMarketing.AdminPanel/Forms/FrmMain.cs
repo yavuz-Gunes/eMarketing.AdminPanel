@@ -11,8 +11,7 @@ namespace eMarketing.AdminPanel.Forms
         private Panel contentPanel;
         private TopbarControl topbar;
         private SidebarControl sidebar;
-        private Panel mainPanel;     // sidebar dışındaki tüm alan
-
+        private Panel bodyPanel;
 
         public FrmMain()
         {
@@ -20,56 +19,81 @@ namespace eMarketing.AdminPanel.Forms
             InitializeLayout();
         }
 
-      private void InitializeLayout()
-{
-    BackColor = AppColors.Background;
-    WindowState = FormWindowState.Maximized;
-    FormBorderStyle = FormBorderStyle.Sizable;
+        private void InitializeLayout()
+        {
+            SuspendLayout();
 
-    // Eğer designer'da eskiden kalma panel/btn vs varsa çakışmasın:
-    // (Designer'da kontrol bırakmadıysan bunu kaldırabilirsin)
-    Controls.Clear();
+            BackColor = AppColors.Background;
+            WindowState = FormWindowState.Maximized;
+            FormBorderStyle = FormBorderStyle.Sizable;
 
-    // 1) SIDEBAR (Formun solunda, tüm boy boyunca)
-    sidebar = new SidebarControl();
-    sidebar.Dock = DockStyle.Left;
-    sidebar.Width = 240; // SidebarControl içinde 240 yapmıştın, aynı kalsın
-    sidebar.MenuClicked += Sidebar_MenuClicked;
-    Controls.Add(sidebar);
+            Controls.Clear();
 
-    // 2) MAIN PANEL (Sidebar'ın sağındaki tüm alan)
-    mainPanel = new Panel();
-    mainPanel.Dock = DockStyle.Fill;
-    mainPanel.BackColor = AppColors.Background;
-    Controls.Add(mainPanel);
+            // BODY PANEL
+            bodyPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = AppColors.Background,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
 
-    // 3) TOPBAR (Sadece mainPanel içinde, sidebar'a binmez)
-    topbar = new TopbarControl();
-    topbar.Dock = DockStyle.Top;
-    topbar.Height = 60;
-    mainPanel.Controls.Add(topbar);
+            // CONTENT PANEL
+            contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = AppColors.Background,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
 
-    // 4) CONTENT PANEL (Topbar’ın altında kalan alan)
-    contentPanel = new Panel();
-    contentPanel.Dock = DockStyle.Fill;
-    contentPanel.BackColor = AppColors.Background;
-    mainPanel.Controls.Add(contentPanel);
+            // TOPBAR
+            topbar = new TopbarControl
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                Margin = Padding.Empty
+            };
 
-    // İlk açılan sayfa
-    LoadPage(new DashboardPage(), "Dashboard");
-}
+            // SIDEBAR
+            sidebar = new SidebarControl
+            {
+                Dock = DockStyle.Left,
+                Width = 240,
+                Margin = Padding.Empty
+            };
+            sidebar.MenuClicked += Sidebar_MenuClicked;
 
-private void LoadPage(UserControl page, string title)
-{
-    // eski sayfayı temizle + dispose et (üst üste binme hissini bitirir)
-    foreach (Control c in contentPanel.Controls) c.Dispose();
-    contentPanel.Controls.Clear();
+            // ÖNEMLİ: Dock sırası için önce Fill, sonra Top
+            bodyPanel.Controls.Add(contentPanel);
+            bodyPanel.Controls.Add(topbar);
 
-    page.Dock = DockStyle.Fill;
-    contentPanel.Controls.Add(page);
+            // ÖNEMLİ: Önce Fill alan, sonra Left sidebar
+            Controls.Add(bodyPanel);
+            Controls.Add(sidebar);
 
-    topbar.SetTitle(title);
-}
+            LoadPage(new DashboardPage(), "Dashboard");
+
+            ResumeLayout(true);
+        }
+
+        private void LoadPage(UserControl page, string title)
+        {
+            contentPanel.SuspendLayout();
+
+            foreach (Control c in contentPanel.Controls)
+                c.Dispose();
+
+            contentPanel.Controls.Clear();
+
+            page.Dock = DockStyle.Fill;
+            page.Margin = Padding.Empty;
+
+            contentPanel.Controls.Add(page);
+            topbar.SetTitle(title);
+
+            contentPanel.ResumeLayout(true);
+        }
 
         private void Sidebar_MenuClicked(string menu)
         {
@@ -93,11 +117,8 @@ private void LoadPage(UserControl page, string title)
             }
         }
 
-      
-
         private void FrmMain_Load(object sender, EventArgs e)
         {
-
         }
     }
 }

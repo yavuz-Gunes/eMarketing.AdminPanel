@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 
@@ -11,23 +6,33 @@ namespace eMarketing.AdminPanel.Componets
 {
     public class CardControl : Panel
     {
-        public Label Title = new Label();
-        public Label Value = new Label();
+        public Label Title { get; private set; }
+        public Label Value { get; private set; }
 
         public CardControl()
         {
-            Width = 250;
-            Height = 120;
             BackColor = AppColors.Card;
+            Margin = Padding.Empty;
             Padding = new Padding(20);
 
-            Title.Font = new Font("Segoe UI", 9F);
-            Title.ForeColor = AppColors.TextSecondary;
-            Title.Dock = DockStyle.Top;
+            Title = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                AutoSize = false,
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                ForeColor = AppColors.TextSecondary,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
 
-            Value.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            Value.ForeColor = AppColors.TextPrimary;
-            Value.Dock = DockStyle.Bottom;
+            Value = new Label
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
 
             Controls.Add(Value);
             Controls.Add(Title);

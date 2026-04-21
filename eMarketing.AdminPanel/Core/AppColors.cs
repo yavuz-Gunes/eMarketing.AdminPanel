@@ -12,7 +12,7 @@ namespace eMarketing.AdminPanel.Core
         public static Color Background = Color.FromArgb(245, 247, 250);
         public static Color Sidebar = Color.White;
         public static Color Topbar = Color.White;
-        public static Color Card = Color.White;
+        public static Color Card = Color.BurlyWood;
 
         public static Color Primary = Color.FromArgb(59, 130, 246);
         public static Color TextPrimary = Color.FromArgb(31, 41, 55);
