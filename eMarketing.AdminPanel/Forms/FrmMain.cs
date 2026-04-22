@@ -114,6 +114,9 @@ namespace eMarketing.AdminPanel.Forms
                 case "Customers":
                     LoadPage(new CustomersPage(), "Customers");
                     break;
+                case "Categories":
+                    LoadPage(new CategoriesPage(), "Categories");
+                    break;
             }
         }
 

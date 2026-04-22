@@ -50,6 +50,9 @@
     <Compile Include="Componets\CardControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Componets\CategoriesCard.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Componets\DataGridTheme.cs" />
     <Compile Include="Componets\PrimaryButton.cs">
       <SubType>Component</SubType>
@@ -66,6 +69,12 @@
     <Compile Include="DataAccess\DbHelper.cs" />
     <Compile Include="DataAccess\OrderRepository.cs" />
     <Compile Include="DataAccess\ProductRepository.cs" />
+    <Compile Include="Forms\CategoryModalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\CategoryModalForm.Designer.cs">
+      <DependentUpon>CategoryModalForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\FrmMain.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -84,7 +93,11 @@
     <Compile Include="Forms\FrmProducts.Designer.cs">
       <DependentUpon>FrmProducts.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\Category.cs" />
     <Compile Include="Models\Product.cs" />
+    <Compile Include="Pages\CategoriesPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Pages\CustomersPage.cs">
       <SubType>UserControl</SubType>
     </Compile>

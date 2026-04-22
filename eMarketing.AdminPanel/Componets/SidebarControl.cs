@@ -52,8 +52,9 @@
                 AddMenuItem("Products", 150);
                 AddMenuItem("Orders", 200);
                 AddMenuItem("Customers", 250);
+                AddMenuItem("Categories", 300);
 
-                SetActive("Dashboard");
+            SetActive("Dashboard");
             }
 
             private void AddMenuItem(string text, int top)
