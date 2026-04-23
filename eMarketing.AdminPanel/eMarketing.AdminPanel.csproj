@@ -87,11 +87,11 @@
     <Compile Include="Forms\FrmOrders.Designer.cs">
       <DependentUpon>FrmOrders.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\FrmProducts.cs">
+    <Compile Include="Forms\ProductModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\FrmProducts.Designer.cs">
-      <DependentUpon>FrmProducts.cs</DependentUpon>
+    <Compile Include="Forms\ProductModalForm.Designer.cs">
+      <DependentUpon>ProductModalForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Models\Category.cs" />
     <Compile Include="Models\Product.cs" />
@@ -117,9 +117,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\FrmOrders.resx">
       <DependentUpon>FrmOrders.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FrmProducts.resx">
-      <DependentUpon>FrmProducts.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
