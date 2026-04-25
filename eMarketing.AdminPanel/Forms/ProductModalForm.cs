@@ -220,7 +220,7 @@ namespace eMarketing.AdminPanel.Forms
 
             chkIsActive = new CheckBox
             {
-                Text = "Aktif",
+                Text = "Ürün aktif olarak yayınlansın",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F),
                 Location = new Point(24, 514),

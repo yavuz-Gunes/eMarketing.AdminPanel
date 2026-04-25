@@ -91,19 +91,13 @@ namespace eMarketing.AdminPanel.DataAccess
         public void SetProductActiveStatus(int productId, bool isActive)
         {
             using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("UPDATE Products SET IsActive = @isActive WHERE ProductId = @productId", connection))
             {
-                string query = @"UPDATE Products
-                         SET IsActive = @isActive
-                         WHERE ProductId = @productId";
+                cmd.Parameters.AddWithValue("@productId", productId);
+                cmd.Parameters.AddWithValue("@isActive", isActive);
 
-                using (SqlCommand cmd = new SqlCommand(query, connection))
-                {
-                    cmd.Parameters.AddWithValue("@productId", productId);
-                    cmd.Parameters.AddWithValue("@isActive", isActive);
-
-                    connection.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                connection.Open();
+                cmd.ExecuteNonQuery();
             }
         }
         //public void DeleteProduct(int id)

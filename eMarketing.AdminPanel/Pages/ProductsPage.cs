@@ -76,7 +76,6 @@ namespace eMarketing.AdminPanel.Pages
             Controls.Add(filterPanel);
             Controls.Add(statsPanel);
             Controls.Add(headerPanel);
-
         }
 
         private void BuildHeaderPanel()
@@ -270,106 +269,37 @@ namespace eMarketing.AdminPanel.Pages
 
             ConfigureGridColumns();
 
-            ConfigureGridColumns();
-
             dgvProducts.CellFormatting += DgvProducts_CellFormatting;
             dgvProducts.CellContentClick += DgvProducts_CellContentClick;
             dgvProducts.CellPainting += DgvProducts_CellPainting;
-            dgvProducts.MouseLeave += DgvProducts_MouseLeave;
             dgvProducts.CellMouseMove += DgvProducts_CellMouseMove;
-            
+            dgvProducts.MouseLeave += DgvProducts_MouseLeave;
 
             gridPanel.Controls.Add(dgvProducts);
-
-            gridPanel.Controls.Add(dgvProducts);
-        }
-        private void ShowImagePreview(string imagePath)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(imagePath))
-                {
-                    HideImagePreview();
-                    return;
-                }
-
-                string fullPath = imagePath;
-
-                if (!Path.IsPathRooted(fullPath))
-                    fullPath = Path.Combine(GetRuntimeRootPath(), imagePath);
-
-                if (!File.Exists(fullPath))
-                {
-                    HideImagePreview();
-                    return;
-                }
-
-                using (var temp = Image.FromFile(fullPath))
-                {
-                    imagePreviewBox.Image?.Dispose();
-                    imagePreviewBox.Image = new Bitmap(temp);
-                }
-
-                // ÖNEMLİ: konum gridPanel'e göre hesaplanacak
-                Point clientPoint = gridPanel.PointToClient(Cursor.Position);
-
-                int x = clientPoint.X + 20;
-                int y = clientPoint.Y + 20;
-
-                if (x + imagePreviewPanel.Width > gridPanel.Width)
-                    x = gridPanel.Width - imagePreviewPanel.Width - 10;
-
-                if (y + imagePreviewPanel.Height > gridPanel.Height)
-                    y = gridPanel.Height - imagePreviewPanel.Height - 10;
-
-                if (x < 0) x = 10;
-                if (y < 0) y = 10;
-
-                imagePreviewPanel.Location = new Point(x, y);
-                imagePreviewPanel.Visible = true;
-                imagePreviewPanel.BringToFront();
-            }
-            catch
-            {
-                HideImagePreview();
-            }
         }
 
-        private void HideImagePreview()
-        {
-            if (imagePreviewPanel != null)
-                imagePreviewPanel.Visible = false;
-
-            if (imagePreviewBox != null && imagePreviewBox.Image != null)
-            {
-                imagePreviewBox.Image.Dispose();
-                imagePreviewBox.Image = null;
-            }
-        }
         private void BuildImagePreview()
         {
             imagePreviewPanel = new Panel
             {
-                Size = new Size(220, 220),
+                Size = new Size(240, 240),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
-                Visible = false
+                Visible = false,
+                Padding = new Padding(8)
             };
 
             imagePreviewBox = new PictureBox
             {
                 Dock = DockStyle.Fill,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                BackColor = Color.White
+                BackColor = Color.FromArgb(250, 251, 253)
             };
 
             imagePreviewPanel.Controls.Add(imagePreviewBox);
-
-            // ÖNEMLİ: preview ana control'e değil gridPanel içine eklensin
             gridPanel.Controls.Add(imagePreviewPanel);
             imagePreviewPanel.BringToFront();
         }
-
 
         private void ConfigureGridColumns()
         {
@@ -485,7 +415,7 @@ namespace eMarketing.AdminPanel.Pages
                 HeaderText = "",
                 Text = "Sil",
                 UseColumnTextForButtonValue = true,
-                Width = 70
+                Width = 95
             });
         }
 
@@ -591,6 +521,69 @@ namespace eMarketing.AdminPanel.Pages
             catch
             {
                 return null;
+            }
+        }
+
+        private void ShowImagePreview(string imagePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(imagePath))
+                {
+                    HideImagePreview();
+                    return;
+                }
+
+                string fullPath = imagePath;
+
+                if (!Path.IsPathRooted(fullPath))
+                    fullPath = Path.Combine(GetRuntimeRootPath(), imagePath);
+
+                if (!File.Exists(fullPath))
+                {
+                    HideImagePreview();
+                    return;
+                }
+
+                using (var temp = Image.FromFile(fullPath))
+                {
+                    imagePreviewBox.Image?.Dispose();
+                    imagePreviewBox.Image = new Bitmap(temp);
+                }
+
+                Point clientPoint = gridPanel.PointToClient(Cursor.Position);
+
+                int x = clientPoint.X + 22;
+                int y = clientPoint.Y + 22;
+
+                if (x + imagePreviewPanel.Width > gridPanel.Width)
+                    x = clientPoint.X - imagePreviewPanel.Width - 14;
+
+                if (y + imagePreviewPanel.Height > gridPanel.Height)
+                    y = gridPanel.Height - imagePreviewPanel.Height - 12;
+
+                if (x < 10) x = 10;
+                if (y < 10) y = 10;
+
+                imagePreviewPanel.Location = new Point(x, y);
+                imagePreviewPanel.Visible = true;
+                imagePreviewPanel.BringToFront();
+            }
+            catch
+            {
+                HideImagePreview();
+            }
+        }
+
+        private void HideImagePreview()
+        {
+            if (imagePreviewPanel != null)
+                imagePreviewPanel.Visible = false;
+
+            if (imagePreviewBox != null && imagePreviewBox.Image != null)
+            {
+                imagePreviewBox.Image.Dispose();
+                imagePreviewBox.Image = null;
             }
         }
 
@@ -725,8 +718,6 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-
-
         private void DgvProducts_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
         {
             int newRow = -1;
@@ -789,8 +780,6 @@ namespace eMarketing.AdminPanel.Pages
 
             HideImagePreview();
         }
-
-
 
         private void DgvProducts_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
@@ -953,6 +942,7 @@ namespace eMarketing.AdminPanel.Pages
                 return;
             }
         }
+
         private void DgvProducts_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -974,12 +964,19 @@ namespace eMarketing.AdminPanel.Pages
             else if (columnName == "colDelete")
             {
                 bool isActive = false;
+                object activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
 
-                var activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
-                if (activeValue != null)
+                if (activeValue != null && activeValue != DBNull.Value)
                 {
-                    string text = activeValue.ToString();
-                    isActive = text == "Aktif" || text == "True" || text == "true";
+                    try
+                    {
+                        isActive = Convert.ToBoolean(activeValue);
+                    }
+                    catch
+                    {
+                        string activeText = activeValue.ToString();
+                        isActive = activeText == "Aktif" || activeText == "True" || activeText == "true";
+                    }
                 }
 
                 string message = isActive
