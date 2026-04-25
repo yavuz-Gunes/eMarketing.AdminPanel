@@ -88,18 +88,36 @@ namespace eMarketing.AdminPanel.DataAccess
             }
         }
 
-        public void DeleteProduct(int id)
+        public void SetProductActiveStatus(int productId, bool isActive)
         {
             using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@ProductId", id);
+                string query = @"UPDATE Products
+                         SET IsActive = @isActive
+                         WHERE ProductId = @productId";
 
-                connection.Open();
-                cmd.ExecuteNonQuery();
+                using (SqlCommand cmd = new SqlCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@productId", productId);
+                    cmd.Parameters.AddWithValue("@isActive", isActive);
+
+                    connection.Open();
+                    cmd.ExecuteNonQuery();
+                }
             }
         }
+        //public void DeleteProduct(int id)
+        //{
+        //    using (SqlConnection connection = DbHelper.GetConnection())
+        //    using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
+        //    {
+        //        cmd.CommandType = CommandType.StoredProcedure;
+        //        cmd.Parameters.AddWithValue("@ProductId", id);
+
+        //        connection.Open();
+        //        cmd.ExecuteNonQuery();
+        //    }
+        //}
 
         public DataTable GetActiveProducts()
         {

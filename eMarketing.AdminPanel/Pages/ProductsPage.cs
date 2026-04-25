@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
@@ -37,6 +38,12 @@ namespace eMarketing.AdminPanel.Pages
 
         private Timer searchTimer;
 
+        private int hoveredRowIndex = -1;
+        private int hoveredColumnIndex = -1;
+
+        private Panel imagePreviewPanel;
+        private PictureBox imagePreviewBox;
+
         public ProductsPage()
         {
             Dock = DockStyle.Fill;
@@ -63,11 +70,13 @@ namespace eMarketing.AdminPanel.Pages
             BuildStatsPanel();
             BuildFilterPanel();
             BuildGridPanel();
+            BuildImagePreview();
 
             Controls.Add(gridPanel);
             Controls.Add(filterPanel);
             Controls.Add(statsPanel);
             Controls.Add(headerPanel);
+
         }
 
         private void BuildHeaderPanel()
@@ -247,7 +256,7 @@ namespace eMarketing.AdminPanel.Pages
 
             dgvProducts.EnableHeadersVisualStyles = false;
             dgvProducts.ColumnHeadersHeight = 42;
-            dgvProducts.RowTemplate.Height = 54;
+            dgvProducts.RowTemplate.Height = 48;
             dgvProducts.GridColor = Color.Gainsboro;
             dgvProducts.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             dgvProducts.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
@@ -261,11 +270,106 @@ namespace eMarketing.AdminPanel.Pages
 
             ConfigureGridColumns();
 
+            ConfigureGridColumns();
+
             dgvProducts.CellFormatting += DgvProducts_CellFormatting;
             dgvProducts.CellContentClick += DgvProducts_CellContentClick;
+            dgvProducts.CellPainting += DgvProducts_CellPainting;
+            dgvProducts.MouseLeave += DgvProducts_MouseLeave;
+            dgvProducts.CellMouseMove += DgvProducts_CellMouseMove;
+            
+
+            gridPanel.Controls.Add(dgvProducts);
 
             gridPanel.Controls.Add(dgvProducts);
         }
+        private void ShowImagePreview(string imagePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(imagePath))
+                {
+                    HideImagePreview();
+                    return;
+                }
+
+                string fullPath = imagePath;
+
+                if (!Path.IsPathRooted(fullPath))
+                    fullPath = Path.Combine(GetRuntimeRootPath(), imagePath);
+
+                if (!File.Exists(fullPath))
+                {
+                    HideImagePreview();
+                    return;
+                }
+
+                using (var temp = Image.FromFile(fullPath))
+                {
+                    imagePreviewBox.Image?.Dispose();
+                    imagePreviewBox.Image = new Bitmap(temp);
+                }
+
+                // ÖNEMLİ: konum gridPanel'e göre hesaplanacak
+                Point clientPoint = gridPanel.PointToClient(Cursor.Position);
+
+                int x = clientPoint.X + 20;
+                int y = clientPoint.Y + 20;
+
+                if (x + imagePreviewPanel.Width > gridPanel.Width)
+                    x = gridPanel.Width - imagePreviewPanel.Width - 10;
+
+                if (y + imagePreviewPanel.Height > gridPanel.Height)
+                    y = gridPanel.Height - imagePreviewPanel.Height - 10;
+
+                if (x < 0) x = 10;
+                if (y < 0) y = 10;
+
+                imagePreviewPanel.Location = new Point(x, y);
+                imagePreviewPanel.Visible = true;
+                imagePreviewPanel.BringToFront();
+            }
+            catch
+            {
+                HideImagePreview();
+            }
+        }
+
+        private void HideImagePreview()
+        {
+            if (imagePreviewPanel != null)
+                imagePreviewPanel.Visible = false;
+
+            if (imagePreviewBox != null && imagePreviewBox.Image != null)
+            {
+                imagePreviewBox.Image.Dispose();
+                imagePreviewBox.Image = null;
+            }
+        }
+        private void BuildImagePreview()
+        {
+            imagePreviewPanel = new Panel
+            {
+                Size = new Size(220, 220),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Visible = false
+            };
+
+            imagePreviewBox = new PictureBox
+            {
+                Dock = DockStyle.Fill,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.White
+            };
+
+            imagePreviewPanel.Controls.Add(imagePreviewBox);
+
+            // ÖNEMLİ: preview ana control'e değil gridPanel içine eklensin
+            gridPanel.Controls.Add(imagePreviewPanel);
+            imagePreviewPanel.BringToFront();
+        }
+
 
         private void ConfigureGridColumns()
         {
@@ -280,10 +384,26 @@ namespace eMarketing.AdminPanel.Pages
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
+                Name = "ImageUrlHidden",
+                DataPropertyName = "ImageUrl",
+                Visible = false
+            });
+
+            dgvProducts.Columns.Add(new DataGridViewImageColumn
+            {
+                Name = "ProductImage",
+                DataPropertyName = "ProductImage",
+                HeaderText = "Görsel",
+                Width = 70,
+                ImageLayout = DataGridViewImageCellLayout.Zoom
+            });
+
+            dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
+            {
                 Name = "ProductName",
                 DataPropertyName = "ProductName",
                 HeaderText = "Ürün Adı",
-                Width = 170
+                Width = 150
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
@@ -291,7 +411,7 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "Description",
                 DataPropertyName = "Description",
                 HeaderText = "Açıklama",
-                Width = 220
+                Width = 170
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
@@ -299,7 +419,7 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "Price",
                 DataPropertyName = "Price",
                 HeaderText = "Fiyat",
-                Width = 100,
+                Width = 90,
                 DefaultCellStyle = new DataGridViewCellStyle
                 {
                     Format = "N2"
@@ -311,7 +431,7 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "Stock",
                 DataPropertyName = "Stock",
                 HeaderText = "Stok",
-                Width = 80
+                Width = 60
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
@@ -319,7 +439,7 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "Category",
                 DataPropertyName = "Category",
                 HeaderText = "Kategori",
-                Width = 140
+                Width = 120
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
@@ -327,14 +447,15 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "IsActive",
                 DataPropertyName = "IsActive",
                 HeaderText = "Durum",
-                Width = 90
+                Width = 80
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "StockStatus",
+                DataPropertyName = "StockStatus",
                 HeaderText = "Stok Durumu",
-                Width = 110
+                Width = 95
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
@@ -342,10 +463,10 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "CreatedDate",
                 DataPropertyName = "CreatedDate",
                 HeaderText = "Oluşturulma",
-                Width = 160,
+                Width = 120,
                 DefaultCellStyle = new DataGridViewCellStyle
                 {
-                    Format = "dd.MM.yyyy HH:mm"
+                    Format = "dd.MM.yyyy"
                 }
             });
 
@@ -355,7 +476,7 @@ namespace eMarketing.AdminPanel.Pages
                 HeaderText = "",
                 Text = "Düzenle",
                 UseColumnTextForButtonValue = true,
-                Width = 100
+                Width = 85
             });
 
             dgvProducts.Columns.Add(new DataGridViewButtonColumn
@@ -364,7 +485,7 @@ namespace eMarketing.AdminPanel.Pages
                 HeaderText = "",
                 Text = "Sil",
                 UseColumnTextForButtonValue = true,
-                Width = 80
+                Width = 70
             });
         }
 
@@ -406,14 +527,15 @@ namespace eMarketing.AdminPanel.Pages
                 int categoryId = 0;
 
                 if (cmbCategory.SelectedValue != null && cmbCategory.SelectedValue is int)
-                {
                     categoryId = (int)cmbCategory.SelectedValue;
-                }
 
                 DataTable table = _repo.GetProducts(txtSearch.Text.Trim(), GetSelectedStatus(), categoryId);
 
                 if (!table.Columns.Contains("StockStatus"))
                     table.Columns.Add("StockStatus", typeof(string));
+
+                if (!table.Columns.Contains("ProductImage"))
+                    table.Columns.Add("ProductImage", typeof(Image));
 
                 foreach (DataRow row in table.Rows)
                 {
@@ -425,6 +547,10 @@ namespace eMarketing.AdminPanel.Pages
                         row["StockStatus"] = "Kritik";
                     else
                         row["StockStatus"] = "Yeterli";
+
+                    row["ProductImage"] = LoadProductThumbnail(
+                        row["ImageUrl"] == DBNull.Value ? "" : row["ImageUrl"].ToString()
+                    );
                 }
 
                 dgvProducts.DataSource = table;
@@ -434,6 +560,37 @@ namespace eMarketing.AdminPanel.Pages
             {
                 MessageBox.Show("Ürünler yüklenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string GetRuntimeRootPath()
+        {
+            return AppDomain.CurrentDomain.BaseDirectory;
+        }
+
+        private Image LoadProductThumbnail(string imagePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(imagePath))
+                    return null;
+
+                string fullPath = imagePath;
+
+                if (!Path.IsPathRooted(fullPath))
+                    fullPath = Path.Combine(GetRuntimeRootPath(), imagePath);
+
+                if (!File.Exists(fullPath))
+                    return null;
+
+                using (var tempImage = Image.FromFile(fullPath))
+                {
+                    return new Bitmap(tempImage, new Size(40, 40));
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -531,32 +688,271 @@ namespace eMarketing.AdminPanel.Pages
 
         private void CmbCategory_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (cmbCategory.DataSource != null)
-                LoadProducts();
+            if (cmbCategory.DataSource == null)
+                return;
+
+            if (cmbCategory.SelectedValue == null)
+                return;
+
+            if (!(cmbCategory.SelectedValue is int))
+                return;
+
+            LoadProducts();
         }
 
         private void DgvProducts_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
 
-            if (columnName == "IsActive" && e.Value != null && e.Value != DBNull.Value)
-            {
-                bool isActive = Convert.ToBoolean(e.Value);
-                e.Value = isActive ? "Aktif" : "Pasif";
-                e.FormattingApplied = true;
-            }
-
             if (columnName == "Description" && e.Value != null)
             {
                 string text = e.Value.ToString();
-                if (text.Length > 28)
+                if (text.Length > 24)
                 {
-                    e.Value = text.Substring(0, 28) + "...";
+                    e.Value = text.Substring(0, 24) + "...";
+                    e.FormattingApplied = true;
+                }
+            }
+
+            if (columnName == "Category" && e.Value != null)
+            {
+                string text = e.Value.ToString();
+                if (text.Length > 16)
+                {
+                    e.Value = text.Substring(0, 16) + "...";
                     e.FormattingApplied = true;
                 }
             }
         }
 
+
+
+        private void DgvProducts_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            int newRow = -1;
+            int newCol = -1;
+
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
+
+                if (columnName == "colEdit" || columnName == "colDelete")
+                {
+                    newRow = e.RowIndex;
+                    newCol = e.ColumnIndex;
+                }
+            }
+
+            if (newRow != hoveredRowIndex || newCol != hoveredColumnIndex)
+            {
+                int oldRow = hoveredRowIndex;
+                int oldCol = hoveredColumnIndex;
+
+                hoveredRowIndex = newRow;
+                hoveredColumnIndex = newCol;
+
+                if (oldRow >= 0 && oldCol >= 0)
+                    dgvProducts.InvalidateCell(oldCol, oldRow);
+
+                if (hoveredRowIndex >= 0 && hoveredColumnIndex >= 0)
+                    dgvProducts.InvalidateCell(hoveredColumnIndex, hoveredRowIndex);
+            }
+
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+            {
+                HideImagePreview();
+                return;
+            }
+
+            string currentColumnName = dgvProducts.Columns[e.ColumnIndex].Name;
+
+            if (currentColumnName != "ProductImage")
+            {
+                HideImagePreview();
+                return;
+            }
+
+            string imagePath = dgvProducts.Rows[e.RowIndex].Cells["ImageUrlHidden"].Value?.ToString();
+            ShowImagePreview(imagePath);
+        }
+
+        private void DgvProducts_MouseLeave(object sender, EventArgs e)
+        {
+            int oldRow = hoveredRowIndex;
+            int oldCol = hoveredColumnIndex;
+
+            hoveredRowIndex = -1;
+            hoveredColumnIndex = -1;
+
+            if (oldRow >= 0 && oldCol >= 0)
+                dgvProducts.InvalidateCell(oldCol, oldRow);
+
+            HideImagePreview();
+        }
+
+
+
+        private void DgvProducts_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
+
+            if (columnName == "IsActive")
+            {
+                e.PaintBackground(e.CellBounds, true);
+                e.Handled = true;
+
+                bool isActive = false;
+                if (e.Value != null && e.Value != DBNull.Value)
+                    isActive = Convert.ToBoolean(e.Value);
+
+                string text = isActive ? "Aktif" : "Pasif";
+
+                Color backColor = isActive
+                    ? Color.FromArgb(232, 245, 233)
+                    : Color.FromArgb(245, 245, 245);
+
+                Color foreColor = isActive
+                    ? Color.FromArgb(46, 125, 50)
+                    : Color.FromArgb(97, 97, 97);
+
+                Rectangle badgeRect = new Rectangle(
+                    e.CellBounds.X + (e.CellBounds.Width - 72) / 2,
+                    e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
+                    72,
+                    24
+                );
+
+                using (SolidBrush brush = new SolidBrush(backColor))
+                using (SolidBrush textBrush = new SolidBrush(foreColor))
+                using (StringFormat sf = new StringFormat())
+                {
+                    sf.Alignment = StringAlignment.Center;
+                    sf.LineAlignment = StringAlignment.Center;
+
+                    e.Graphics.FillRectangle(brush, badgeRect);
+                    e.Graphics.DrawString(text, new Font("Segoe UI", 8.5F, FontStyle.Bold), textBrush, badgeRect, sf);
+                }
+
+                return;
+            }
+
+            if (columnName == "StockStatus")
+            {
+                e.PaintBackground(e.CellBounds, true);
+                e.Handled = true;
+
+                string text = e.Value?.ToString() ?? "";
+
+                Color backColor = Color.FromArgb(243, 244, 246);
+                Color foreColor = Color.FromArgb(75, 85, 99);
+
+                if (text == "Tükendi")
+                {
+                    backColor = Color.FromArgb(254, 242, 242);
+                    foreColor = Color.FromArgb(185, 28, 28);
+                }
+                else if (text == "Kritik")
+                {
+                    backColor = Color.FromArgb(255, 247, 237);
+                    foreColor = Color.FromArgb(194, 65, 12);
+                }
+                else if (text == "Yeterli")
+                {
+                    backColor = Color.FromArgb(236, 253, 245);
+                    foreColor = Color.FromArgb(21, 128, 61);
+                }
+
+                Rectangle badgeRect = new Rectangle(
+                    e.CellBounds.X + (e.CellBounds.Width - 78) / 2,
+                    e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
+                    78,
+                    24
+                );
+
+                using (SolidBrush brush = new SolidBrush(backColor))
+                using (SolidBrush textBrush = new SolidBrush(foreColor))
+                using (StringFormat sf = new StringFormat())
+                {
+                    sf.Alignment = StringAlignment.Center;
+                    sf.LineAlignment = StringAlignment.Center;
+
+                    e.Graphics.FillRectangle(brush, badgeRect);
+                    e.Graphics.DrawString(text, new Font("Segoe UI", 8.5F, FontStyle.Bold), textBrush, badgeRect, sf);
+                }
+
+                return;
+            }
+
+            if (columnName == "colEdit" || columnName == "colDelete")
+            {
+                e.PaintBackground(e.CellBounds, true);
+                e.Handled = true;
+
+                bool isEdit = columnName == "colEdit";
+                bool isHovered = e.RowIndex == hoveredRowIndex && e.ColumnIndex == hoveredColumnIndex;
+
+                bool rowIsActive = false;
+                object activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
+
+                if (activeValue != null && activeValue != DBNull.Value)
+                {
+                    try
+                    {
+                        rowIsActive = Convert.ToBoolean(activeValue);
+                    }
+                    catch
+                    {
+                        string activeText = activeValue.ToString();
+                        rowIsActive = activeText == "Aktif" || activeText == "True" || activeText == "true";
+                    }
+                }
+
+                string text;
+                Color baseColor;
+
+                if (isEdit)
+                {
+                    text = "Düzenle";
+                    baseColor = Color.FromArgb(66, 133, 244);
+                }
+                else
+                {
+                    text = rowIsActive ? "Pasife Al" : "Aktifleştir";
+                    baseColor = rowIsActive
+                        ? Color.FromArgb(220, 53, 69)
+                        : Color.FromArgb(25, 135, 84);
+                }
+
+                Color fillColor = isHovered ? baseColor : Color.White;
+                Color borderColor = baseColor;
+                Color textColor = isHovered ? Color.White : baseColor;
+
+                Rectangle buttonRect = new Rectangle(
+                    e.CellBounds.X + 6,
+                    e.CellBounds.Y + 6,
+                    e.CellBounds.Width - 12,
+                    e.CellBounds.Height - 12
+                );
+
+                using (SolidBrush fillBrush = new SolidBrush(fillColor))
+                using (Pen borderPen = new Pen(borderColor))
+                using (SolidBrush textBrush = new SolidBrush(textColor))
+                using (StringFormat sf = new StringFormat())
+                {
+                    sf.Alignment = StringAlignment.Center;
+                    sf.LineAlignment = StringAlignment.Center;
+
+                    e.Graphics.FillRectangle(fillBrush, buttonRect);
+                    e.Graphics.DrawRectangle(borderPen, buttonRect);
+                    e.Graphics.DrawString(text, new Font("Segoe UI", 8.2F, FontStyle.Bold), textBrush, buttonRect, sf);
+                }
+
+                return;
+            }
+        }
         private void DgvProducts_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -577,8 +973,21 @@ namespace eMarketing.AdminPanel.Pages
             }
             else if (columnName == "colDelete")
             {
+                bool isActive = false;
+
+                var activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
+                if (activeValue != null)
+                {
+                    string text = activeValue.ToString();
+                    isActive = text == "Aktif" || text == "True" || text == "true";
+                }
+
+                string message = isActive
+                    ? "Bu ürünü pasife çekmek istiyor musunuz?"
+                    : "Bu ürünü tekrar aktife almak istiyor musunuz?";
+
                 DialogResult result = MessageBox.Show(
-                    "Bu ürünü pasife çekmek istiyor musunuz?",
+                    message,
                     "Onay",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
@@ -587,12 +996,12 @@ namespace eMarketing.AdminPanel.Pages
                 {
                     try
                     {
-                        _repo.DeleteProduct(productId);
+                        _repo.SetProductActiveStatus(productId, !isActive);
                         LoadProducts();
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Ürün pasife alınırken hata: " + ex.Message,
+                        MessageBox.Show("Ürün durumu güncellenirken hata: " + ex.Message,
                             "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }

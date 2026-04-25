@@ -2,6 +2,7 @@
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.DataAccess;
@@ -31,8 +32,10 @@ namespace eMarketing.AdminPanel.Forms
         private Label lblCategory;
         private ComboBox cmbCategory;
 
-        private Label lblImageUrl;
-        private TextBox txtImageUrl;
+        private Label lblImage;
+        private TextBox txtImagePath;
+        private Button btnBrowseImage;
+        private PictureBox picPreview;
 
         private CheckBox chkIsActive;
 
@@ -40,10 +43,15 @@ namespace eMarketing.AdminPanel.Forms
         private Button btnCancel;
         private Button btnSave;
 
+        private OpenFileDialog openFileDialog;
+        private string selectedSourceImagePath = "";
+
         public bool IsSaved { get; private set; }
 
         public ProductModalForm(int productId = 0)
         {
+            InitializeComponent();
+
             _productId = productId;
 
             BuildLayout();
@@ -52,6 +60,7 @@ namespace eMarketing.AdminPanel.Forms
 
         private void ProductModalForm_Load(object sender, EventArgs e)
         {
+            EnsureImageFolder();
             LoadCategories();
 
             if (_productId > 0)
@@ -67,8 +76,15 @@ namespace eMarketing.AdminPanel.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
             BackColor = Color.White;
-            Width = 560;
-            Height = 520;
+            Width = 620;
+            Height = 620;
+
+            openFileDialog = new OpenFileDialog
+            {
+                Title = "Ürün Görseli Seç",
+                Filter = "Resim Dosyaları|*.jpg;*.jpeg;*.png;*.bmp;*.webp",
+                Multiselect = false
+            };
 
             lblTitle = new Label
             {
@@ -93,7 +109,7 @@ namespace eMarketing.AdminPanel.Forms
             txtProductName = new TextBox
             {
                 Location = new Point(24, 92),
-                Width = 490,
+                Width = 550,
                 Font = new Font("Segoe UI", 10F)
             };
 
@@ -109,7 +125,7 @@ namespace eMarketing.AdminPanel.Forms
             txtDescription = new TextBox
             {
                 Location = new Point(24, 154),
-                Width = 490,
+                Width = 550,
                 Height = 72,
                 Multiline = true,
                 Font = new Font("Segoe UI", 10F),
@@ -160,25 +176,46 @@ namespace eMarketing.AdminPanel.Forms
             cmbCategory = new ComboBox
             {
                 Location = new Point(334, 262),
-                Width = 180,
+                Width = 240,
                 Font = new Font("Segoe UI", 10F),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
 
-            lblImageUrl = new Label
+            lblImage = new Label
             {
-                Text = "Görsel URL",
+                Text = "Ürün Görseli",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary,
                 Location = new Point(24, 306)
             };
 
-            txtImageUrl = new TextBox
+            txtImagePath = new TextBox
             {
                 Location = new Point(24, 330),
-                Width = 490,
-                Font = new Font("Segoe UI", 10F)
+                Width = 420,
+                Font = new Font("Segoe UI", 10F),
+                ReadOnly = true
+            };
+
+            btnBrowseImage = new Button
+            {
+                Text = "Resim Seç",
+                Width = 130,
+                Height = 32,
+                Location = new Point(444, 328),
+                FlatStyle = FlatStyle.Flat
+            };
+            btnBrowseImage.FlatAppearance.BorderColor = Color.Gainsboro;
+            btnBrowseImage.Click += BtnBrowseImage_Click;
+
+            picPreview = new PictureBox
+            {
+                Location = new Point(24, 376),
+                Size = new Size(120, 120),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.WhiteSmoke
             };
 
             chkIsActive = new CheckBox
@@ -186,7 +223,7 @@ namespace eMarketing.AdminPanel.Forms
                 Text = "Aktif",
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F),
-                Location = new Point(24, 372),
+                Location = new Point(24, 514),
                 Checked = true
             };
 
@@ -202,7 +239,7 @@ namespace eMarketing.AdminPanel.Forms
                 Text = "İptal",
                 Width = 100,
                 Height = 36,
-                Location = new Point(304, 14),
+                Location = new Point(364, 14),
                 FlatStyle = FlatStyle.Flat
             };
             btnCancel.FlatAppearance.BorderColor = Color.Gainsboro;
@@ -213,7 +250,7 @@ namespace eMarketing.AdminPanel.Forms
                 Text = "Kaydet",
                 Width = 100,
                 Height = 36,
-                Location = new Point(414, 14),
+                Location = new Point(474, 14),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
@@ -226,8 +263,10 @@ namespace eMarketing.AdminPanel.Forms
 
             Controls.Add(footerPanel);
             Controls.Add(chkIsActive);
-            Controls.Add(txtImageUrl);
-            Controls.Add(lblImageUrl);
+            Controls.Add(picPreview);
+            Controls.Add(btnBrowseImage);
+            Controls.Add(txtImagePath);
+            Controls.Add(lblImage);
             Controls.Add(cmbCategory);
             Controls.Add(lblCategory);
             Controls.Add(txtStock);
@@ -281,11 +320,13 @@ namespace eMarketing.AdminPanel.Forms
                     ? Convert.ToDecimal(row["Price"]).ToString("0.##", CultureInfo.InvariantCulture)
                     : "";
                 txtStock.Text = row["Stock"] != DBNull.Value ? row["Stock"].ToString() : "";
-                txtImageUrl.Text = row["ImageUrl"] == DBNull.Value ? "" : row["ImageUrl"].ToString();
+                txtImagePath.Text = row["ImageUrl"] == DBNull.Value ? "" : row["ImageUrl"].ToString();
                 chkIsActive.Checked = row["IsActive"] != DBNull.Value && Convert.ToBoolean(row["IsActive"]);
 
                 if (row["CategoryId"] != DBNull.Value)
                     cmbCategory.SelectedValue = Convert.ToInt32(row["CategoryId"]);
+
+                LoadPreviewImage(txtImagePath.Text);
             }
             catch (Exception ex)
             {
@@ -295,13 +336,91 @@ namespace eMarketing.AdminPanel.Forms
             }
         }
 
+        private void BtnBrowseImage_Click(object sender, EventArgs e)
+        {
+            if (openFileDialog.ShowDialog() != DialogResult.OK)
+                return;
+
+            selectedSourceImagePath = openFileDialog.FileName;
+            txtImagePath.Text = selectedSourceImagePath;
+            LoadPreviewImage(selectedSourceImagePath);
+        }
+
+        private string GetRuntimeRootPath()
+        {
+            return AppDomain.CurrentDomain.BaseDirectory;
+        }
+
+        private string GetRuntimeImagesFolder()
+        {
+            return Path.Combine(GetRuntimeRootPath(), "Images", "Products");
+        }
+
+        private void EnsureImageFolder()
+        {
+            string imagesFolder = GetRuntimeImagesFolder();
+
+            if (!Directory.Exists(imagesFolder))
+                Directory.CreateDirectory(imagesFolder);
+        }
+
+        private void LoadPreviewImage(string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    picPreview.Image = null;
+                    return;
+                }
+
+                string fullPath = path;
+
+                if (!Path.IsPathRooted(fullPath))
+                    fullPath = Path.Combine(GetRuntimeRootPath(), path);
+
+                if (!File.Exists(fullPath))
+                {
+                    picPreview.Image = null;
+                    return;
+                }
+
+                using (var temp = Image.FromFile(fullPath))
+                {
+                    picPreview.Image = new Bitmap(temp);
+                }
+            }
+            catch
+            {
+                picPreview.Image = null;
+            }
+        }
+
+        private string SaveSelectedImage()
+        {
+            if (string.IsNullOrWhiteSpace(selectedSourceImagePath))
+                return txtImagePath.Text.Trim();
+
+            string imagesFolder = GetRuntimeImagesFolder();
+
+            if (!Directory.Exists(imagesFolder))
+                Directory.CreateDirectory(imagesFolder);
+
+            string extension = Path.GetExtension(selectedSourceImagePath);
+            string fileName = Guid.NewGuid().ToString("N") + extension;
+            string destinationPath = Path.Combine(imagesFolder, fileName);
+
+            File.Copy(selectedSourceImagePath, destinationPath, true);
+
+            return Path.Combine("Images", "Products", fileName);
+        }
+
         private void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
                 string productName = txtProductName.Text.Trim();
                 string description = txtDescription.Text.Trim();
-                string imageUrl = txtImageUrl.Text.Trim();
 
                 if (string.IsNullOrWhiteSpace(productName))
                 {
@@ -347,6 +466,7 @@ namespace eMarketing.AdminPanel.Forms
                 }
 
                 int categoryId = Convert.ToInt32(cmbCategory.SelectedValue);
+                string savedImagePath = SaveSelectedImage();
 
                 if (_productId > 0)
                 {
@@ -356,7 +476,7 @@ namespace eMarketing.AdminPanel.Forms
                         description,
                         price,
                         stock,
-                        imageUrl,
+                        savedImagePath,
                         chkIsActive.Checked,
                         categoryId);
                 }
@@ -367,7 +487,7 @@ namespace eMarketing.AdminPanel.Forms
                         description,
                         price,
                         stock,
-                        imageUrl,
+                        savedImagePath,
                         chkIsActive.Checked,
                         categoryId);
                 }
