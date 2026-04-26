@@ -1,49 +1,41 @@
 ﻿using System;
 using System.Data.SqlClient;
 using eMarketing.Data.Connection;
+using eMarketing.Data.Models;
 
 namespace eMarketing.Data.Repositories
 {
     public class DashboardRepository
     {
-        public int GetTotalProducts()
+        public DashboardSummary GetSummary()
         {
             using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Products", connection))
+            using (SqlCommand cmd = new SqlCommand("SELECT ToplamUrun, AktifUrun, KritikStok, ToplamSiparis FROM vw_DashboardOzet", connection))
             {
                 connection.Open();
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-        }
 
-        public int GetActiveProducts()
-        {
-            using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Products WHERE IsActive = 1", connection))
-            {
-                connection.Open();
-                return Convert.ToInt32(cmd.ExecuteScalar());
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return new DashboardSummary
+                        {
+                            TotalProducts = Convert.ToInt32(reader["ToplamUrun"]),
+                            ActiveProducts = Convert.ToInt32(reader["AktifUrun"]),
+                            LowStockProducts = Convert.ToInt32(reader["KritikStok"]),
+                            TotalOrders = Convert.ToInt32(reader["ToplamSiparis"])
+                        };
+                    }
+                }
             }
-        }
 
-        public int GetLowStockProducts()
-        {
-            using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Products WHERE Stock BETWEEN 1 AND 9", connection))
+            return new DashboardSummary
             {
-                connection.Open();
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-        }
-
-        public int GetTotalOrders()
-        {
-            using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Orders", connection))
-            {
-                connection.Open();
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
+                TotalProducts = 0,
+                ActiveProducts = 0,
+                LowStockProducts = 0,
+                TotalOrders = 0
+            };
         }
     }
 }

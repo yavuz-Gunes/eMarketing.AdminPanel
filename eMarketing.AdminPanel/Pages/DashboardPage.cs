@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
+using eMarketing.Data.Models;
 using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Pages
@@ -91,10 +92,12 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                cTotalProducts.SetData("Toplam Ürün", _repo.GetTotalProducts().ToString());
-                cActiveProducts.SetData("Aktif Ürün", _repo.GetActiveProducts().ToString());
-                cLowStock.SetData("Kritik Stok", _repo.GetLowStockProducts().ToString());
-                cTotalOrders.SetData("Toplam Sipariþ", _repo.GetTotalOrders().ToString());
+                DashboardSummary summary = _repo.GetSummary();
+
+                cTotalProducts.SetData("Toplam Ürün", summary.TotalProducts.ToString());
+                cActiveProducts.SetData("Aktif Ürün", summary.ActiveProducts.ToString());
+                cLowStock.SetData("Kritik Stok", summary.LowStockProducts.ToString());
+                cTotalOrders.SetData("Toplam Sipariþ", summary.TotalOrders.ToString());
             }
             catch (Exception ex)
             {
