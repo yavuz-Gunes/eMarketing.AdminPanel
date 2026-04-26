@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using eMarketing.Data.Connection;
 
-namespace eMarketing.AdminPanel.DataAccess
+namespace eMarketing.Data.Repositories
 {
     public class CategoryRepository
     {

@@ -3,8 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.AdminPanel.DataAccess;
-
+using eMarketing.Data.Repositories;
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class CategoryModalForm : Form

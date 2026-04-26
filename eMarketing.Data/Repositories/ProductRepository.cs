@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using eMarketing.Data.Connection;
 
-namespace eMarketing.AdminPanel.DataAccess
+namespace eMarketing.Data.Repositories
 {
     public class ProductRepository
     {
@@ -100,18 +101,6 @@ namespace eMarketing.AdminPanel.DataAccess
                 cmd.ExecuteNonQuery();
             }
         }
-        //public void DeleteProduct(int id)
-        //{
-        //    using (SqlConnection connection = DbHelper.GetConnection())
-        //    using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
-        //    {
-        //        cmd.CommandType = CommandType.StoredProcedure;
-        //        cmd.Parameters.AddWithValue("@ProductId", id);
-
-        //        connection.Open();
-        //        cmd.ExecuteNonQuery();
-        //    }
-        //}
 
         public DataTable GetActiveProducts()
         {

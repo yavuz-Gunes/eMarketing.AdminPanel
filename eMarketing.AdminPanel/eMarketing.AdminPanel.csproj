@@ -64,11 +64,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Core\AppColors.cs" />
-    <Compile Include="DataAccess\CategoryRepository.cs" />
-    <Compile Include="DataAccess\DashboardRepository.cs" />
-    <Compile Include="DataAccess\DbHelper.cs" />
-    <Compile Include="DataAccess\OrderRepository.cs" />
-    <Compile Include="DataAccess\ProductRepository.cs" />
     <Compile Include="Forms\CategoryModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -93,8 +88,6 @@
     <Compile Include="Forms\ProductModalForm.Designer.cs">
       <DependentUpon>ProductModalForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Models\Category.cs" />
-    <Compile Include="Models\Product.cs" />
     <Compile Include="Pages\CategoriesPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -141,8 +134,16 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="DataAccess\" />
     <Folder Include="Images\Products\" />
     <Folder Include="Layout\" />
+    <Folder Include="Models\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\eMarketing.Data\eMarketing.Data.csproj">
+      <Project>{c11a6a49-1015-46ee-aede-1c85b56e9842}</Project>
+      <Name>eMarketing.Data</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

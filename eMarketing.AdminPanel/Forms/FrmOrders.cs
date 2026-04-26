@@ -1,8 +1,7 @@
 using System;
 using System.Data;
 using System.Windows.Forms;
-using eMarketing.AdminPanel.DataAccess;
-
+using eMarketing.Data.Repositories;
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class FrmOrders : Form

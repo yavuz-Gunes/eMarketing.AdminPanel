@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // Bir bütünleştirilmiş koda ilişkin Genel Bilgiler aşağıdaki öznitelikler kümesiyle
 // denetlenir. Bütünleştirilmiş kod ile ilişkili bilgileri değiştirmek için
 // bu öznitelik değerlerini değiştirin.
-[assembly: AssemblyTitle("ClassLibrary1")]
+[assembly: AssemblyTitle("eMarketing.Data")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ClassLibrary1")]
+[assembly: AssemblyProduct("eMarketing.Data")]
 [assembly: AssemblyCopyright("Copyright ©  2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // Bu proje COM'un kullanımına sunulursa, aşağıdaki GUID tür kitaplığının kimliği içindir
-[assembly: Guid("9feea0f8-9881-4d27-9942-6e4ded7bb09e")]
+[assembly: Guid("c11a6a49-1015-46ee-aede-1c85b56e9842")]
 
 // Bir derlemenin sürüm bilgileri aşağıdaki dört değerden oluşur:
 //

@@ -5,8 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.AdminPanel.DataAccess;
-
+using eMarketing.Data.Repositories;
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class ProductModalForm : Form

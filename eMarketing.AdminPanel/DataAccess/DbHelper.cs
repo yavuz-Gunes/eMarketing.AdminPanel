@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +14,7 @@ namespace eMarketing.AdminPanel.DataAccess
         {
             var settings = ConfigurationManager.ConnectionStrings["DbConnection"];
             if (settings == null || string.IsNullOrWhiteSpace(settings.ConnectionString))
-                throw new InvalidOperationException("App.config iÃ§inde 'DbConnection' connectionString bulunamadÄ± veya boÅŸ. LÃ¼tfen App.config'u kontrol edin.");
+                throw new InvalidOperationException("App.config içinde 'DbConnection' connectionString bulunamadý veya boþ. Lütfen App.config'u kontrol edin.");
 
             return new SqlConnection(settings.ConnectionString);
         }

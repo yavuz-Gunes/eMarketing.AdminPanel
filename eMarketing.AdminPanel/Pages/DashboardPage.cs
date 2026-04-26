@@ -2,7 +2,7 @@ using System;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
-using eMarketing.AdminPanel.DataAccess;
+using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Pages
 {

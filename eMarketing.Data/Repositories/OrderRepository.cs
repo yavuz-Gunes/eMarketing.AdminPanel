@@ -1,7 +1,8 @@
 using System.Data;
 using System.Data.SqlClient;
+using eMarketing.Data.Connection;
 
-namespace eMarketing.AdminPanel.DataAccess
+namespace eMarketing.Data.Repositories
 {
     public class OrderRepository
     {
@@ -26,12 +27,10 @@ namespace eMarketing.AdminPanel.DataAccess
                                  ORDER BY o.OrderId DESC";
 
                 using (SqlCommand cmd = new SqlCommand(query, connection))
+                using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
-                    using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
-                    {
-                        connection.Open();
-                        adapter.Fill(table);
-                    }
+                    connection.Open();
+                    adapter.Fill(table);
                 }
             }
 
@@ -45,16 +44,16 @@ namespace eMarketing.AdminPanel.DataAccess
                 string query = @"INSERT INTO Orders
                                  (CustomerName, CustomerEmail, CustomerPhone, ProductId, Quantity, TotalPrice, OrderStatus, OrderDate)
                                  VALUES
-                                 (@name, @email, @phone, @pid, @qty, @total, 'Hazyrlanyyor', GETDATE())";
+                                 (@name, @email, @phone, @productId, @quantity, @totalPrice, 'Hazirlaniyor', GETDATE())";
 
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@name", name);
                     cmd.Parameters.AddWithValue("@email", email);
                     cmd.Parameters.AddWithValue("@phone", phone);
-                    cmd.Parameters.AddWithValue("@pid", productId);
-                    cmd.Parameters.AddWithValue("@qty", quantity);
-                    cmd.Parameters.AddWithValue("@total", totalPrice);
+                    cmd.Parameters.AddWithValue("@productId", productId);
+                    cmd.Parameters.AddWithValue("@quantity", quantity);
+                    cmd.Parameters.AddWithValue("@totalPrice", totalPrice);
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -66,12 +65,12 @@ namespace eMarketing.AdminPanel.DataAccess
         {
             using (SqlConnection connection = DbHelper.GetConnection())
             {
-                string query = "UPDATE Orders SET OrderStatus=@status WHERE OrderId=@id";
+                string query = "UPDATE Orders SET OrderStatus = @status WHERE OrderId = @orderId";
 
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@status", status);
-                    cmd.Parameters.AddWithValue("@id", orderId);
+                    cmd.Parameters.AddWithValue("@orderId", orderId);
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
