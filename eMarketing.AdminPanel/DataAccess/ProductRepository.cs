@@ -100,18 +100,18 @@ namespace eMarketing.AdminPanel.DataAccess
                 cmd.ExecuteNonQuery();
             }
         }
-        //public void DeleteProduct(int id)
-        //{
-        //    using (SqlConnection connection = DbHelper.GetConnection())
-        //    using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
-        //    {
-        //        cmd.CommandType = CommandType.StoredProcedure;
-        //        cmd.Parameters.AddWithValue("@ProductId", id);
+        public void DeleteProductPermanently(int productId)
+        {
+            using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProductId", productId);
 
-        //        connection.Open();
-        //        cmd.ExecuteNonQuery();
-        //    }
-        //}
+                connection.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
 
         public DataTable GetActiveProducts()
         {

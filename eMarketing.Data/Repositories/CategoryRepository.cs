@@ -77,6 +77,18 @@ namespace eMarketing.Data.Repositories
             }
         }
 
+        public void SetCategoryActiveStatus(int categoryId, bool isActive)
+        {
+            DataRow row = GetCategoryById(categoryId);
+
+            if (row == null)
+                throw new Exception("Kategori bulunamadı.");
+
+            string categoryName = row["CategoryName"]?.ToString() ?? "";
+
+            UpdateCategory(categoryId, categoryName, isActive);
+        }
+
         public void DeleteCategory(int categoryId)
         {
             using (SqlConnection connection = DbHelper.GetConnection())
@@ -94,5 +106,6 @@ namespace eMarketing.Data.Repositories
         {
             return GetCategories("", 1);
         }
+        
     }
 }

@@ -290,7 +290,7 @@ namespace eMarketing.AdminPanel.Pages
         }
         private void DgvCategories_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            if (e.RowIndex < 0)
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
             string columnName = dgvCategories.Columns[e.ColumnIndex].Name;
@@ -346,11 +346,39 @@ namespace eMarketing.AdminPanel.Pages
                 bool isEdit = columnName == "colEdit";
                 bool isHovered = e.RowIndex == hoveredRowIndex && e.ColumnIndex == hoveredColumnIndex;
 
-                string text = isEdit ? "Düzenle" : "Sil";
+                bool rowIsActive = false;
+                object activeValue = dgvCategories.Rows[e.RowIndex].Cells["IsActive"].Value;
 
-                Color baseColor = isEdit
-                    ? Color.FromArgb(66, 133, 244)
-                    : Color.FromArgb(220, 53, 69);
+                if (activeValue != null && activeValue != DBNull.Value)
+                {
+                    try
+                    {
+                        rowIsActive = Convert.ToBoolean(activeValue);
+                    }
+                    catch
+                    {
+                        string activeText = activeValue.ToString();
+                        rowIsActive = activeText == "Aktif" || activeText == "True" || activeText == "true";
+                    }
+                }
+
+                string text;
+                Color baseColor;
+
+                if (isEdit)
+                {
+                    text = rowIsActive ? "Düzenle" : "Aktifleştir";
+                    baseColor = rowIsActive
+                        ? Color.FromArgb(66, 133, 244)
+                        : Color.FromArgb(25, 135, 84);
+                }
+                else
+                {
+                    text = rowIsActive ? "Pasife Al" : "Sil";
+                    baseColor = rowIsActive
+                        ? Color.FromArgb(220, 53, 69)
+                        : Color.FromArgb(108, 117, 125);
+                }
 
                 Color fillColor = isHovered ? baseColor : Color.White;
                 Color borderColor = baseColor;
@@ -547,7 +575,7 @@ namespace eMarketing.AdminPanel.Pages
             LoadCategories();
         }
 
-        
+
 
         private void DgvCategories_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -557,35 +585,101 @@ namespace eMarketing.AdminPanel.Pages
             string columnName = dgvCategories.Columns[e.ColumnIndex].Name;
             int categoryId = Convert.ToInt32(dgvCategories.Rows[e.RowIndex].Cells["CategoryId"].Value);
 
+            bool isActive = false;
+            object activeValue = dgvCategories.Rows[e.RowIndex].Cells["IsActive"].Value;
+
+            if (activeValue != null && activeValue != DBNull.Value)
+            {
+                try
+                {
+                    isActive = Convert.ToBoolean(activeValue);
+                }
+                catch
+                {
+                    string activeText = activeValue.ToString();
+                    isActive = activeText == "Aktif" || activeText == "True" || activeText == "true";
+                }
+            }
+
             if (columnName == "colEdit")
             {
-                using (var frm = new CategoryModalForm(categoryId))
+                if (isActive)
                 {
-                    if (frm.ShowDialog() == DialogResult.OK)
+                    using (var frm = new CategoryModalForm(categoryId))
                     {
-                        LoadCategories();
+                        if (frm.ShowDialog() == DialogResult.OK)
+                        {
+                            LoadCategories();
+                        }
+                    }
+                }
+                else
+                {
+                    DialogResult result = MessageBox.Show(
+                        "Bu kategoriyi tekrar aktifleştirmek istiyor musunuz?",
+                        "Onay",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        try
+                        {
+                            _repo.SetCategoryActiveStatus(categoryId, true);
+                            LoadCategories();
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Kategori aktifleştirilirken hata: " + ex.Message,
+                                "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
             }
             else if (columnName == "colDelete")
             {
-                DialogResult result = MessageBox.Show(
-                    "Bu kategoriyi pasife çekmek istiyor musunuz?",
-                    "Onay",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (result == DialogResult.Yes)
+                if (isActive)
                 {
-                    try
+                    DialogResult result = MessageBox.Show(
+                        "Bu kategoriyi pasife çekmek istiyor musunuz?",
+                        "Onay",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
                     {
-                        _repo.DeleteCategory(categoryId);
-                        LoadCategories();
+                        try
+                        {
+                            _repo.SetCategoryActiveStatus(categoryId, false);
+                            LoadCategories();
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Kategori pasife alınırken hata: " + ex.Message,
+                                "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
-                    catch (Exception ex)
+                }
+                else
+                {
+                    DialogResult result = MessageBox.Show(
+                        "Bu pasif kategoriyi kalıcı olarak silmek istiyor musunuz?",
+                        "Kalıcı Silme",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+
+                    if (result == DialogResult.Yes)
                     {
-                        MessageBox.Show("Kategori pasife alınırken hata: " + ex.Message,
-                            "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        try
+                        {
+                            _repo.DeleteCategory(categoryId);
+                            LoadCategories();
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Kategori silinirken hata: " + ex.Message,
+                                "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
             }

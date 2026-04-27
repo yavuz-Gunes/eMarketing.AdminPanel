@@ -89,6 +89,19 @@ namespace eMarketing.Data.Repositories
             }
         }
 
+        public void DeleteProductPermanently(int productId)
+        {
+            using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProductId", productId);
+
+                connection.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         public void SetProductActiveStatus(int productId, bool isActive)
         {
             using (SqlConnection connection = DbHelper.GetConnection())

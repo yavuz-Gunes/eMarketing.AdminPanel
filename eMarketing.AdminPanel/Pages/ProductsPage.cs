@@ -904,15 +904,17 @@ namespace eMarketing.AdminPanel.Pages
 
                 if (isEdit)
                 {
-                    text = "Düzenle";
-                    baseColor = Color.FromArgb(66, 133, 244);
+                    text = rowIsActive ? "Düzenle" : "Aktifleştir";
+                    baseColor = rowIsActive
+                        ? Color.FromArgb(66, 133, 244)
+                        : Color.FromArgb(25, 135, 84);
                 }
                 else
                 {
-                    text = rowIsActive ? "Pasife Al" : "Aktifleştir";
+                    text = rowIsActive ? "Pasife Al" : "Sil";
                     baseColor = rowIsActive
                         ? Color.FromArgb(220, 53, 69)
-                        : Color.FromArgb(25, 135, 84);
+                        : Color.FromArgb(108, 117, 125);
                 }
 
                 Color fillColor = isHovered ? baseColor : Color.White;
@@ -951,55 +953,75 @@ namespace eMarketing.AdminPanel.Pages
             string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
             int productId = Convert.ToInt32(dgvProducts.Rows[e.RowIndex].Cells["ProductId"].Value);
 
+            bool isActive = false;
+            object activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
+
+            if (activeValue != null && activeValue != DBNull.Value)
+            {
+                try
+                {
+                    isActive = Convert.ToBoolean(activeValue);
+                }
+                catch
+                {
+                    string activeText = activeValue.ToString();
+                    isActive = activeText == "Aktif" || activeText == "True" || activeText == "true";
+                }
+            }
+
             if (columnName == "colEdit")
             {
-                using (var frm = new ProductModalForm(productId))
+                if (isActive)
                 {
-                    if (frm.ShowDialog() == DialogResult.OK)
+                    using (var frm = new ProductModalForm(productId))
                     {
+                        if (frm.ShowDialog() == DialogResult.OK)
+                            LoadProducts();
+                    }
+                }
+                else
+                {
+                    DialogResult result = MessageBox.Show(
+                        "Bu ürünü tekrar aktifleştirmek istiyor musunuz?",
+                        "Onay",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        _repo.SetProductActiveStatus(productId, true);
                         LoadProducts();
                     }
                 }
             }
             else if (columnName == "colDelete")
             {
-                bool isActive = false;
-                object activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
-
-                if (activeValue != null && activeValue != DBNull.Value)
+                if (isActive)
                 {
-                    try
-                    {
-                        isActive = Convert.ToBoolean(activeValue);
-                    }
-                    catch
-                    {
-                        string activeText = activeValue.ToString();
-                        isActive = activeText == "Aktif" || activeText == "True" || activeText == "true";
-                    }
-                }
+                    DialogResult result = MessageBox.Show(
+                        "Bu ürünü pasife çekmek istiyor musunuz?",
+                        "Onay",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
 
-                string message = isActive
-                    ? "Bu ürünü pasife çekmek istiyor musunuz?"
-                    : "Bu ürünü tekrar aktife almak istiyor musunuz?";
-
-                DialogResult result = MessageBox.Show(
-                    message,
-                    "Onay",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (result == DialogResult.Yes)
-                {
-                    try
+                    if (result == DialogResult.Yes)
                     {
-                        _repo.SetProductActiveStatus(productId, !isActive);
+                        _repo.SetProductActiveStatus(productId, false);
                         LoadProducts();
                     }
-                    catch (Exception ex)
+                }
+                else
+                {
+                    DialogResult result = MessageBox.Show(
+                        "Bu pasif ürünü kalıcı olarak silmek istiyor musunuz?",
+                        "Kalıcı Silme",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+
+                    if (result == DialogResult.Yes)
                     {
-                        MessageBox.Show("Ürün durumu güncellenirken hata: " + ex.Message,
-                            "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        _repo.DeleteProductPermanently(productId);
+                        LoadProducts();
                     }
                 }
             }
