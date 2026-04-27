@@ -82,6 +82,12 @@
     <Compile Include="Forms\FrmOrders.Designer.cs">
       <DependentUpon>FrmOrders.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\OrderModalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\OrderModalForm.Designer.cs">
+      <DependentUpon>OrderModalForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\ProductModalForm.cs">
       <SubType>Form</SubType>
     </Compile>

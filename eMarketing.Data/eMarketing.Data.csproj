@@ -45,6 +45,7 @@
     <Compile Include="Connection\DbHelper.cs" />
     <Compile Include="Models\Category.cs" />
     <Compile Include="Models\DashboardSummary.cs" />
+    <Compile Include="Models\OrderSummary.cs" />
     <Compile Include="Models\Product.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\CategoryRepository.cs" />

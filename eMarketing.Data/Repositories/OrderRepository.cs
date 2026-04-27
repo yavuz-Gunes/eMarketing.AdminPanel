@@ -1,6 +1,8 @@
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using eMarketing.Data.Connection;
+using eMarketing.Data.Models;
 
 namespace eMarketing.Data.Repositories
 {
@@ -11,27 +13,13 @@ namespace eMarketing.Data.Repositories
             DataTable table = new DataTable();
 
             using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("sp_Siparis_Listele", connection))
+            using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
             {
-                string query = @"SELECT 
-                                    o.OrderId,
-                                    o.CustomerName,
-                                    o.CustomerEmail,
-                                    o.CustomerPhone,
-                                    p.ProductName,
-                                    o.Quantity,
-                                    o.TotalPrice,
-                                    o.OrderStatus,
-                                    o.OrderDate
-                                 FROM Orders o
-                                 INNER JOIN Products p ON o.ProductId = p.ProductId
-                                 ORDER BY o.OrderId DESC";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                using (SqlCommand cmd = new SqlCommand(query, connection))
-                using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
-                {
-                    connection.Open();
-                    adapter.Fill(table);
-                }
+                connection.Open();
+                adapter.Fill(table);
             }
 
             return table;
@@ -40,42 +28,65 @@ namespace eMarketing.Data.Repositories
         public void AddOrder(string name, string email, string phone, int productId, int quantity, decimal totalPrice)
         {
             using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("sp_Siparis_Ekle", connection))
             {
-                string query = @"INSERT INTO Orders
-                                 (CustomerName, CustomerEmail, CustomerPhone, ProductId, Quantity, TotalPrice, OrderStatus, OrderDate)
-                                 VALUES
-                                 (@name, @email, @phone, @productId, @quantity, @totalPrice, 'Hazirlaniyor', GETDATE())";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                using (SqlCommand cmd = new SqlCommand(query, connection))
-                {
-                    cmd.Parameters.AddWithValue("@name", name);
-                    cmd.Parameters.AddWithValue("@email", email);
-                    cmd.Parameters.AddWithValue("@phone", phone);
-                    cmd.Parameters.AddWithValue("@productId", productId);
-                    cmd.Parameters.AddWithValue("@quantity", quantity);
-                    cmd.Parameters.AddWithValue("@totalPrice", totalPrice);
+                cmd.Parameters.AddWithValue("@CustomerName", name);
+                cmd.Parameters.AddWithValue("@CustomerEmail",
+                    string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                cmd.Parameters.AddWithValue("@CustomerPhone",
+                    string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
+                cmd.Parameters.AddWithValue("@ProductId", productId);
+                cmd.Parameters.AddWithValue("@Quantity", quantity);
+                cmd.Parameters.AddWithValue("@TotalPrice", totalPrice);
 
-                    connection.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                connection.Open();
+                cmd.ExecuteNonQuery();
             }
         }
 
         public void UpdateOrderStatus(int orderId, string status)
         {
             using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("sp_Siparis_Durum_Guncelle", connection))
             {
-                string query = "UPDATE Orders SET OrderStatus = @status WHERE OrderId = @orderId";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                using (SqlCommand cmd = new SqlCommand(query, connection))
+                cmd.Parameters.AddWithValue("@OrderId", orderId);
+                cmd.Parameters.AddWithValue("@OrderStatus", status);
+
+                connection.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public OrderSummary GetOrderSummary()
+        {
+            using (SqlConnection connection = DbHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                "SELECT ToplamSiparis, HazirlaniyorSayisi, KargodaSayisi, TeslimEdildiSayisi, IptalSayisi FROM vw_SiparisDurumOzet",
+                connection))
+            {
+                connection.Open();
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@status", status);
-                    cmd.Parameters.AddWithValue("@orderId", orderId);
-
-                    connection.Open();
-                    cmd.ExecuteNonQuery();
+                    if (reader.Read())
+                    {
+                        return new OrderSummary
+                        {
+                            TotalOrders = Convert.ToInt32(reader["ToplamSiparis"]),
+                            PreparingOrders = Convert.ToInt32(reader["HazirlaniyorSayisi"]),
+                            ShippedOrders = Convert.ToInt32(reader["KargodaSayisi"]),
+                            DeliveredOrders = Convert.ToInt32(reader["TeslimEdildiSayisi"]),
+                            CancelledOrders = Convert.ToInt32(reader["IptalSayisi"])
+                        };
+                    }
                 }
             }
+
+            return new OrderSummary();
         }
     }
 }

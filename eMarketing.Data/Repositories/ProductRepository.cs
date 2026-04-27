@@ -106,5 +106,31 @@ namespace eMarketing.Data.Repositories
         {
             return GetProducts("", 1, 0);
         }
+
+        public DataTable GetProductsForOrder()
+        {
+            DataTable table = new DataTable();
+
+            using (SqlConnection connection = DbHelper.GetConnection())
+            {
+                string query = @"SELECT 
+                                    ProductId,
+                                    ProductName + ' (Stok: ' + CAST(Stock AS NVARCHAR(20)) + ')' AS ProductDisplay,
+                                    Price,
+                                    Stock
+                                 FROM Products
+                                 WHERE IsActive = 1
+                                 ORDER BY ProductName";
+
+                using (SqlCommand cmd = new SqlCommand(query, connection))
+                using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+                {
+                    connection.Open();
+                    adapter.Fill(table);
+                }
+            }
+
+            return table;
+        }
     }
 }
