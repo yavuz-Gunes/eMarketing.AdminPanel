@@ -89,19 +89,6 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public void DeleteProductPermanently(int productId)
-        {
-            using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@ProductId", productId);
-
-                connection.Open();
-                cmd.ExecuteNonQuery();
-            }
-        }
-
         public void SetProductActiveStatus(int productId, bool isActive)
         {
             using (SqlConnection connection = DbHelper.GetConnection())
@@ -112,6 +99,48 @@ namespace eMarketing.Data.Repositories
 
                 connection.Open();
                 cmd.ExecuteNonQuery();
+            }
+        }
+
+        public bool DeleteProduct(int productId, out string message)
+        {
+            message = string.Empty;
+
+            try
+            {
+                using (SqlConnection connection = DbHelper.GetConnection())
+                using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ProductId", productId);
+
+                    connection.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                return true;
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 547)
+                {
+                    message = "Bu ürün başka kayıtlarda kullanıldığı için silinemez.";
+                    return false;
+                }
+
+                if (ex.Number == 50000)
+                {
+                    message = ex.Message;
+                    return false;
+                }
+
+                message = "Ürün silinirken veritabanı hatası oluştu: " + ex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                message = "Ürün silinirken hata oluştu: " + ex.Message;
+                return false;
             }
         }
 

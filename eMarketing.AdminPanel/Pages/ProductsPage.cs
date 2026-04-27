@@ -1020,8 +1020,15 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        _repo.DeleteProductPermanently(productId);
-                        LoadProducts();
+                        if (_repo.DeleteProduct(productId, out string message))
+                        {
+                            LoadProducts();
+                        }
+                        else
+                        {
+                            MessageBox.Show(message,
+                                "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
                     }
                 }
             }

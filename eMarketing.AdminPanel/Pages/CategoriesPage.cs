@@ -576,7 +576,6 @@ namespace eMarketing.AdminPanel.Pages
         }
 
 
-
         private void DgvCategories_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -623,16 +622,8 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        try
-                        {
-                            _repo.SetCategoryActiveStatus(categoryId, true);
-                            LoadCategories();
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Kategori aktifleştirilirken hata: " + ex.Message,
-                                "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        _repo.SetCategoryActiveStatus(categoryId, true);
+                        LoadCategories();
                     }
                 }
             }
@@ -648,16 +639,8 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        try
-                        {
-                            _repo.SetCategoryActiveStatus(categoryId, false);
-                            LoadCategories();
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Kategori pasife alınırken hata: " + ex.Message,
-                                "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        _repo.SetCategoryActiveStatus(categoryId, false);
+                        LoadCategories();
                     }
                 }
                 else
@@ -670,19 +653,19 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        try
+                        if (_repo.DeleteCategory(categoryId, out string message))
                         {
-                            _repo.DeleteCategory(categoryId);
                             LoadCategories();
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            MessageBox.Show("Kategori silinirken hata: " + ex.Message,
-                                "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show(message,
+                                "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }
                     }
                 }
             }
         }
+
     }
 }

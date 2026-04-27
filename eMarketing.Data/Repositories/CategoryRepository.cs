@@ -85,20 +85,48 @@ namespace eMarketing.Data.Repositories
                 throw new Exception("Kategori bulunamadı.");
 
             string categoryName = row["CategoryName"]?.ToString() ?? "";
-
             UpdateCategory(categoryId, categoryName, isActive);
         }
 
-        public void DeleteCategory(int categoryId)
+        public bool DeleteCategory(int categoryId, out string message)
         {
-            using (SqlConnection connection = DbHelper.GetConnection())
-            using (SqlCommand cmd = new SqlCommand("sp_Category_Delete", connection))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+            message = string.Empty;
 
-                connection.Open();
-                cmd.ExecuteNonQuery();
+            try
+            {
+                using (SqlConnection connection = DbHelper.GetConnection())
+                using (SqlCommand cmd = new SqlCommand("sp_Category_Delete", connection))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+                    connection.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                return true;
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 547)
+                {
+                    message = "Bu kategoriye bağlı ürünler olduğu için silinemez.";
+                    return false;
+                }
+
+                if (ex.Number == 50000)
+                {
+                    message = ex.Message;
+                    return false;
+                }
+
+                message = "Kategori silinirken veritabanı hatası oluştu: " + ex.Message;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                message = "Kategori silinirken hata oluştu: " + ex.Message;
+                return false;
             }
         }
 
@@ -106,6 +134,5 @@ namespace eMarketing.Data.Repositories
         {
             return GetCategories("", 1);
         }
-        
     }
 }
