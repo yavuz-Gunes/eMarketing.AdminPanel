@@ -429,6 +429,14 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
+                if (!IsValidProductName(productName))
+                {
+                    MessageBox.Show("Ürün adı yalnızca harf, boşluk ve izin verilen karakterleri içerebilir. Sayı ve özel karakterler kullanılamaz.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtProductName.Focus();
+                    return;
+                }
+
                 if (!decimal.TryParse(txtPrice.Text.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
                 {
                     if (!decimal.TryParse(txtPrice.Text.Trim(), out price))
@@ -438,6 +446,14 @@ namespace eMarketing.AdminPanel.Forms
                         txtPrice.Focus();
                         return;
                     }
+                }
+
+                if (price <= 0)
+                {
+                    MessageBox.Show("Fiyat sıfırdan büyük olmalıdır.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPrice.Focus();
+                    return;
                 }
 
                 if (!int.TryParse(txtStock.Text.Trim(), out int stock))
@@ -500,6 +516,23 @@ namespace eMarketing.AdminPanel.Forms
                 MessageBox.Show("Ürün kaydedilirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private bool IsValidProductName(string productName)
+        {
+            if (string.IsNullOrWhiteSpace(productName))
+                return false;
+
+            foreach (char c in productName)
+            {
+                if (char.IsDigit(c))
+                    return false;
+
+                if (!char.IsLetter(c) && !char.IsWhiteSpace(c) && c != '-' && c != '(' && c != ')' && c != '&' && c != ',')
+                    return false;
+            }
+
+            return true;
         }
     }
 }

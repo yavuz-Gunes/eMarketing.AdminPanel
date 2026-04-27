@@ -162,6 +162,14 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
+                if (!IsValidCategoryName(categoryName))
+                {
+                    MessageBox.Show("Kategori adı yalnızca harf, boşluk ve izin verilen karakterleri içerebilir. Sayı ve özel karakterler kullanılamaz.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtCategoryName.Focus();
+                    return;
+                }
+
                 if (_categoryId > 0)
                 {
                     _repo.UpdateCategory(_categoryId, categoryName, chkIsActive.Checked);
@@ -180,6 +188,23 @@ namespace eMarketing.AdminPanel.Forms
                 MessageBox.Show("Kategori kaydedilirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private bool IsValidCategoryName(string categoryName)
+        {
+            if (string.IsNullOrWhiteSpace(categoryName))
+                return false;
+
+            foreach (char c in categoryName)
+            {
+                if (char.IsDigit(c))
+                    return false;
+
+                if (!char.IsLetter(c) && !char.IsWhiteSpace(c) && c != '-' && c != '(' && c != ')' && c != '&' && c != ',')
+                    return false;
+            }
+
+            return true;
         }
     }
 }
