@@ -37,11 +37,20 @@ namespace eMarketing.AdminPanel.Pages
         private ComboBox cmbStatus;
         private Button btnUpdateStatus;
 
+        private TextBox txtSearch;
+        private Button btnSearch;
+        private DataTable ordersTable;
+        private Timer searchTimer;
+
         public OrdersPage()
         {
             Dock = DockStyle.Fill;
             BackColor = AppColors.Background;
             Padding = new Padding(24, 18, 24, 18);
+
+            searchTimer = new Timer();
+            searchTimer.Interval = 300;
+            searchTimer.Tick += SearchTimer_Tick;
 
             BuildLayout();
             Load += OrdersPage_Load;
@@ -170,9 +179,34 @@ namespace eMarketing.AdminPanel.Pages
             filterPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 18,
-                BackColor = AppColors.Background
+                Height = 64,
+                BackColor = Color.White,
+                Padding = new Padding(16, 14, 16, 14)
             };
+
+            txtSearch = new TextBox
+            {
+                Width = 280,
+                Font = new Font("Segoe UI", 10F),
+                Location = new Point(16, 16)
+            };
+
+            btnSearch = new Button
+            {
+                Text = "Ara",
+                Width = 90,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(312, 15)
+            };
+            btnSearch.FlatAppearance.BorderColor = Color.Gainsboro;
+
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+            txtSearch.KeyDown += TxtSearch_KeyDown;
+            btnSearch.Click += BtnSearch_Click;
+
+            filterPanel.Controls.Add(txtSearch);
+            filterPanel.Controls.Add(btnSearch);
         }
 
         private void BuildGridPanel()
@@ -300,8 +334,8 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                DataTable table = _repo.GetAllOrders();
-                dgvOrders.DataSource = table;
+                ordersTable = _repo.GetAllOrders();
+                dgvOrders.DataSource = ordersTable;
 
                 if (dgvOrders.Columns.Contains("ProductId"))
                     dgvOrders.Columns["ProductId"].Visible = false;
@@ -383,6 +417,7 @@ namespace eMarketing.AdminPanel.Pages
                 {
                     LoadOrderSummary();
                     LoadOrders();
+                    ApplySearch();
                 }
             }
         }
@@ -529,6 +564,7 @@ namespace eMarketing.AdminPanel.Pages
 
                 LoadOrderSummary();
                 LoadOrders();
+                ApplySearch();
                 txtOrderId.Clear();
                 cmbStatus.SelectedIndex = 0;
             }
@@ -537,6 +573,63 @@ namespace eMarketing.AdminPanel.Pages
                 MessageBox.Show("Sipariş durumu güncellenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+        private void ApplySearch()
+        {
+            try
+            {
+                if (ordersTable == null)
+                    return;
+
+                string search = txtSearch.Text.Trim().Replace("'", "''");
+
+                DataView view = ordersTable.DefaultView;
+
+                if (string.IsNullOrWhiteSpace(search))
+                {
+                    view.RowFilter = string.Empty;
+                }
+                else
+                {
+                    view.RowFilter =
+                        $"Convert(CustomerName, 'System.String') LIKE '%{search}%' " +
+                        $"OR Convert(CustomerEmail, 'System.String') LIKE '%{search}%' " +
+                        $"OR Convert(CustomerPhone, 'System.String') LIKE '%{search}%' " +
+                        $"OR Convert(ProductName, 'System.String') LIKE '%{search}%'";
+                }
+
+                dgvOrders.DataSource = view;
+            }
+            catch
+            {
+            }
+        }
+
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+            searchTimer.Start();
+        }
+
+        private void SearchTimer_Tick(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+            ApplySearch();
+        }
+
+        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                searchTimer.Stop();
+                ApplySearch();
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void BtnSearch_Click(object sender, EventArgs e)
+        {
+            ApplySearch();
         }
     }
 }
