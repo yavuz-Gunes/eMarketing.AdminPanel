@@ -14,12 +14,16 @@ namespace eMarketing.Data.Repositories
                 DataTable table = new DataTable();
 
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Category_List", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Kategori_Listele", connection))
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@Search", string.IsNullOrWhiteSpace(search) ? "" : search.Trim());
-                    cmd.Parameters.AddWithValue("@Status", status);
+
+                    cmd.Parameters.Add("@Arama", SqlDbType.NVarChar, 150)
+                        .Value = string.IsNullOrWhiteSpace(search) ? "" : search.Trim();
+
+                    cmd.Parameters.Add("@Durum", SqlDbType.Int)
+                        .Value = status;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -44,11 +48,13 @@ namespace eMarketing.Data.Repositories
                 DataTable table = new DataTable();
 
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Category_GetById", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Kategori_Getir", connection))
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+                    cmd.Parameters.Add("@KategoriId", SqlDbType.Int)
+                        .Value = categoryId;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -74,10 +80,12 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Category_Insert", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Kategori_Ekle", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@CategoryName", categoryName.Trim());
+
+                    cmd.Parameters.Add("@KategoriAdi", SqlDbType.NVarChar, 150)
+                        .Value = categoryName.Trim();
 
                     connection.Open();
 
@@ -100,12 +108,18 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Category_Update", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Kategori_Guncelle", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
-                    cmd.Parameters.AddWithValue("@CategoryName", categoryName.Trim());
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+
+                    cmd.Parameters.Add("@KategoriId", SqlDbType.Int)
+                        .Value = categoryId;
+
+                    cmd.Parameters.Add("@KategoriAdi", SqlDbType.NVarChar, 150)
+                        .Value = categoryName.Trim();
+
+                    cmd.Parameters.Add("@AktifMi", SqlDbType.Bit)
+                        .Value = isActive;
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -130,7 +144,8 @@ namespace eMarketing.Data.Repositories
                 if (row == null)
                     throw new Exception("Kategori bulunamadı.");
 
-                string categoryName = row["CategoryName"]?.ToString() ?? "";
+                string categoryName = row["KategoriAdi"]?.ToString() ?? "";
+
                 UpdateCategory(categoryId, categoryName, isActive);
             }
             catch (Exception ex)
@@ -146,10 +161,12 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Category_Delete", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Kategori_Sil", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+                    cmd.Parameters.Add("@KategoriId", SqlDbType.Int)
+                        .Value = categoryId;
 
                     connection.Open();
                     cmd.ExecuteNonQuery();

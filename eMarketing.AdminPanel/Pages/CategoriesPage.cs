@@ -9,7 +9,7 @@ using eMarketing.AdminPanel.Forms;
 
 namespace eMarketing.AdminPanel.Pages
 {
-    public  class CategoriesPage : UserControl
+    public class CategoriesPage : UserControl
     {
         private readonly CategoryRepository _repo = new CategoryRepository();
 
@@ -39,8 +39,6 @@ namespace eMarketing.AdminPanel.Pages
 
         public CategoriesPage()
         {
-            
-
             Dock = DockStyle.Fill;
             BackColor = AppColors.Background;
             Padding = new Padding(24, 18, 24, 18);
@@ -107,6 +105,7 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
             };
+
             btnNewCategory.FlatAppearance.BorderSize = 0;
             btnNewCategory.Click += BtnNewCategory_Click;
 
@@ -188,6 +187,7 @@ namespace eMarketing.AdminPanel.Pages
                 Font = new Font("Segoe UI", 10F),
                 Location = new Point(332, 16)
             };
+
             cmbStatus.Items.Add("Aktif");
             cmbStatus.Items.Add("Pasif");
             cmbStatus.Items.Add("Hepsi");
@@ -201,6 +201,7 @@ namespace eMarketing.AdminPanel.Pages
                 FlatStyle = FlatStyle.Flat,
                 Location = new Point(488, 15)
             };
+
             btnSearch.FlatAppearance.BorderColor = Color.Gainsboro;
 
             txtSearch.KeyDown += TxtSearch_KeyDown;
@@ -260,12 +261,139 @@ namespace eMarketing.AdminPanel.Pages
 
             gridPanel.Controls.Add(dgvCategories);
         }
+
+        private void ConfigureGridColumns()
+        {
+            dgvCategories.Columns.Clear();
+
+            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "KategoriId",
+                DataPropertyName = "KategoriId",
+                HeaderText = "ID",
+                Visible = false
+            });
+
+            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "KategoriAdi",
+                DataPropertyName = "KategoriAdi",
+                HeaderText = "Kategori Adı",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                FillWeight = 48
+            });
+
+            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "AktifMi",
+                DataPropertyName = "AktifMi",
+                HeaderText = "Durum",
+                Width = 120
+            });
+
+            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "OlusturmaTarihi",
+                DataPropertyName = "OlusturmaTarihi",
+                HeaderText = "Oluşturulma",
+                Width = 170,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Format = "dd.MM.yyyy HH:mm"
+                }
+            });
+
+            dgvCategories.Columns.Add(new DataGridViewButtonColumn
+            {
+                Name = "colEdit",
+                HeaderText = "",
+                Text = "Düzenle",
+                UseColumnTextForButtonValue = true,
+                Width = 110
+            });
+
+            dgvCategories.Columns.Add(new DataGridViewButtonColumn
+            {
+                Name = "colDelete",
+                HeaderText = "",
+                Text = "Sil",
+                UseColumnTextForButtonValue = true,
+                Width = 90
+            });
+        }
+
+        private void LoadCategories()
+        {
+            try
+            {
+                DataTable table = _repo.GetCategories(txtSearch.Text.Trim(), GetSelectedStatus());
+                dgvCategories.DataSource = table;
+
+                UpdateStats(table);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Kategoriler yüklenirken hata: " + ex.Message,
+                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateStats(DataTable currentTable)
+        {
+            try
+            {
+                DataTable allTable = _repo.GetCategories("", -1);
+
+                int totalCount = allTable.Rows.Count;
+                int activeCount = 0;
+                int passiveCount = 0;
+
+                foreach (DataRow row in allTable.Rows)
+                {
+                    bool isActive = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
+
+                    if (isActive)
+                        activeCount++;
+                    else
+                        passiveCount++;
+                }
+
+                int shownCount = currentTable.Rows.Count;
+
+                cTotal.SetData("📁", "Toplam", totalCount.ToString());
+                cActive.SetData("✅", "Aktif", activeCount.ToString());
+                cPassive.SetData("⛔", "Pasif", passiveCount.ToString());
+                cShown.SetData("🔎", "Gösterilen", shownCount.ToString());
+            }
+            catch
+            {
+                cTotal.SetData("📁", "Toplam", "0");
+                cActive.SetData("✅", "Aktif", "0");
+                cPassive.SetData("⛔", "Pasif", "0");
+                cShown.SetData("🔎", "Gösterilen", "0");
+            }
+        }
+
+        private int GetSelectedStatus()
+        {
+            switch (cmbStatus.SelectedIndex)
+            {
+                case 0:
+                    return 1;
+                case 1:
+                    return 0;
+                default:
+                    return -1;
+            }
+        }
+
         private void DgvCategories_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
             string columnName = dgvCategories.Columns[e.ColumnIndex].Name;
+
             if (columnName == "colEdit" || columnName == "colDelete")
             {
                 hoveredRowIndex = e.RowIndex;
@@ -288,6 +416,7 @@ namespace eMarketing.AdminPanel.Pages
             if (oldRow >= 0 && oldCol >= 0)
                 dgvCategories.InvalidateCell(oldCol, oldRow);
         }
+
         private void DgvCategories_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
@@ -295,12 +424,13 @@ namespace eMarketing.AdminPanel.Pages
 
             string columnName = dgvCategories.Columns[e.ColumnIndex].Name;
 
-            if (columnName == "IsActive")
+            if (columnName == "AktifMi")
             {
                 e.PaintBackground(e.CellBounds, true);
                 e.Handled = true;
 
                 bool isActive = false;
+
                 if (e.Value != null && e.Value != DBNull.Value)
                     isActive = Convert.ToBoolean(e.Value);
 
@@ -347,7 +477,7 @@ namespace eMarketing.AdminPanel.Pages
                 bool isHovered = e.RowIndex == hoveredRowIndex && e.ColumnIndex == hoveredColumnIndex;
 
                 bool rowIsActive = false;
-                object activeValue = dgvCategories.Rows[e.RowIndex].Cells["IsActive"].Value;
+                object activeValue = dgvCategories.Rows[e.RowIndex].Cells["AktifMi"].Value;
 
                 if (activeValue != null && activeValue != DBNull.Value)
                 {
@@ -407,174 +537,6 @@ namespace eMarketing.AdminPanel.Pages
                 return;
             }
         }
-        private void ConfigureGridColumns()
-        {
-            dgvCategories.Columns.Clear();
-
-            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CategoryId",
-                DataPropertyName = "CategoryId",
-                HeaderText = "ID",
-                Visible = false
-            });
-
-            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CategoryName",
-                DataPropertyName = "CategoryName",
-                HeaderText = "Kategori Adı",
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-                FillWeight = 48
-            });
-
-            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "IsActive",
-                DataPropertyName = "IsActive",
-                HeaderText = "Durum",
-                Width = 120
-            });
-
-            dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CreatedAt",
-                DataPropertyName = "CreatedAt",
-                HeaderText = "Oluşturulma",
-                Width = 170,
-                DefaultCellStyle = new DataGridViewCellStyle
-                {
-                    Format = "dd.MM.yyyy HH:mm"
-                }
-            });
-
-            dgvCategories.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colEdit",
-                HeaderText = "",
-                Text = "Düzenle",
-                UseColumnTextForButtonValue = true,
-                Width = 110
-            });
-
-            dgvCategories.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colDelete",
-                HeaderText = "",
-                Text = "Sil",
-                UseColumnTextForButtonValue = true,
-                Width = 90
-            });
-        }
-
-        private void LoadCategories()
-        {
-            try
-            {
-                DataTable table = _repo.GetCategories(txtSearch.Text.Trim(), GetSelectedStatus());
-                dgvCategories.DataSource = table;
-
-                UpdateStats(table);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Kategoriler yüklenirken hata: " + ex.Message,
-                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void UpdateStats(DataTable currentTable)
-        {
-            try
-            {
-                DataTable allTable = _repo.GetCategories("", -1);
-
-                int totalCount = allTable.Rows.Count;
-                int activeCount = 0;
-                int passiveCount = 0;
-
-                foreach (DataRow row in allTable.Rows)
-                {
-                    bool isActive = row["IsActive"] != DBNull.Value && Convert.ToBoolean(row["IsActive"]);
-
-                    if (isActive)
-                        activeCount++;
-                    else
-                        passiveCount++;
-                }
-
-                int shownCount = currentTable.Rows.Count;
-
-                cTotal.SetData("📁", "Toplam", totalCount.ToString());
-                cActive.SetData("✅", "Aktif", activeCount.ToString());
-                cPassive.SetData("⛔", "Pasif", passiveCount.ToString());
-                cShown.SetData("🔎", "Gösterilen", shownCount.ToString());
-            }
-            catch
-            {
-                cTotal.SetData("📁", "Toplam", "0");
-                cActive.SetData("✅", "Aktif", "0");
-                cPassive.SetData("⛔", "Pasif", "0");
-                cShown.SetData("🔎", "Gösterilen", "0");
-            }
-        }
-
-        private int GetSelectedStatus()
-        {
-            switch (cmbStatus.SelectedIndex)
-            {
-                case 0:
-                    return 1;
-                case 1:
-                    return 0;
-                default:
-                    return -1;
-            }
-        }
-
-        private void BtnNewCategory_Click(object sender, EventArgs e)
-        {
-            using (var frm = new CategoryModalForm())
-            {
-                if (frm.ShowDialog() == DialogResult.OK)
-                {
-                    LoadCategories();
-                }
-            }
-        }
-
-        private void BtnSearch_Click(object sender, EventArgs e)
-        {
-            LoadCategories();
-        }
-
-        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                searchTimer.Stop();
-                LoadCategories();
-                e.SuppressKeyPress = true;
-            }
-        }
-
-        private void TxtSearch_TextChanged(object sender, EventArgs e)
-        {
-            searchTimer.Stop();
-            searchTimer.Start();
-        }
-
-        private void SearchTimer_Tick(object sender, EventArgs e)
-        {
-            searchTimer.Stop();
-            LoadCategories();
-        }
-
-        private void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            LoadCategories();
-        }
-
 
         private void DgvCategories_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -582,10 +544,10 @@ namespace eMarketing.AdminPanel.Pages
                 return;
 
             string columnName = dgvCategories.Columns[e.ColumnIndex].Name;
-            int categoryId = Convert.ToInt32(dgvCategories.Rows[e.RowIndex].Cells["CategoryId"].Value);
+            int categoryId = Convert.ToInt32(dgvCategories.Rows[e.RowIndex].Cells["KategoriId"].Value);
 
             bool isActive = false;
-            object activeValue = dgvCategories.Rows[e.RowIndex].Cells["IsActive"].Value;
+            object activeValue = dgvCategories.Rows[e.RowIndex].Cells["AktifMi"].Value;
 
             if (activeValue != null && activeValue != DBNull.Value)
             {
@@ -667,5 +629,47 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
+        private void BtnNewCategory_Click(object sender, EventArgs e)
+        {
+            using (var frm = new CategoryModalForm())
+            {
+                if (frm.ShowDialog() == DialogResult.OK)
+                {
+                    LoadCategories();
+                }
+            }
+        }
+
+        private void BtnSearch_Click(object sender, EventArgs e)
+        {
+            LoadCategories();
+        }
+
+        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                searchTimer.Stop();
+                LoadCategories();
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+            searchTimer.Start();
+        }
+
+        private void SearchTimer_Tick(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+            LoadCategories();
+        }
+
+        private void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadCategories();
+        }
     }
 }

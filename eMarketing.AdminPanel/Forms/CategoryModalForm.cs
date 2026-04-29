@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.Data.Repositories;
+
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class CategoryModalForm : Form
@@ -130,15 +131,17 @@ namespace eMarketing.AdminPanel.Forms
             try
             {
                 DataRow row = _repo.GetCategoryById(_categoryId);
+
                 if (row == null)
                 {
-                    MessageBox.Show("Kategori bulunamadı.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Kategori bulunamadı.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     Close();
                     return;
                 }
 
-                txtCategoryName.Text = row["CategoryName"]?.ToString();
-                chkIsActive.Checked = row["IsActive"] != DBNull.Value && Convert.ToBoolean(row["IsActive"]);
+                txtCategoryName.Text = row["KategoriAdi"]?.ToString();
+                chkIsActive.Checked = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
             }
             catch (Exception ex)
             {
@@ -200,8 +203,16 @@ namespace eMarketing.AdminPanel.Forms
                 if (char.IsDigit(c))
                     return false;
 
-                if (!char.IsLetter(c) && !char.IsWhiteSpace(c) && c != '-' && c != '(' && c != ')' && c != '&' && c != ',')
+                if (!char.IsLetter(c)
+                    && !char.IsWhiteSpace(c)
+                    && c != '-'
+                    && c != '('
+                    && c != ')'
+                    && c != '&'
+                    && c != ',')
+                {
                     return false;
+                }
             }
 
             return true;

@@ -36,7 +36,7 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public void AddOrder(string name, string email, string phone, int productId, int quantity, decimal totalPrice)
+        public int AddOrder(string name, string email, string phone, int productId, int quantity, decimal totalPrice)
         {
             try
             {
@@ -45,17 +45,30 @@ namespace eMarketing.Data.Repositories
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    cmd.Parameters.AddWithValue("@CustomerName", name);
-                    cmd.Parameters.AddWithValue("@CustomerEmail",
-                        string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
-                    cmd.Parameters.AddWithValue("@CustomerPhone",
-                        string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone);
-                    cmd.Parameters.AddWithValue("@ProductId", productId);
-                    cmd.Parameters.AddWithValue("@Quantity", quantity);
-                    cmd.Parameters.AddWithValue("@TotalPrice", totalPrice);
+                    cmd.Parameters.Add("@MusteriAdi", SqlDbType.NVarChar, 150)
+                        .Value = name.Trim();
+
+                    cmd.Parameters.Add("@MusteriEmail", SqlDbType.NVarChar, 150)
+                        .Value = string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email.Trim();
+
+                    cmd.Parameters.Add("@MusteriTelefon", SqlDbType.NVarChar, 50)
+                        .Value = string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone.Trim();
+
+                    cmd.Parameters.Add("@UrunId", SqlDbType.Int)
+                        .Value = productId;
+
+                    cmd.Parameters.Add("@Adet", SqlDbType.Int)
+                        .Value = quantity;
+
+                    cmd.Parameters.Add("@ToplamTutar", SqlDbType.Decimal)
+                        .Value = totalPrice;
+                    cmd.Parameters["@ToplamTutar"].Precision = 18;
+                    cmd.Parameters["@ToplamTutar"].Scale = 2;
 
                     connection.Open();
-                    cmd.ExecuteNonQuery();
+
+                    object result = cmd.ExecuteScalar();
+                    return result != null ? Convert.ToInt32(result) : 0;
                 }
             }
             catch (SqlException ex)
@@ -80,8 +93,11 @@ namespace eMarketing.Data.Repositories
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    cmd.Parameters.AddWithValue("@OrderId", orderId);
-                    cmd.Parameters.AddWithValue("@OrderStatus", status);
+                    cmd.Parameters.Add("@SiparisId", SqlDbType.Int)
+                        .Value = orderId;
+
+                    cmd.Parameters.Add("@SiparisDurumu", SqlDbType.NVarChar, 50)
+                        .Value = status;
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -105,10 +121,10 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand(
-                    "SELECT ToplamSiparis, HazirlaniyorSayisi, KargodaSayisi, TeslimEdildiSayisi, IptalSayisi FROM vw_SiparisDurumOzet",
-                    connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Siparis_DurumOzet_Getir", connection))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
                     connection.Open();
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
@@ -117,11 +133,11 @@ namespace eMarketing.Data.Repositories
                         {
                             return new OrderSummary
                             {
-                                TotalOrders = Convert.ToInt32(reader["ToplamSiparis"]),
-                                PreparingOrders = Convert.ToInt32(reader["HazirlaniyorSayisi"]),
-                                ShippedOrders = Convert.ToInt32(reader["KargodaSayisi"]),
-                                DeliveredOrders = Convert.ToInt32(reader["TeslimEdildiSayisi"]),
-                                CancelledOrders = Convert.ToInt32(reader["IptalSayisi"])
+                                TotalOrders = GetInt(reader, "ToplamSiparis"),
+                                PreparingOrders = GetInt(reader, "HazirlaniyorSayisi"),
+                                ShippedOrders = GetInt(reader, "KargodaSayisi"),
+                                DeliveredOrders = GetInt(reader, "TeslimEdildiSayisi"),
+                                CancelledOrders = GetInt(reader, "IptalSayisi")
                             };
                         }
                     }
@@ -137,6 +153,14 @@ namespace eMarketing.Data.Repositories
             {
                 throw new Exception("Sipariþ özeti getirilirken hata oluþtu: " + ex.Message);
             }
+        }
+
+        private int GetInt(SqlDataReader reader, string columnName)
+        {
+            if (reader[columnName] == DBNull.Value)
+                return 0;
+
+            return Convert.ToInt32(reader[columnName]);
         }
     }
 }

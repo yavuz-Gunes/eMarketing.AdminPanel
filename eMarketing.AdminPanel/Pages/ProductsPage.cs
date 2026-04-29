@@ -114,6 +114,7 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
             };
+
             btnNewProduct.FlatAppearance.BorderSize = 0;
             btnNewProduct.Click += BtnNewProduct_Click;
 
@@ -194,6 +195,7 @@ namespace eMarketing.AdminPanel.Pages
                 Font = new Font("Segoe UI", 10F),
                 Location = new Point(282, 16)
             };
+
             cmbStatus.Items.Add("Aktif");
             cmbStatus.Items.Add("Pasif");
             cmbStatus.Items.Add("Hepsi");
@@ -215,6 +217,7 @@ namespace eMarketing.AdminPanel.Pages
                 FlatStyle = FlatStyle.Flat,
                 Location = new Point(624, 15)
             };
+
             btnSearch.FlatAppearance.BorderColor = Color.Gainsboro;
 
             txtSearch.KeyDown += TxtSearch_KeyDown;
@@ -307,22 +310,22 @@ namespace eMarketing.AdminPanel.Pages
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "ProductId",
-                DataPropertyName = "ProductId",
+                Name = "UrunId",
+                DataPropertyName = "UrunId",
                 Visible = false
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "ImageUrlHidden",
-                DataPropertyName = "ImageUrl",
+                Name = "GorselUrlHidden",
+                DataPropertyName = "GorselUrl",
                 Visible = false
             });
 
             dgvProducts.Columns.Add(new DataGridViewImageColumn
             {
-                Name = "ProductImage",
-                DataPropertyName = "ProductImage",
+                Name = "UrunGorsel",
+                DataPropertyName = "UrunGorsel",
                 HeaderText = "Görsel",
                 Width = 70,
                 ImageLayout = DataGridViewImageCellLayout.Zoom
@@ -330,24 +333,24 @@ namespace eMarketing.AdminPanel.Pages
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "ProductName",
-                DataPropertyName = "ProductName",
+                Name = "UrunAdi",
+                DataPropertyName = "UrunAdi",
                 HeaderText = "Ürün Adı",
                 Width = 150
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Description",
-                DataPropertyName = "Description",
+                Name = "Aciklama",
+                DataPropertyName = "Aciklama",
                 HeaderText = "Açıklama",
                 Width = 170
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Price",
-                DataPropertyName = "Price",
+                Name = "Fiyat",
+                DataPropertyName = "Fiyat",
                 HeaderText = "Fiyat",
                 Width = 90,
                 DefaultCellStyle = new DataGridViewCellStyle
@@ -358,40 +361,40 @@ namespace eMarketing.AdminPanel.Pages
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Stock",
-                DataPropertyName = "Stock",
+                Name = "Stok",
+                DataPropertyName = "Stok",
                 HeaderText = "Stok",
                 Width = 60
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Category",
-                DataPropertyName = "Category",
+                Name = "KategoriAdi",
+                DataPropertyName = "KategoriAdi",
                 HeaderText = "Kategori",
                 Width = 120
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "IsActive",
-                DataPropertyName = "IsActive",
+                Name = "AktifMi",
+                DataPropertyName = "AktifMi",
                 HeaderText = "Durum",
                 Width = 80
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "StockStatus",
-                DataPropertyName = "StockStatus",
+                Name = "StokDurumu",
+                DataPropertyName = "StokDurumu",
                 HeaderText = "Stok Durumu",
                 Width = 95
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "CreatedDate",
-                DataPropertyName = "CreatedDate",
+                Name = "OlusturmaTarihi",
+                DataPropertyName = "OlusturmaTarihi",
                 HeaderText = "Oluşturulma",
                 Width = 120,
                 DefaultCellStyle = new DataGridViewCellStyle
@@ -423,25 +426,30 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
+                cmbCategory.SelectedIndexChanged -= CmbCategory_SelectedIndexChanged;
+
                 DataTable categories = _categoryRepo.GetActiveCategories();
 
                 DataTable source = new DataTable();
-                source.Columns.Add("CategoryId", typeof(int));
-                source.Columns.Add("CategoryName", typeof(string));
+                source.Columns.Add("KategoriId", typeof(int));
+                source.Columns.Add("KategoriAdi", typeof(string));
 
                 source.Rows.Add(0, "Tüm Kategoriler");
 
                 foreach (DataRow row in categories.Rows)
                 {
                     source.Rows.Add(
-                        Convert.ToInt32(row["CategoryId"]),
-                        row["CategoryName"].ToString()
+                        Convert.ToInt32(row["KategoriId"]),
+                        row["KategoriAdi"]?.ToString()
                     );
                 }
 
+                cmbCategory.DisplayMember = "KategoriAdi";
+                cmbCategory.ValueMember = "KategoriId";
                 cmbCategory.DataSource = source;
-                cmbCategory.DisplayMember = "CategoryName";
-                cmbCategory.ValueMember = "CategoryId";
+                cmbCategory.SelectedValue = 0;
+
+                cmbCategory.SelectedIndexChanged += CmbCategory_SelectedIndexChanged;
             }
             catch (Exception ex)
             {
@@ -461,25 +469,25 @@ namespace eMarketing.AdminPanel.Pages
 
                 DataTable table = _repo.GetProducts(txtSearch.Text.Trim(), GetSelectedStatus(), categoryId);
 
-                if (!table.Columns.Contains("StockStatus"))
-                    table.Columns.Add("StockStatus", typeof(string));
+                if (!table.Columns.Contains("StokDurumu"))
+                    table.Columns.Add("StokDurumu", typeof(string));
 
-                if (!table.Columns.Contains("ProductImage"))
-                    table.Columns.Add("ProductImage", typeof(Image));
+                if (!table.Columns.Contains("UrunGorsel"))
+                    table.Columns.Add("UrunGorsel", typeof(Image));
 
                 foreach (DataRow row in table.Rows)
                 {
-                    int stock = row["Stock"] != DBNull.Value ? Convert.ToInt32(row["Stock"]) : 0;
+                    int stock = row["Stok"] != DBNull.Value ? Convert.ToInt32(row["Stok"]) : 0;
 
                     if (stock <= 0)
-                        row["StockStatus"] = "Tükendi";
+                        row["StokDurumu"] = "Tükendi";
                     else if (stock <= 5)
-                        row["StockStatus"] = "Kritik";
+                        row["StokDurumu"] = "Kritik";
                     else
-                        row["StockStatus"] = "Yeterli";
+                        row["StokDurumu"] = "Yeterli";
 
-                    row["ProductImage"] = LoadProductThumbnail(
-                        row["ImageUrl"] == DBNull.Value ? "" : row["ImageUrl"].ToString()
+                    row["UrunGorsel"] = LoadProductThumbnail(
+                        row["GorselUrl"] == DBNull.Value ? "" : row["GorselUrl"]?.ToString()
                     );
                 }
 
@@ -600,8 +608,8 @@ namespace eMarketing.AdminPanel.Pages
 
                 foreach (DataRow row in allTable.Rows)
                 {
-                    bool isActive = row["IsActive"] != DBNull.Value && Convert.ToBoolean(row["IsActive"]);
-                    int stock = row["Stock"] != DBNull.Value ? Convert.ToInt32(row["Stock"]) : 0;
+                    bool isActive = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
+                    int stock = row["Stok"] != DBNull.Value ? Convert.ToInt32(row["Stok"]) : 0;
 
                     if (isActive)
                         activeCount++;
@@ -630,9 +638,12 @@ namespace eMarketing.AdminPanel.Pages
         {
             switch (cmbStatus.SelectedIndex)
             {
-                case 0: return 1;
-                case 1: return 0;
-                default: return -1;
+                case 0:
+                    return 1;
+                case 1:
+                    return 0;
+                default:
+                    return -1;
             }
         }
 
@@ -697,9 +708,10 @@ namespace eMarketing.AdminPanel.Pages
         {
             string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
 
-            if (columnName == "Description" && e.Value != null)
+            if (columnName == "Aciklama" && e.Value != null)
             {
                 string text = e.Value.ToString();
+
                 if (text.Length > 24)
                 {
                     e.Value = text.Substring(0, 24) + "...";
@@ -707,9 +719,10 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            if (columnName == "Category" && e.Value != null)
+            if (columnName == "KategoriAdi" && e.Value != null)
             {
                 string text = e.Value.ToString();
+
                 if (text.Length > 16)
                 {
                     e.Value = text.Substring(0, 16) + "...";
@@ -757,13 +770,13 @@ namespace eMarketing.AdminPanel.Pages
 
             string currentColumnName = dgvProducts.Columns[e.ColumnIndex].Name;
 
-            if (currentColumnName != "ProductImage")
+            if (currentColumnName != "UrunGorsel")
             {
                 HideImagePreview();
                 return;
             }
 
-            string imagePath = dgvProducts.Rows[e.RowIndex].Cells["ImageUrlHidden"].Value?.ToString();
+            string imagePath = dgvProducts.Rows[e.RowIndex].Cells["GorselUrlHidden"].Value?.ToString();
             ShowImagePreview(imagePath);
         }
 
@@ -788,12 +801,13 @@ namespace eMarketing.AdminPanel.Pages
 
             string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
 
-            if (columnName == "IsActive")
+            if (columnName == "AktifMi")
             {
                 e.PaintBackground(e.CellBounds, true);
                 e.Handled = true;
 
                 bool isActive = false;
+
                 if (e.Value != null && e.Value != DBNull.Value)
                     isActive = Convert.ToBoolean(e.Value);
 
@@ -828,7 +842,7 @@ namespace eMarketing.AdminPanel.Pages
                 return;
             }
 
-            if (columnName == "StockStatus")
+            if (columnName == "StokDurumu")
             {
                 e.PaintBackground(e.CellBounds, true);
                 e.Handled = true;
@@ -884,7 +898,7 @@ namespace eMarketing.AdminPanel.Pages
                 bool isHovered = e.RowIndex == hoveredRowIndex && e.ColumnIndex == hoveredColumnIndex;
 
                 bool rowIsActive = false;
-                object activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
+                object activeValue = dgvProducts.Rows[e.RowIndex].Cells["AktifMi"].Value;
 
                 if (activeValue != null && activeValue != DBNull.Value)
                 {
@@ -951,10 +965,10 @@ namespace eMarketing.AdminPanel.Pages
                 return;
 
             string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
-            int productId = Convert.ToInt32(dgvProducts.Rows[e.RowIndex].Cells["ProductId"].Value);
+            int productId = Convert.ToInt32(dgvProducts.Rows[e.RowIndex].Cells["UrunId"].Value);
 
             bool isActive = false;
-            object activeValue = dgvProducts.Rows[e.RowIndex].Cells["IsActive"].Value;
+            object activeValue = dgvProducts.Rows[e.RowIndex].Cells["AktifMi"].Value;
 
             if (activeValue != null && activeValue != DBNull.Value)
             {

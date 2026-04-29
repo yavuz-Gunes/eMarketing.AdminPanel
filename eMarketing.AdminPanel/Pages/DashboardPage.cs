@@ -90,6 +90,11 @@ namespace eMarketing.AdminPanel.Pages
 
         private void DashboardPage_Load(object sender, EventArgs e)
         {
+            LoadDashboardSummary();
+        }
+
+        private void LoadDashboardSummary()
+        {
             try
             {
                 DashboardSummary summary = _repo.GetSummary();
@@ -101,7 +106,11 @@ namespace eMarketing.AdminPanel.Pages
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Dashboard verileri çekilirken hata: " + ex.Message);
+                MessageBox.Show(
+                    "Dashboard verileri çekilirken hata: " + ex.Message,
+                    "Hata",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
     }

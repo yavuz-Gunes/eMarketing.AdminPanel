@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.Data.Repositories;
+
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class ProductModalForm : Form
@@ -205,6 +206,7 @@ namespace eMarketing.AdminPanel.Forms
                 Location = new Point(444, 328),
                 FlatStyle = FlatStyle.Flat
             };
+
             btnBrowseImage.FlatAppearance.BorderColor = Color.Gainsboro;
             btnBrowseImage.Click += BtnBrowseImage_Click;
 
@@ -241,6 +243,7 @@ namespace eMarketing.AdminPanel.Forms
                 Location = new Point(364, 14),
                 FlatStyle = FlatStyle.Flat
             };
+
             btnCancel.FlatAppearance.BorderColor = Color.Gainsboro;
             btnCancel.Click += (s, e) => Close();
 
@@ -254,6 +257,7 @@ namespace eMarketing.AdminPanel.Forms
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
             };
+
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;
 
@@ -288,9 +292,9 @@ namespace eMarketing.AdminPanel.Forms
             {
                 DataTable categories = _categoryRepo.GetActiveCategories();
 
+                cmbCategory.DisplayMember = "KategoriAdi";
+                cmbCategory.ValueMember = "KategoriId";
                 cmbCategory.DataSource = categories;
-                cmbCategory.DisplayMember = "CategoryName";
-                cmbCategory.ValueMember = "CategoryId";
             }
             catch (Exception ex)
             {
@@ -313,17 +317,19 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
-                txtProductName.Text = row["ProductName"]?.ToString();
-                txtDescription.Text = row["Description"] == DBNull.Value ? "" : row["Description"].ToString();
-                txtPrice.Text = row["Price"] != DBNull.Value
-                    ? Convert.ToDecimal(row["Price"]).ToString("0.##", CultureInfo.InvariantCulture)
-                    : "";
-                txtStock.Text = row["Stock"] != DBNull.Value ? row["Stock"].ToString() : "";
-                txtImagePath.Text = row["ImageUrl"] == DBNull.Value ? "" : row["ImageUrl"].ToString();
-                chkIsActive.Checked = row["IsActive"] != DBNull.Value && Convert.ToBoolean(row["IsActive"]);
+                txtProductName.Text = row["UrunAdi"]?.ToString();
+                txtDescription.Text = row["Aciklama"] == DBNull.Value ? "" : row["Aciklama"]?.ToString();
 
-                if (row["CategoryId"] != DBNull.Value)
-                    cmbCategory.SelectedValue = Convert.ToInt32(row["CategoryId"]);
+                txtPrice.Text = row["Fiyat"] != DBNull.Value
+                    ? Convert.ToDecimal(row["Fiyat"]).ToString("0.##", CultureInfo.InvariantCulture)
+                    : "";
+
+                txtStock.Text = row["Stok"] != DBNull.Value ? row["Stok"]?.ToString() : "";
+                txtImagePath.Text = row["GorselUrl"] == DBNull.Value ? "" : row["GorselUrl"]?.ToString();
+                chkIsActive.Checked = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
+
+                if (row["KategoriId"] != DBNull.Value)
+                    cmbCategory.SelectedValue = Convert.ToInt32(row["KategoriId"]);
 
                 LoadPreviewImage(txtImagePath.Text);
             }
@@ -431,7 +437,7 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (!IsValidProductName(productName))
                 {
-                    MessageBox.Show("Ürün adı yalnızca harf, boşluk ve izin verilen karakterleri içerebilir. Sayı ve özel karakterler kullanılamaz.",
+                    MessageBox.Show("Ürün adı yalnızca harf, rakam, boşluk ve izin verilen karakterleri içerebilir.",
                         "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtProductName.Focus();
                     return;
@@ -525,11 +531,19 @@ namespace eMarketing.AdminPanel.Forms
 
             foreach (char c in productName)
             {
-                if (char.IsDigit(c))
+                if (!char.IsLetterOrDigit(c)
+                    && !char.IsWhiteSpace(c)
+                    && c != '-'
+                    && c != '('
+                    && c != ')'
+                    && c != '&'
+                    && c != ','
+                    && c != '.'
+                    && c != '/'
+                    && c != '+')
+                {
                     return false;
-
-                if (!char.IsLetter(c) && !char.IsWhiteSpace(c) && c != '-' && c != '(' && c != ')' && c != '&' && c != ',')
-                    return false;
+                }
             }
 
             return true;

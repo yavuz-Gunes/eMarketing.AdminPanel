@@ -123,6 +123,7 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 10F),
                 MaxLength = 11
             };
+
             txtCustomerPhone.KeyPress += TxtCustomerPhone_KeyPress;
             txtCustomerPhone.Leave += TxtCustomerPhone_Leave;
 
@@ -142,6 +143,7 @@ namespace eMarketing.AdminPanel.Forms
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 10F)
             };
+
             cmbProduct.SelectedIndexChanged += CmbProduct_SelectedIndexChanged;
 
             lblQuantity = new Label
@@ -160,6 +162,7 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 10F),
                 Text = "1"
             };
+
             txtQuantity.TextChanged += TxtQuantity_TextChanged;
             txtQuantity.KeyPress += TxtQuantity_KeyPress;
             txtQuantity.Leave += TxtQuantity_Leave;
@@ -196,6 +199,7 @@ namespace eMarketing.AdminPanel.Forms
                 Location = new Point(304, 14),
                 FlatStyle = FlatStyle.Flat
             };
+
             btnCancel.FlatAppearance.BorderColor = Color.Gainsboro;
             btnCancel.Click += (s, e) => Close();
 
@@ -209,6 +213,7 @@ namespace eMarketing.AdminPanel.Forms
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
             };
+
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;
 
@@ -240,9 +245,9 @@ namespace eMarketing.AdminPanel.Forms
             {
                 DataTable products = _productRepo.GetProductsForOrder();
 
+                cmbProduct.DisplayMember = "UrunGosterim";
+                cmbProduct.ValueMember = "UrunId";
                 cmbProduct.DataSource = products;
-                cmbProduct.DisplayMember = "ProductDisplay";
-                cmbProduct.ValueMember = "ProductId";
 
                 RecalculateTotal();
             }
@@ -331,8 +336,8 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
-                decimal price = Convert.ToDecimal(rowView["Price"]);
-                int stock = rowView["Stock"] != DBNull.Value ? Convert.ToInt32(rowView["Stock"]) : 0;
+                decimal price = Convert.ToDecimal(rowView["Fiyat"]);
+                int stock = rowView["Stok"] != DBNull.Value ? Convert.ToInt32(rowView["Stok"]) : 0;
 
                 int quantity = 1;
                 int.TryParse(txtQuantity.Text.Trim(), out quantity);
@@ -379,6 +384,14 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
+                if (!IsValidCustomerName(customerName))
+                {
+                    MessageBox.Show("Müşteri adı yalnızca harf, boşluk ve izin verilen karakterleri içerebilir.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtCustomerName.Focus();
+                    return;
+                }
+
                 if (!IsValidEmail(customerEmail))
                 {
                     MessageBox.Show("Geçerli bir e-posta adresi giriniz.",
@@ -420,7 +433,8 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
-                int stock = rowView["Stock"] != DBNull.Value ? Convert.ToInt32(rowView["Stock"]) : 0;
+                int stock = rowView["Stok"] != DBNull.Value ? Convert.ToInt32(rowView["Stok"]) : 0;
+
                 if (quantity > stock)
                 {
                     MessageBox.Show("Girilen adet mevcut stoktan fazla olamaz.",
@@ -429,11 +443,17 @@ namespace eMarketing.AdminPanel.Forms
                     return;
                 }
 
-                decimal price = Convert.ToDecimal(rowView["Price"]);
+                decimal price = Convert.ToDecimal(rowView["Fiyat"]);
                 decimal totalPrice = price * quantity;
                 int productId = Convert.ToInt32(cmbProduct.SelectedValue);
 
-                _orderRepo.AddOrder(customerName, customerEmail, customerPhone, productId, quantity, totalPrice);
+                _orderRepo.AddOrder(
+                    customerName,
+                    customerEmail,
+                    customerPhone,
+                    productId,
+                    quantity,
+                    totalPrice);
 
                 DialogResult = DialogResult.OK;
                 Close();
@@ -443,6 +463,26 @@ namespace eMarketing.AdminPanel.Forms
                 MessageBox.Show("Sipariş kaydedilirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private bool IsValidCustomerName(string customerName)
+        {
+            if (string.IsNullOrWhiteSpace(customerName))
+                return false;
+
+            foreach (char c in customerName)
+            {
+                if (!char.IsLetter(c)
+                    && !char.IsWhiteSpace(c)
+                    && c != '-'
+                    && c != '.'
+                    && c != '\'')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

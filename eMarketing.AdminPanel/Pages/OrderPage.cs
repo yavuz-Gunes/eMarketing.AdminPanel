@@ -114,6 +114,7 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
             };
+
             btnNewOrder.FlatAppearance.BorderSize = 0;
             btnNewOrder.Click += BtnNewOrder_Click;
 
@@ -199,6 +200,7 @@ namespace eMarketing.AdminPanel.Pages
                 FlatStyle = FlatStyle.Flat,
                 Location = new Point(312, 15)
             };
+
             btnSearch.FlatAppearance.BorderColor = Color.Gainsboro;
 
             txtSearch.TextChanged += TxtSearch_TextChanged;
@@ -299,6 +301,7 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White
             };
+
             btnUpdateStatus.FlatAppearance.BorderSize = 0;
             btnUpdateStatus.Click += BtnUpdateStatus_Click;
 
@@ -337,65 +340,73 @@ namespace eMarketing.AdminPanel.Pages
                 ordersTable = _repo.GetAllOrders();
                 dgvOrders.DataSource = ordersTable;
 
-                if (dgvOrders.Columns.Contains("ProductId"))
-                    dgvOrders.Columns["ProductId"].Visible = false;
-
-                if (dgvOrders.Columns.Contains("OrderId"))
-                    dgvOrders.Columns["OrderId"].Width = 80;
-
-                if (dgvOrders.Columns.Contains("CustomerName"))
-                {
-                    dgvOrders.Columns["CustomerName"].HeaderText = "Müşteri";
-                    dgvOrders.Columns["CustomerName"].Width = 140;
-                }
-
-                if (dgvOrders.Columns.Contains("CustomerEmail"))
-                {
-                    dgvOrders.Columns["CustomerEmail"].HeaderText = "E-Posta";
-                    dgvOrders.Columns["CustomerEmail"].Width = 170;
-                }
-
-                if (dgvOrders.Columns.Contains("CustomerPhone"))
-                {
-                    dgvOrders.Columns["CustomerPhone"].HeaderText = "Telefon";
-                    dgvOrders.Columns["CustomerPhone"].Width = 110;
-                }
-
-                if (dgvOrders.Columns.Contains("ProductName"))
-                {
-                    dgvOrders.Columns["ProductName"].HeaderText = "Ürün";
-                    dgvOrders.Columns["ProductName"].Width = 170;
-                }
-
-                if (dgvOrders.Columns.Contains("Quantity"))
-                {
-                    dgvOrders.Columns["Quantity"].HeaderText = "Adet";
-                    dgvOrders.Columns["Quantity"].Width = 60;
-                }
-
-                if (dgvOrders.Columns.Contains("TotalPrice"))
-                {
-                    dgvOrders.Columns["TotalPrice"].HeaderText = "Tutar";
-                    dgvOrders.Columns["TotalPrice"].Width = 90;
-                    dgvOrders.Columns["TotalPrice"].DefaultCellStyle.Format = "N2";
-                }
-
-                if (dgvOrders.Columns.Contains("OrderStatus"))
-                {
-                    dgvOrders.Columns["OrderStatus"].HeaderText = "Durum";
-                    dgvOrders.Columns["OrderStatus"].Width = 120;
-                }
-
-                if (dgvOrders.Columns.Contains("OrderDate"))
-                {
-                    dgvOrders.Columns["OrderDate"].HeaderText = "Tarih";
-                    dgvOrders.Columns["OrderDate"].Width = 130;
-                }
+                ConfigureOrderGridColumns();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Siparişler yüklenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ConfigureOrderGridColumns()
+        {
+            if (dgvOrders.Columns.Contains("UrunId"))
+                dgvOrders.Columns["UrunId"].Visible = false;
+
+            if (dgvOrders.Columns.Contains("SiparisId"))
+            {
+                dgvOrders.Columns["SiparisId"].HeaderText = "ID";
+                dgvOrders.Columns["SiparisId"].Width = 80;
+            }
+
+            if (dgvOrders.Columns.Contains("MusteriAdi"))
+            {
+                dgvOrders.Columns["MusteriAdi"].HeaderText = "Müşteri";
+                dgvOrders.Columns["MusteriAdi"].Width = 140;
+            }
+
+            if (dgvOrders.Columns.Contains("MusteriEmail"))
+            {
+                dgvOrders.Columns["MusteriEmail"].HeaderText = "E-Posta";
+                dgvOrders.Columns["MusteriEmail"].Width = 170;
+            }
+
+            if (dgvOrders.Columns.Contains("MusteriTelefon"))
+            {
+                dgvOrders.Columns["MusteriTelefon"].HeaderText = "Telefon";
+                dgvOrders.Columns["MusteriTelefon"].Width = 110;
+            }
+
+            if (dgvOrders.Columns.Contains("UrunAdi"))
+            {
+                dgvOrders.Columns["UrunAdi"].HeaderText = "Ürün";
+                dgvOrders.Columns["UrunAdi"].Width = 170;
+            }
+
+            if (dgvOrders.Columns.Contains("Adet"))
+            {
+                dgvOrders.Columns["Adet"].HeaderText = "Adet";
+                dgvOrders.Columns["Adet"].Width = 60;
+            }
+
+            if (dgvOrders.Columns.Contains("ToplamTutar"))
+            {
+                dgvOrders.Columns["ToplamTutar"].HeaderText = "Tutar";
+                dgvOrders.Columns["ToplamTutar"].Width = 90;
+                dgvOrders.Columns["ToplamTutar"].DefaultCellStyle.Format = "N2";
+            }
+
+            if (dgvOrders.Columns.Contains("SiparisDurumu"))
+            {
+                dgvOrders.Columns["SiparisDurumu"].HeaderText = "Durum";
+                dgvOrders.Columns["SiparisDurumu"].Width = 120;
+            }
+
+            if (dgvOrders.Columns.Contains("SiparisTarihi"))
+            {
+                dgvOrders.Columns["SiparisTarihi"].HeaderText = "Tarih";
+                dgvOrders.Columns["SiparisTarihi"].Width = 130;
             }
         }
 
@@ -429,9 +440,10 @@ namespace eMarketing.AdminPanel.Pages
 
             DataGridViewRow row = dgvOrders.Rows[e.RowIndex];
 
-            txtOrderId.Text = row.Cells["OrderId"].Value?.ToString();
+            txtOrderId.Text = row.Cells["SiparisId"].Value?.ToString();
 
-            string currentStatus = row.Cells["OrderStatus"].Value?.ToString();
+            string currentStatus = row.Cells["SiparisDurumu"].Value?.ToString();
+
             if (!string.IsNullOrWhiteSpace(currentStatus))
                 cmbStatus.SelectedItem = currentStatus;
         }
@@ -440,14 +452,14 @@ namespace eMarketing.AdminPanel.Pages
         {
             string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
 
-            if (columnName == "OrderDate" && e.Value != null && e.Value != DBNull.Value)
+            if (columnName == "SiparisTarihi" && e.Value != null && e.Value != DBNull.Value)
             {
                 DateTime dt = Convert.ToDateTime(e.Value);
                 e.Value = dt.ToString("dd.MM.yyyy HH:mm");
                 e.FormattingApplied = true;
             }
 
-            if (columnName == "CustomerEmail" && e.Value != null)
+            if (columnName == "MusteriEmail" && e.Value != null)
             {
                 string text = e.Value.ToString();
                 if (text.Length > 22)
@@ -457,7 +469,7 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            if (columnName == "CustomerName" && e.Value != null)
+            if (columnName == "MusteriAdi" && e.Value != null)
             {
                 string text = e.Value.ToString();
                 if (text.Length > 18)
@@ -467,7 +479,7 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            if (columnName == "CustomerPhone" && e.Value != null)
+            if (columnName == "MusteriTelefon" && e.Value != null)
             {
                 string text = e.Value.ToString();
                 if (text.Length > 11)
@@ -485,7 +497,7 @@ namespace eMarketing.AdminPanel.Pages
 
             string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
 
-            if (columnName != "OrderStatus")
+            if (columnName != "SiparisDurumu")
                 return;
 
             e.PaintBackground(e.CellBounds, true);
@@ -517,6 +529,8 @@ namespace eMarketing.AdminPanel.Pages
                 foreColor = Color.FromArgb(185, 28, 28);
             }
 
+            string displayText = GetStatusDisplayText(text);
+
             Rectangle badgeRect = new Rectangle(
                 e.CellBounds.X + (e.CellBounds.Width - 96) / 2,
                 e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
@@ -532,8 +546,19 @@ namespace eMarketing.AdminPanel.Pages
                 sf.LineAlignment = StringAlignment.Center;
 
                 e.Graphics.FillRectangle(brush, badgeRect);
-                e.Graphics.DrawString(text, new Font("Segoe UI", 8.5F, FontStyle.Bold), textBrush, badgeRect, sf);
+                e.Graphics.DrawString(displayText, new Font("Segoe UI", 8.5F, FontStyle.Bold), textBrush, badgeRect, sf);
             }
+        }
+
+        private string GetStatusDisplayText(string status)
+        {
+            if (status == "Hazirlaniyor")
+                return "Hazırlanıyor";
+
+            if (status == "Iptal")
+                return "İptal";
+
+            return status;
         }
 
         private void BtnUpdateStatus_Click(object sender, EventArgs e)
@@ -565,6 +590,7 @@ namespace eMarketing.AdminPanel.Pages
                 LoadOrderSummary();
                 LoadOrders();
                 ApplySearch();
+
                 txtOrderId.Clear();
                 cmbStatus.SelectedIndex = 0;
             }
@@ -574,6 +600,7 @@ namespace eMarketing.AdminPanel.Pages
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
         private void ApplySearch()
         {
             try
@@ -582,7 +609,6 @@ namespace eMarketing.AdminPanel.Pages
                     return;
 
                 string search = txtSearch.Text.Trim().Replace("'", "''");
-
                 DataView view = ordersTable.DefaultView;
 
                 if (string.IsNullOrWhiteSpace(search))
@@ -592,13 +618,14 @@ namespace eMarketing.AdminPanel.Pages
                 else
                 {
                     view.RowFilter =
-                        $"Convert(CustomerName, 'System.String') LIKE '%{search}%' " +
-                        $"OR Convert(CustomerEmail, 'System.String') LIKE '%{search}%' " +
-                        $"OR Convert(CustomerPhone, 'System.String') LIKE '%{search}%' " +
-                        $"OR Convert(ProductName, 'System.String') LIKE '%{search}%'";
+                        $"Convert(MusteriAdi, 'System.String') LIKE '%{search}%' " +
+                        $"OR Convert(MusteriEmail, 'System.String') LIKE '%{search}%' " +
+                        $"OR Convert(MusteriTelefon, 'System.String') LIKE '%{search}%' " +
+                        $"OR Convert(UrunAdi, 'System.String') LIKE '%{search}%'";
                 }
 
                 dgvOrders.DataSource = view;
+                ConfigureOrderGridColumns();
             }
             catch
             {

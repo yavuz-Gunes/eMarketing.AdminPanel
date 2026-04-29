@@ -14,13 +14,19 @@ namespace eMarketing.Data.Repositories
                 DataTable table = new DataTable();
 
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Product_List", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Urun_Listele", connection))
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@Search", string.IsNullOrWhiteSpace(search) ? "" : search.Trim());
-                    cmd.Parameters.AddWithValue("@Status", status);
-                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+                    cmd.Parameters.Add("@Arama", SqlDbType.NVarChar, 200)
+                        .Value = string.IsNullOrWhiteSpace(search) ? "" : search.Trim();
+
+                    cmd.Parameters.Add("@Durum", SqlDbType.Int)
+                        .Value = status;
+
+                    cmd.Parameters.Add("@KategoriId", SqlDbType.Int)
+                        .Value = categoryId;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -45,11 +51,13 @@ namespace eMarketing.Data.Repositories
                 DataTable table = new DataTable();
 
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Product_GetById", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Urun_Getir", connection))
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@ProductId", productId);
+
+                    cmd.Parameters.Add("@UrunId", SqlDbType.Int)
+                        .Value = productId;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -75,16 +83,32 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Product_Insert", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Urun_Ekle", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@ProductName", name.Trim());
-                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
-                    cmd.Parameters.AddWithValue("@Price", price);
-                    cmd.Parameters.AddWithValue("@Stock", stock);
-                    cmd.Parameters.AddWithValue("@ImageUrl", string.IsNullOrWhiteSpace(imageUrl) ? (object)DBNull.Value : imageUrl.Trim());
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
-                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+                    cmd.Parameters.Add("@KategoriId", SqlDbType.Int)
+                        .Value = categoryId;
+
+                    cmd.Parameters.Add("@UrunAdi", SqlDbType.NVarChar, 200)
+                        .Value = name.Trim();
+
+                    cmd.Parameters.Add("@Aciklama", SqlDbType.NVarChar)
+                        .Value = string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim();
+
+                    cmd.Parameters.Add("@Fiyat", SqlDbType.Decimal)
+                        .Value = price;
+                    cmd.Parameters["@Fiyat"].Precision = 18;
+                    cmd.Parameters["@Fiyat"].Scale = 2;
+
+                    cmd.Parameters.Add("@Stok", SqlDbType.Int)
+                        .Value = stock;
+
+                    cmd.Parameters.Add("@GorselUrl", SqlDbType.NVarChar, 500)
+                        .Value = string.IsNullOrWhiteSpace(imageUrl) ? (object)DBNull.Value : imageUrl.Trim();
+
+                    cmd.Parameters.Add("@AktifMi", SqlDbType.Bit)
+                        .Value = isActive;
 
                     connection.Open();
 
@@ -107,17 +131,35 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Product_Update", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Urun_Guncelle", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@ProductId", id);
-                    cmd.Parameters.AddWithValue("@ProductName", name.Trim());
-                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim());
-                    cmd.Parameters.AddWithValue("@Price", price);
-                    cmd.Parameters.AddWithValue("@Stock", stock);
-                    cmd.Parameters.AddWithValue("@ImageUrl", string.IsNullOrWhiteSpace(imageUrl) ? (object)DBNull.Value : imageUrl.Trim());
-                    cmd.Parameters.AddWithValue("@IsActive", isActive);
-                    cmd.Parameters.AddWithValue("@CategoryId", categoryId);
+
+                    cmd.Parameters.Add("@UrunId", SqlDbType.Int)
+                        .Value = id;
+
+                    cmd.Parameters.Add("@KategoriId", SqlDbType.Int)
+                        .Value = categoryId;
+
+                    cmd.Parameters.Add("@UrunAdi", SqlDbType.NVarChar, 200)
+                        .Value = name.Trim();
+
+                    cmd.Parameters.Add("@Aciklama", SqlDbType.NVarChar)
+                        .Value = string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description.Trim();
+
+                    cmd.Parameters.Add("@Fiyat", SqlDbType.Decimal)
+                        .Value = price;
+                    cmd.Parameters["@Fiyat"].Precision = 18;
+                    cmd.Parameters["@Fiyat"].Scale = 2;
+
+                    cmd.Parameters.Add("@Stok", SqlDbType.Int)
+                        .Value = stock;
+
+                    cmd.Parameters.Add("@GorselUrl", SqlDbType.NVarChar, 500)
+                        .Value = string.IsNullOrWhiteSpace(imageUrl) ? (object)DBNull.Value : imageUrl.Trim();
+
+                    cmd.Parameters.Add("@AktifMi", SqlDbType.Bit)
+                        .Value = isActive;
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -138,10 +180,15 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("UPDATE Products SET IsActive = @isActive WHERE ProductId = @productId", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Urun_DurumGuncelle", connection))
                 {
-                    cmd.Parameters.AddWithValue("@productId", productId);
-                    cmd.Parameters.AddWithValue("@isActive", isActive);
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@UrunId", SqlDbType.Int)
+                        .Value = productId;
+
+                    cmd.Parameters.Add("@AktifMi", SqlDbType.Bit)
+                        .Value = isActive;
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -164,10 +211,12 @@ namespace eMarketing.Data.Repositories
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Product_Delete", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Urun_Sil", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@ProductId", productId);
+
+                    cmd.Parameters.Add("@UrunId", SqlDbType.Int)
+                        .Value = productId;
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -218,22 +267,13 @@ namespace eMarketing.Data.Repositories
                 DataTable table = new DataTable();
 
                 using (SqlConnection connection = DbHelper.GetConnection())
+                using (SqlCommand cmd = new SqlCommand("sp_SiparisIcin_Urun_Listele", connection))
+                using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
-                    string query = @"SELECT 
-                                        ProductId,
-                                        ProductName + ' (Stok: ' + CAST(Stock AS NVARCHAR(20)) + ')' AS ProductDisplay,
-                                        Price,
-                                        Stock
-                                     FROM Products
-                                     WHERE IsActive = 1
-                                     ORDER BY ProductName";
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-                    using (SqlCommand cmd = new SqlCommand(query, connection))
-                    using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
-                    {
-                        connection.Open();
-                        adapter.Fill(table);
-                    }
+                    connection.Open();
+                    adapter.Fill(table);
                 }
 
                 return table;
