@@ -12,10 +12,14 @@ namespace eMarketing.AdminPanel.Pages
         private readonly DashboardRepository _repo = new DashboardRepository();
 
         private TableLayoutPanel cardsGrid;
+
         private CardControl cTotalProducts;
         private CardControl cActiveProducts;
         private CardControl cLowStock;
+        private CardControl cTotalCategories;
+        private CardControl cActiveCategories;
         private CardControl cTotalOrders;
+
         private Panel bodyArea;
 
         public DashboardPage()
@@ -35,32 +39,38 @@ namespace eMarketing.AdminPanel.Pages
             cardsGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 130,
-                ColumnCount = 4,
-                RowCount = 1,
+                Height = 270,
+                ColumnCount = 3,
+                RowCount = 2,
                 BackColor = AppColors.Background,
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
             };
 
             cardsGrid.ColumnStyles.Clear();
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
             cardsGrid.RowStyles.Clear();
-            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
 
-            cTotalProducts = CreateCard("Toplam Ürün", "0", new Padding(0, 0, 16, 0));
-            cActiveProducts = CreateCard("Aktif Ürün", "0", new Padding(0, 0, 16, 0));
-            cLowStock = CreateCard("Kritik Stok", "0", new Padding(0, 0, 16, 0));
+            cTotalProducts = CreateCard("Toplam Ürün", "0", new Padding(0, 0, 16, 16));
+            cActiveProducts = CreateCard("Aktif Ürün", "0", new Padding(0, 0, 16, 16));
+            cLowStock = CreateCard("Kritik Stok", "0", new Padding(0, 0, 0, 16));
+
+            cTotalCategories = CreateCard("Toplam Kategori", "0", new Padding(0, 0, 16, 0));
+            cActiveCategories = CreateCard("Aktif Kategori", "0", new Padding(0, 0, 16, 0));
             cTotalOrders = CreateCard("Toplam Sipariþ", "0", Padding.Empty);
 
             cardsGrid.Controls.Add(cTotalProducts, 0, 0);
             cardsGrid.Controls.Add(cActiveProducts, 1, 0);
             cardsGrid.Controls.Add(cLowStock, 2, 0);
-            cardsGrid.Controls.Add(cTotalOrders, 3, 0);
+
+            cardsGrid.Controls.Add(cTotalCategories, 0, 1);
+            cardsGrid.Controls.Add(cActiveCategories, 1, 1);
+            cardsGrid.Controls.Add(cTotalOrders, 2, 1);
 
             bodyArea = new Panel
             {
@@ -102,6 +112,10 @@ namespace eMarketing.AdminPanel.Pages
                 cTotalProducts.SetData("Toplam Ürün", summary.TotalProducts.ToString());
                 cActiveProducts.SetData("Aktif Ürün", summary.ActiveProducts.ToString());
                 cLowStock.SetData("Kritik Stok", summary.LowStockProducts.ToString());
+
+                cTotalCategories.SetData("Toplam Kategori", summary.TotalCategories.ToString());
+                cActiveCategories.SetData("Aktif Kategori", summary.ActiveCategories.ToString());
+
                 cTotalOrders.SetData("Toplam Sipariþ", summary.TotalOrders.ToString());
             }
             catch (Exception ex)
