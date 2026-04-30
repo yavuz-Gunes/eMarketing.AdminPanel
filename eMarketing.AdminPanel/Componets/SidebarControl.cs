@@ -1,139 +1,218 @@
-﻿    using System;
-    using System.Collections.Generic;
-    using System.Drawing;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-    using System.Windows.Forms;
-    using eMarketing.AdminPanel.Core;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Windows.Forms;
 
-    namespace eMarketing.AdminPanel.Componets
+namespace eMarketing.AdminPanel.Componets
+{
+    public class SidebarControl : UserControl
     {
-        public class SidebarControl : Panel
+        public event EventHandler<string> MenuClicked;
+
+        private readonly Dictionary<string, Button> _menuButtons = new Dictionary<string, Button>();
+
+        private readonly Color _sidebarBack = Color.FromArgb(20, 27, 38);
+        private readonly Color _sidebarSecond = Color.FromArgb(28, 36, 50);
+        private readonly Color _activeBack = Color.FromArgb(59, 130, 246);
+        private readonly Color _hoverBack = Color.FromArgb(36, 47, 66);
+        private readonly Color _textColor = Color.FromArgb(230, 236, 245);
+        private readonly Color _mutedTextColor = Color.FromArgb(140, 150, 165);
+        private readonly Color _dangerColor = Color.FromArgb(239, 68, 68);
+
+        private FlowLayoutPanel menuPanel;
+        private Panel logoPanel;
+        private Panel bottomPanel;
+
+        private string _activeKey = "Dashboard";
+
+        public SidebarControl()
         {
-            public event Action<string> MenuClicked;
+            Width = 240;
+            Dock = DockStyle.Left;
+            BackColor = _sidebarBack;
 
-            private Dictionary<string, Panel> menuItems = new Dictionary<string, Panel>();
-            private Panel activeIndicator;
+            BuildLayout();
+            SetActiveMenu("Dashboard");
+        }
 
-            public SidebarControl()
+        private void BuildLayout()
+        {
+            Controls.Clear();
+
+            BuildBottomPanel();
+            BuildLogoPanel();
+            BuildMenuPanel();
+        }
+
+        private void BuildLogoPanel()
+        {
+            logoPanel = new Panel
             {
-                Width = 240;
-                Dock = DockStyle.Left;
-                BackColor = AppColors.Sidebar;
+                Dock = DockStyle.Top,
+                Height = 105,
+                BackColor = _sidebarBack,
+                Padding = new Padding(18, 18, 18, 12)
+            };
 
-                BuildSidebar();
-            }
-
-            private void BuildSidebar()
+            Label lblTitle = new Label
             {
-                // Logo / Title
-                var title = new Label
-                {
-                    Text = "eMarketing",
-                    Font = new Font("Segoe UI", 14F, FontStyle.Bold),
-                    ForeColor = AppColors.TextPrimary,
-                    Location = new Point(25, 30),
-                    AutoSize = true
-                };
-                Controls.Add(title);
+                Text = "eMarketing",
+                Dock = DockStyle.Top,
+                Height = 34,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 17, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
 
-                // Active indicator (mavi bar)
-                activeIndicator = new Panel
-                {
-                    Width = 4,
-                    Height = 40,
-                    BackColor = AppColors.Primary,
-                    Visible = false
-                };
-                Controls.Add(activeIndicator);
-
-                AddMenuItem("Dashboard", 100);
-                AddMenuItem("Products", 150);
-                AddMenuItem("Orders", 200);
-                AddMenuItem("Customers", 250);
-                AddMenuItem("Categories", 300);
-
-            SetActive("Dashboard");
-            }
-
-            private void AddMenuItem(string text, int top)
+            Label lblSubTitle = new Label
             {
-                Panel container = new Panel
-                {
-                    Width = 240,
-                    Height = 45,
-                    Location = new Point(0, top),
-                    Cursor = Cursors.Hand
-                };
+                Text = "Oto Yedek Parça Paneli",
+                Dock = DockStyle.Top,
+                Height = 24,
+                ForeColor = _mutedTextColor,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
 
-                Label lbl = new Label
-                {
-                    Text = text,
-                    Font = new Font("Segoe UI", 10F),
-                    ForeColor = AppColors.TextSecondary,
-                    AutoSize = false,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Dock = DockStyle.Fill,
-                    Padding = new Padding(25, 0, 0, 0)
-                };
-
-                container.Controls.Add(lbl);
-
-                container.MouseEnter += (s, e) =>
-                {
-                    if (!IsActive(text))
-                        container.BackColor = Color.FromArgb(240, 242, 245);
-                };
-
-                container.MouseLeave += (s, e) =>
-                {
-                    if (!IsActive(text))
-                        container.BackColor = Color.Transparent;
-                };
-
-                container.Click += (s, e) =>
-                {
-                    SetActive(text);
-                    MenuClicked?.Invoke(text);
-                };
-
-                lbl.Click += (s, e) =>
-                {
-                    SetActive(text);
-                    MenuClicked?.Invoke(text);
-                };
-
-                Controls.Add(container);
-                menuItems[text] = container;
-            }
-
-            private void SetActive(string key)
+            Panel line = new Panel
             {
-                foreach (var item in menuItems)
+                Dock = DockStyle.Bottom,
+                Height = 1,
+                BackColor = Color.FromArgb(42, 52, 68)
+            };
+
+            logoPanel.Controls.Add(line);
+            logoPanel.Controls.Add(lblSubTitle);
+            logoPanel.Controls.Add(lblTitle);
+
+            Controls.Add(logoPanel);
+        }
+
+        private void BuildMenuPanel()
+        {
+            menuPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = _sidebarBack,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = false,
+                Padding = new Padding(12, 20, 12, 10)
+            };
+
+            AddMenuButton("Dashboard", "  Kontrol Paneli");
+            AddMenuButton("Products", "  Ürünler");
+            AddMenuButton("Categories", "  Kategoriler");
+            AddMenuButton("Orders", "  Siparişler");
+            AddMenuButton("Customers", "  Müşteriler");
+            AddMenuButton("Personnel", "  Personel");
+
+            Controls.Add(menuPanel);
+            menuPanel.BringToFront();
+        }
+
+        private void BuildBottomPanel()
+        {
+            bottomPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 86,
+                BackColor = _sidebarBack,
+                Padding = new Padding(12, 10, 12, 14)
+            };
+
+            Button btnLogout = new Button
+            {
+                Text = "  Çıkış Yap",
+                Dock = DockStyle.Fill,
+                Height = 46,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = _sidebarSecond,
+                ForeColor = _dangerColor,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand
+            };
+
+            btnLogout.FlatAppearance.BorderSize = 0;
+            btnLogout.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 35, 42);
+            btnLogout.FlatAppearance.MouseDownBackColor = Color.FromArgb(70, 40, 48);
+
+            btnLogout.Click += (sender, e) =>
+            {
+                MenuClicked?.Invoke(this, "Logout");
+            };
+
+            bottomPanel.Controls.Add(btnLogout);
+            Controls.Add(bottomPanel);
+        }
+
+        private void AddMenuButton(string key, string text)
+        {
+            Button button = new Button
+            {
+                Name = "btn" + key,
+                Text = text,
+                Width = 216,
+                Height = 44,
+                Margin = new Padding(0, 0, 0, 8),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = _sidebarBack,
+                ForeColor = _textColor,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand,
+                Tag = key
+            };
+
+            button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = _hoverBack;
+            button.FlatAppearance.MouseDownBackColor = _activeBack;
+
+            button.MouseEnter += (sender, e) =>
+            {
+                if (_activeKey != key)
+                    button.BackColor = _hoverBack;
+            };
+
+            button.MouseLeave += (sender, e) =>
+            {
+                if (_activeKey != key)
+                    button.BackColor = _sidebarBack;
+            };
+
+            button.Click += (sender, e) =>
+            {
+                SetActiveMenu(key);
+                MenuClicked?.Invoke(this, key);
+            };
+
+            _menuButtons[key] = button;
+            menuPanel.Controls.Add(button);
+        }
+
+        public void SetActiveMenu(string key)
+        {
+            _activeKey = key;
+
+            foreach (var item in _menuButtons)
+            {
+                Button button = item.Value;
+                string cleanText = button.Text.Replace("●", "").Trim();
+
+                if (item.Key == key)
                 {
-                    item.Value.BackColor = Color.Transparent;
-                    item.Value.Controls[0].ForeColor = AppColors.TextSecondary;
+                    button.BackColor = _activeBack;
+                    button.ForeColor = Color.White;
+                    button.Text = "  ● " + cleanText;
                 }
-
-                if (menuItems.ContainsKey(key))
+                else
                 {
-                    var panel = menuItems[key];
-                    panel.BackColor = Color.FromArgb(230, 238, 255);
-                    panel.Controls[0].ForeColor = AppColors.Primary;
-
-                    activeIndicator.Location = new Point(0, panel.Top);
-                    activeIndicator.Height = panel.Height;
-                    activeIndicator.Visible = true;
+                    button.BackColor = _sidebarBack;
+                    button.ForeColor = _textColor;
+                    button.Text = "  " + cleanText;
                 }
-            }
-
-            private bool IsActive(string key)
-            {
-                if (!menuItems.ContainsKey(key))
-                    return false;
-
-                return menuItems[key].BackColor == Color.FromArgb(230, 238, 255);
             }
         }
     }
+}

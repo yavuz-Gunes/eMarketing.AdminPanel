@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 
@@ -13,17 +8,36 @@ namespace eMarketing.AdminPanel.Componets
     {
         public static void Apply(DataGridView dgv)
         {
-            dgv.BackgroundColor = AppColors.Card;
+            dgv.BackgroundColor = AppColors.CardBackground;
             dgv.BorderStyle = BorderStyle.None;
             dgv.EnableHeadersVisualStyles = false;
             dgv.RowHeadersVisible = false;
 
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = AppColors.Primary;
-            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgv.ColumnHeadersHeight = 45;
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+            dgv.AllowUserToResizeRows = false;
 
-            dgv.DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 238, 255);
+            dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgv.MultiSelect = false;
+
+            dgv.ColumnHeadersHeight = 44;
+            dgv.RowTemplate.Height = 44;
+
+            dgv.GridColor = AppColors.Border;
+            dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgv.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
+            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+
+            dgv.DefaultCellStyle.BackColor = Color.White;
+            dgv.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
+            dgv.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgv.DefaultCellStyle.SelectionBackColor = AppColors.PrimarySoft;
             dgv.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
+
+            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
         }
     }
 }

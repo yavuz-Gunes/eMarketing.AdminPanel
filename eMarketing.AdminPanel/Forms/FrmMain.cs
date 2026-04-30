@@ -23,13 +23,14 @@ namespace eMarketing.AdminPanel.Forms
         {
             SuspendLayout();
 
+            Text = "eMarketing - Oto Yedek Parça Yönetim Paneli";
+            ShowIcon = false; // ikon kapalı durumda şuanda
             BackColor = AppColors.Background;
             WindowState = FormWindowState.Maximized;
             FormBorderStyle = FormBorderStyle.Sizable;
 
             Controls.Clear();
 
-            // BODY PANEL
             bodyPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -38,7 +39,6 @@ namespace eMarketing.AdminPanel.Forms
                 Padding = Padding.Empty
             };
 
-            // CONTENT PANEL
             contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -47,77 +47,191 @@ namespace eMarketing.AdminPanel.Forms
                 Padding = Padding.Empty
             };
 
-            // TOPBAR
             topbar = new TopbarControl
             {
                 Dock = DockStyle.Top,
-                Height = 60,
+                Height = 88,
                 Margin = Padding.Empty
             };
 
-            // SIDEBAR
+            topbar.ThemeToggleClicked += Topbar_ThemeToggleClicked;
+
             sidebar = new SidebarControl
             {
                 Dock = DockStyle.Left,
-                Width = 240,
+                Width = 250,
                 Margin = Padding.Empty
             };
+
             sidebar.MenuClicked += Sidebar_MenuClicked;
 
-            // ÖNEMLİ: Dock sırası için önce Fill, sonra Top
             bodyPanel.Controls.Add(contentPanel);
             bodyPanel.Controls.Add(topbar);
 
-            // ÖNEMLİ: Önce Fill alan, sonra Left sidebar
             Controls.Add(bodyPanel);
             Controls.Add(sidebar);
 
-            LoadPage(new DashboardPage(), "Dashboard");
+            LoadPage(
+                new DashboardPage(),
+                "Kontrol Paneli",
+                "Oto yedek parça yönetim özeti"
+            );
 
             ResumeLayout(true);
         }
 
-        private void LoadPage(UserControl page, string title)
+        private void LoadPage(UserControl page, string title, string subtitle)
         {
             contentPanel.SuspendLayout();
 
-            foreach (Control c in contentPanel.Controls)
-                c.Dispose();
+            foreach (Control control in contentPanel.Controls)
+                control.Dispose();
 
             contentPanel.Controls.Clear();
 
             page.Dock = DockStyle.Fill;
             page.Margin = Padding.Empty;
+            page.BackColor = AppColors.Background;
 
             contentPanel.Controls.Add(page);
+
             topbar.SetTitle(title);
+            topbar.SetSubtitle(subtitle);
+
+            if (page is IThemeable themeablePage)
+                themeablePage.ApplyTheme();
 
             contentPanel.ResumeLayout(true);
         }
 
-        private void Sidebar_MenuClicked(string menu)
+        private void Sidebar_MenuClicked(object sender, string pageName)
         {
-            switch (menu)
+            if (pageName == "Dashboard")
             {
-                case "Dashboard":
-                    LoadPage(new DashboardPage(), "Dashboard");
-                    break;
-
-                case "Products":
-                    LoadPage(new ProductsPage(), "Products");
-                    break;
-
-                case "Orders":
-                    LoadPage(new OrdersPage(), "Orders");
-                    break;
-
-                case "Customers":
-                    LoadPage(new CustomersPage(), "Customers");
-                    break;
-                case "Categories":
-                    LoadPage(new CategoriesPage(), "Categories");
-                    break;
+                LoadPage(
+                    new DashboardPage(),
+                  "Kontrol Paneli",
+                  "Genel satış, stok ve sipariş özetleri"
+                );
             }
+            else if (pageName == "Products")
+            {
+                LoadPage(
+                    new ProductsPage(),
+                    "Ürünler",
+                    "Oto yedek parça ürünlerini listele, ekle ve düzenle"
+                );
+            }
+            else if (pageName == "Categories")
+            {
+                LoadPage(
+                    new CategoriesPage(),
+                    "Kategoriler",
+                    "Ürün kategorilerini yönet"
+                );
+            }
+            else if (pageName == "Orders")
+            {
+                LoadPage(
+                    new OrdersPage(),
+                    "Siparişler",
+                    "Müşteri siparişlerini görüntüle ve takip et"
+                );
+            }
+            else if (pageName == "Customers")
+            {
+                LoadPage(
+                    new CustomersPage(),
+                    "Müşteriler",
+                    "Müşteri bilgilerini görüntüle ve yönet"
+                );
+            }
+            else if (pageName == "Personnel")
+            {
+                MessageBox.Show(
+                    "Personel sayfası henüz oluşturulmadı.",
+                    "Bilgi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
+            else if (pageName == "Logout")
+            {
+                Application.Exit();
+            }
+        }
+
+        private void Topbar_ThemeToggleClicked()
+        {
+            ApplyTheme();
+        }
+
+        private void ApplyTheme()
+        {
+            BackColor = AppColors.Background;
+
+            if (bodyPanel != null)
+                bodyPanel.BackColor = AppColors.Background;
+
+            if (contentPanel != null)
+                contentPanel.BackColor = AppColors.Background;
+
+            //sidebar?.ApplyTheme();
+            topbar?.ApplyTheme();
+
+            if (contentPanel != null)
+            {
+                foreach (Control control in contentPanel.Controls)
+                {
+                    ApplyThemeRecursive(control);
+                }
+            }
+
+            Invalidate(true);
+            Refresh();
+        }
+        private void ApplyThemeRecursive(Control control)
+        {
+            if (control is IThemeable themeable)
+            {
+                themeable.ApplyTheme();
+            }
+            else
+            {
+                // Geçici genel yaklaşım
+                if (control is Panel || control is UserControl)
+                    control.BackColor = AppColors.Background;
+
+                if (control is Label label)
+                    label.ForeColor = AppColors.TextPrimary;
+
+                if (control is TextBox textBox)
+                {
+                    textBox.BackColor = AppColors.InputBackground;
+                    textBox.ForeColor = AppColors.TextPrimary;
+                    textBox.BorderStyle = BorderStyle.FixedSingle;
+                }
+
+                if (control is ComboBox comboBox)
+                {
+                    comboBox.BackColor = AppColors.InputBackground;
+                    comboBox.ForeColor = AppColors.TextPrimary;
+                }
+
+                if (control is Button button)
+                {
+                    button.BackColor = AppColors.PrimarySoft;
+                    button.ForeColor = AppColors.Primary;
+                }
+            }
+
+            foreach (Control child in control.Controls)
+            {
+                ApplyThemeRecursive(child);
+            }
+
+            control.Invalidate();
+            control.Refresh();
         }
 
         private void FrmMain_Load(object sender, EventArgs e)

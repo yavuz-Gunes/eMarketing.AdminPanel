@@ -48,7 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Componets\CardControl.cs">
-      <SubType>Component</SubType>
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Componets\CategoriesCard.cs">
       <SubType>Component</SubType>
@@ -57,13 +57,17 @@
     <Compile Include="Componets\PrimaryButton.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Componets\SidebarControl.cs">
+    <Compile Include="Componets\ShadowPanel.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Componets\SidebarControl.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Componets\TopbarControl.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Core\AppColors.cs" />
+    <Compile Include="Core\IThemeable.cs" />
     <Compile Include="Forms\CategoryModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -81,6 +85,9 @@
     </Compile>
     <Compile Include="Forms\FrmOrders.Designer.cs">
       <DependentUpon>FrmOrders.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\OrderDetailForm.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\OrderModalForm.cs">
       <SubType>Form</SubType>
