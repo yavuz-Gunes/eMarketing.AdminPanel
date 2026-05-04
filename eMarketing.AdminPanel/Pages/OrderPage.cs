@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
@@ -10,7 +11,7 @@ using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Pages
 {
-    public class OrdersPage : UserControl
+    public class OrdersPage : UserControl, IThemeable
     {
         private readonly OrderRepository _repo = new OrderRepository();
 
@@ -22,6 +23,8 @@ namespace eMarketing.AdminPanel.Pages
 
         private Label lblTitle;
         private Label lblSubtitle;
+        private Label lblInfo;
+
         private Button btnNewOrder;
 
         private CategoriesCard cTotal;
@@ -30,17 +33,24 @@ namespace eMarketing.AdminPanel.Pages
         private CategoriesCard cDelivered;
         private CategoriesCard cCancelled;
 
+        private TextBox txtSearch;
+        private ComboBox cmbFilterStatus;
+        private Button btnSearch;
+        private Button btnClear;
+
         private DataGridView dgvOrders;
 
         private Label lblSelectedOrder;
         private TextBox txtOrderId;
         private ComboBox cmbStatus;
         private Button btnUpdateStatus;
+        private Button btnOpenDetail;
 
-        private TextBox txtSearch;
-        private Button btnSearch;
         private DataTable ordersTable;
         private Timer searchTimer;
+
+        private int hoveredRowIndex = -1;
+        private int hoveredColumnIndex = -1;
 
         public OrdersPage()
         {
@@ -48,8 +58,10 @@ namespace eMarketing.AdminPanel.Pages
             BackColor = AppColors.Background;
             Padding = new Padding(24, 18, 24, 18);
 
-            searchTimer = new Timer();
-            searchTimer.Interval = 300;
+            searchTimer = new Timer
+            {
+                Interval = 300
+            };
             searchTimer.Tick += SearchTimer_Tick;
 
             BuildLayout();
@@ -65,6 +77,8 @@ namespace eMarketing.AdminPanel.Pages
 
         private void BuildLayout()
         {
+            SuspendLayout();
+
             BuildHeaderPanel();
             BuildStatsPanel();
             BuildFilterPanel();
@@ -76,6 +90,8 @@ namespace eMarketing.AdminPanel.Pages
             Controls.Add(filterPanel);
             Controls.Add(statsPanel);
             Controls.Add(headerPanel);
+
+            ResumeLayout(true);
         }
 
         private void BuildHeaderPanel()
@@ -83,7 +99,7 @@ namespace eMarketing.AdminPanel.Pages
             headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 80,
+                Height = 82,
                 BackColor = AppColors.Background
             };
 
@@ -93,16 +109,16 @@ namespace eMarketing.AdminPanel.Pages
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary,
                 AutoSize = true,
-                Location = new Point(0, 0)
+                Location = new Point(0, 2)
             };
 
             lblSubtitle = new Label
             {
-                Text = "Sipariş kayıtlarını görüntüleyin ve durum güncelleyin.",
+                Text = "Sipariş kayıtlarını görüntüleyin, detayları inceleyin ve durumlarını yönetin.",
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary,
                 AutoSize = true,
-                Location = new Point(2, 34)
+                Location = new Point(2, 38)
             };
 
             btnNewOrder = new Button
@@ -112,7 +128,9 @@ namespace eMarketing.AdminPanel.Pages
                 Height = 42,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = AppColors.Primary,
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
 
             btnNewOrder.FlatAppearance.BorderSize = 0;
@@ -124,7 +142,7 @@ namespace eMarketing.AdminPanel.Pages
 
             headerPanel.Resize += (s, e) =>
             {
-                btnNewOrder.Location = new Point(headerPanel.Width - btnNewOrder.Width, 4);
+                btnNewOrder.Location = new Point(headerPanel.Width - btnNewOrder.Width, 6);
             };
         }
 
@@ -133,11 +151,11 @@ namespace eMarketing.AdminPanel.Pages
             statsPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 120,
+                Height = 124,
                 BackColor = AppColors.Background
             };
 
-            var grid = new TableLayoutPanel
+            TableLayoutPanel grid = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 5,
@@ -180,35 +198,101 @@ namespace eMarketing.AdminPanel.Pages
             filterPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 64,
-                BackColor = Color.White,
+                Height = 74,
+                BackColor = AppColors.CardBackground,
                 Padding = new Padding(16, 14, 16, 14)
             };
 
             txtSearch = new TextBox
             {
-                Width = 280,
+                Width = 300,
                 Font = new Font("Segoe UI", 10F),
-                Location = new Point(16, 16)
+                Location = new Point(16, 20)
+            };
+
+            cmbFilterStatus = new ComboBox
+            {
+                Width = 170,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10F)
             };
 
             btnSearch = new Button
             {
                 Text = "Ara",
-                Width = 90,
-                Height = 32,
+                Width = 88,
+                Height = 34,
                 FlatStyle = FlatStyle.Flat,
-                Location = new Point(312, 15)
+                BackColor = AppColors.Primary,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
 
-            btnSearch.FlatAppearance.BorderColor = Color.Gainsboro;
+            btnSearch.FlatAppearance.BorderSize = 0;
+
+            btnClear = new Button
+            {
+                Text = "Temizle",
+                Width = 92,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White,
+                ForeColor = AppColors.TextSecondary,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+
+            btnClear.FlatAppearance.BorderColor = AppColors.Border;
+
+            lblInfo = new Label
+            {
+                Text = "0 kayıt",
+                Width = 180,
+                Height = 30,
+                TextAlign = ContentAlignment.MiddleRight,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = AppColors.TextSecondary,
+                BackColor = Color.Transparent
+            };
 
             txtSearch.TextChanged += TxtSearch_TextChanged;
             txtSearch.KeyDown += TxtSearch_KeyDown;
+            cmbFilterStatus.SelectedIndexChanged += CmbFilterStatus_SelectedIndexChanged;
             btnSearch.Click += BtnSearch_Click;
+            btnClear.Click += BtnClear_Click;
 
             filterPanel.Controls.Add(txtSearch);
+            filterPanel.Controls.Add(cmbFilterStatus);
             filterPanel.Controls.Add(btnSearch);
+            filterPanel.Controls.Add(btnClear);
+            filterPanel.Controls.Add(lblInfo);
+
+            filterPanel.Resize += (s, e) => PlaceFilterControls();
+            PlaceFilterControls();
+        }
+
+        private void PlaceFilterControls()
+        {
+            if (filterPanel == null)
+                return;
+
+            int x = 16;
+            int y = 20;
+
+            txtSearch.Location = new Point(x, y);
+            x += txtSearch.Width + 14;
+
+            cmbFilterStatus.Location = new Point(x, y);
+            x += cmbFilterStatus.Width + 14;
+
+            btnSearch.Location = new Point(x, y - 2);
+            x += btnSearch.Width + 10;
+
+            btnClear.Location = new Point(x, y - 2);
+
+            lblInfo.Location = new Point(filterPanel.Width - lblInfo.Width - 16, y);
+            lblInfo.Visible = lblInfo.Left > btnClear.Right + 20;
         }
 
         private void BuildGridPanel()
@@ -216,44 +300,164 @@ namespace eMarketing.AdminPanel.Pages
             gridPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
+                BackColor = AppColors.CardBackground,
                 Padding = new Padding(12)
             };
 
             dgvOrders = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
+                BackgroundColor = AppColors.CardBackground,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
                 ReadOnly = true,
                 RowHeadersVisible = false,
-                AutoGenerateColumns = true,
+                AutoGenerateColumns = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
             };
 
             dgvOrders.EnableHeadersVisualStyles = false;
             dgvOrders.ColumnHeadersHeight = 42;
-            dgvOrders.RowTemplate.Height = 44;
-            dgvOrders.GridColor = Color.Gainsboro;
+            dgvOrders.RowTemplate.Height = 50;
+            dgvOrders.GridColor = AppColors.Border;
             dgvOrders.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             dgvOrders.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+
             dgvOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke;
+            dgvOrders.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgvOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dgvOrders.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.WhiteSmoke;
+
             dgvOrders.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
             dgvOrders.DefaultCellStyle.BackColor = Color.White;
-            dgvOrders.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
+            dgvOrders.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgvOrders.DefaultCellStyle.SelectionBackColor = Color.FromArgb(238, 243, 255);
             dgvOrders.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
+
+            dgvOrders.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
+
+            ConfigureOrderGridColumns();
 
             dgvOrders.CellClick += DgvOrders_CellClick;
             dgvOrders.CellFormatting += DgvOrders_CellFormatting;
             dgvOrders.CellPainting += DgvOrders_CellPainting;
+            dgvOrders.CellMouseMove += DgvOrders_CellMouseMove;
+            dgvOrders.CellDoubleClick += DgvOrders_CellDoubleClick;
+            dgvOrders.MouseLeave += DgvOrders_MouseLeave;
 
             gridPanel.Controls.Add(dgvOrders);
+        }
+
+        private void ConfigureOrderGridColumns()
+        {
+            dgvOrders.Columns.Clear();
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "SiparisId",
+                DataPropertyName = "SiparisId",
+                Visible = false
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "UrunId",
+                DataPropertyName = "UrunId",
+                Visible = false
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "SiparisNo",
+                DataPropertyName = "SiparisId",
+                HeaderText = "ID",
+                Width = 70
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "MusteriAdi",
+                DataPropertyName = "MusteriAdi",
+                HeaderText = "Müşteri",
+                Width = 150
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "MusteriTelefon",
+                DataPropertyName = "MusteriTelefon",
+                HeaderText = "Telefon",
+                Width = 120
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "MusteriEmail",
+                DataPropertyName = "MusteriEmail",
+                HeaderText = "E-Posta",
+                Width = 170
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "UrunAdi",
+                DataPropertyName = "UrunAdi",
+                HeaderText = "Ürün",
+                Width = 180
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Adet",
+                DataPropertyName = "Adet",
+                HeaderText = "Adet",
+                Width = 65,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Alignment = DataGridViewContentAlignment.MiddleCenter
+                }
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "ToplamTutar",
+                DataPropertyName = "ToplamTutar",
+                HeaderText = "Tutar",
+                Width = 105,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    Alignment = DataGridViewContentAlignment.MiddleRight
+                }
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "SiparisDurumu",
+                DataPropertyName = "SiparisDurumu",
+                HeaderText = "Durum",
+                Width = 125
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "SiparisTarihi",
+                DataPropertyName = "SiparisTarihi",
+                HeaderText = "Tarih",
+                Width = 145
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewButtonColumn
+            {
+                Name = "colDetail",
+                HeaderText = "",
+                Text = "Detay",
+                UseColumnTextForButtonValue = true,
+                Width = 88
+            });
         }
 
         private void BuildFooterPanel()
@@ -261,8 +465,8 @@ namespace eMarketing.AdminPanel.Pages
             footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 76,
-                BackColor = Color.White,
+                Height = 78,
+                BackColor = AppColors.CardBackground,
                 Padding = new Padding(16, 16, 16, 16)
             };
 
@@ -286,7 +490,7 @@ namespace eMarketing.AdminPanel.Pages
             cmbStatus = new ComboBox
             {
                 Location = new Point(136, 30),
-                Width = 170,
+                Width = 180,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 10F)
             };
@@ -294,21 +498,58 @@ namespace eMarketing.AdminPanel.Pages
             btnUpdateStatus = new Button
             {
                 Text = "Durum Güncelle",
-                Width = 140,
+                Width = 145,
                 Height = 34,
-                Location = new Point(326, 28),
+                Location = new Point(332, 28),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = AppColors.Primary,
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
 
             btnUpdateStatus.FlatAppearance.BorderSize = 0;
             btnUpdateStatus.Click += BtnUpdateStatus_Click;
 
+            btnOpenDetail = new Button
+            {
+                Text = "Detay Aç",
+                Width = 110,
+                Height = 34,
+                Location = new Point(490, 28),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White,
+                ForeColor = AppColors.TextSecondary,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+
+            btnOpenDetail.FlatAppearance.BorderColor = AppColors.Border;
+            btnOpenDetail.Click += BtnOpenDetail_Click;
+
             footerPanel.Controls.Add(lblSelectedOrder);
             footerPanel.Controls.Add(txtOrderId);
             footerPanel.Controls.Add(cmbStatus);
             footerPanel.Controls.Add(btnUpdateStatus);
+            footerPanel.Controls.Add(btnOpenDetail);
+        }
+
+        private void LoadStatuses()
+        {
+            cmbStatus.Items.Clear();
+            cmbStatus.Items.Add(new StatusItem("Hazırlanıyor", "Hazirlaniyor"));
+            cmbStatus.Items.Add(new StatusItem("Kargoda", "Kargoda"));
+            cmbStatus.Items.Add(new StatusItem("Teslim Edildi", "Teslim Edildi"));
+            cmbStatus.Items.Add(new StatusItem("İptal", "Iptal"));
+            cmbStatus.SelectedIndex = 0;
+
+            cmbFilterStatus.Items.Clear();
+            cmbFilterStatus.Items.Add(new StatusItem("Tüm Durumlar", ""));
+            cmbFilterStatus.Items.Add(new StatusItem("Hazırlanıyor", "Hazirlaniyor"));
+            cmbFilterStatus.Items.Add(new StatusItem("Kargoda", "Kargoda"));
+            cmbFilterStatus.Items.Add(new StatusItem("Teslim Edildi", "Teslim Edildi"));
+            cmbFilterStatus.Items.Add(new StatusItem("İptal", "Iptal"));
+            cmbFilterStatus.SelectedIndex = 0;
         }
 
         private void LoadOrderSummary()
@@ -340,7 +581,7 @@ namespace eMarketing.AdminPanel.Pages
                 ordersTable = _repo.GetAllOrders();
                 dgvOrders.DataSource = ordersTable;
 
-                ConfigureOrderGridColumns();
+                UpdateInfoLabel(GetCurrentRowCount(), ordersTable.Rows.Count);
             }
             catch (Exception ex)
             {
@@ -349,86 +590,16 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void ConfigureOrderGridColumns()
-        {
-            if (dgvOrders.Columns.Contains("UrunId"))
-                dgvOrders.Columns["UrunId"].Visible = false;
-
-            if (dgvOrders.Columns.Contains("SiparisId"))
-            {
-                dgvOrders.Columns["SiparisId"].HeaderText = "ID";
-                dgvOrders.Columns["SiparisId"].Width = 80;
-            }
-
-            if (dgvOrders.Columns.Contains("MusteriAdi"))
-            {
-                dgvOrders.Columns["MusteriAdi"].HeaderText = "Müşteri";
-                dgvOrders.Columns["MusteriAdi"].Width = 140;
-            }
-
-            if (dgvOrders.Columns.Contains("MusteriEmail"))
-            {
-                dgvOrders.Columns["MusteriEmail"].HeaderText = "E-Posta";
-                dgvOrders.Columns["MusteriEmail"].Width = 170;
-            }
-
-            if (dgvOrders.Columns.Contains("MusteriTelefon"))
-            {
-                dgvOrders.Columns["MusteriTelefon"].HeaderText = "Telefon";
-                dgvOrders.Columns["MusteriTelefon"].Width = 110;
-            }
-
-            if (dgvOrders.Columns.Contains("UrunAdi"))
-            {
-                dgvOrders.Columns["UrunAdi"].HeaderText = "Ürün";
-                dgvOrders.Columns["UrunAdi"].Width = 170;
-            }
-
-            if (dgvOrders.Columns.Contains("Adet"))
-            {
-                dgvOrders.Columns["Adet"].HeaderText = "Adet";
-                dgvOrders.Columns["Adet"].Width = 60;
-            }
-
-            if (dgvOrders.Columns.Contains("ToplamTutar"))
-            {
-                dgvOrders.Columns["ToplamTutar"].HeaderText = "Tutar";
-                dgvOrders.Columns["ToplamTutar"].Width = 90;
-                dgvOrders.Columns["ToplamTutar"].DefaultCellStyle.Format = "N2";
-            }
-
-            if (dgvOrders.Columns.Contains("SiparisDurumu"))
-            {
-                dgvOrders.Columns["SiparisDurumu"].HeaderText = "Durum";
-                dgvOrders.Columns["SiparisDurumu"].Width = 120;
-            }
-
-            if (dgvOrders.Columns.Contains("SiparisTarihi"))
-            {
-                dgvOrders.Columns["SiparisTarihi"].HeaderText = "Tarih";
-                dgvOrders.Columns["SiparisTarihi"].Width = 130;
-            }
-        }
-
-        private void LoadStatuses()
-        {
-            cmbStatus.Items.Clear();
-            cmbStatus.Items.Add("Hazirlaniyor");
-            cmbStatus.Items.Add("Kargoda");
-            cmbStatus.Items.Add("Teslim Edildi");
-            cmbStatus.Items.Add("Iptal");
-            cmbStatus.SelectedIndex = 0;
-        }
-
         private void BtnNewOrder_Click(object sender, EventArgs e)
         {
-            using (var frm = new OrderModalForm())
+            using (OrderModalForm frm = new OrderModalForm())
             {
                 if (frm.ShowDialog() == DialogResult.OK)
                 {
                     LoadOrderSummary();
                     LoadOrders();
                     ApplySearch();
+                    ClearSelectedOrder();
                 }
             }
         }
@@ -438,18 +609,42 @@ namespace eMarketing.AdminPanel.Pages
             if (e.RowIndex < 0)
                 return;
 
-            DataGridViewRow row = dgvOrders.Rows[e.RowIndex];
+            SelectOrderFromRow(e.RowIndex);
+        }
 
-            txtOrderId.Text = row.Cells["SiparisId"].Value?.ToString();
+        private void DgvOrders_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
 
-            string currentStatus = row.Cells["SiparisDurumu"].Value?.ToString();
+            string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
 
-            if (!string.IsNullOrWhiteSpace(currentStatus))
-                cmbStatus.SelectedItem = currentStatus;
+            if (columnName == "colDetail")
+                return;
+
+            SelectOrderFromRow(e.RowIndex);
+            OpenOrderDetail(e.RowIndex);
+        }
+
+        private void DgvOrders_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
+
+            if (columnName == "colDetail")
+            {
+                SelectOrderFromRow(e.RowIndex);
+                OpenOrderDetail(e.RowIndex);
+            }
         }
 
         private void DgvOrders_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
             string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
 
             if (columnName == "SiparisTarihi" && e.Value != null && e.Value != DBNull.Value)
@@ -457,6 +652,17 @@ namespace eMarketing.AdminPanel.Pages
                 DateTime dt = Convert.ToDateTime(e.Value);
                 e.Value = dt.ToString("dd.MM.yyyy HH:mm");
                 e.FormattingApplied = true;
+            }
+
+            if (columnName == "ToplamTutar" && e.Value != null && e.Value != DBNull.Value)
+            {
+                decimal value;
+
+                if (decimal.TryParse(e.Value.ToString(), out value))
+                {
+                    e.Value = value.ToString("N2", new CultureInfo("tr-TR")) + " ₺";
+                    e.FormattingApplied = true;
+                }
             }
 
             if (columnName == "MusteriEmail" && e.Value != null)
@@ -479,15 +685,59 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            if (columnName == "MusteriTelefon" && e.Value != null)
+            if (columnName == "UrunAdi" && e.Value != null)
             {
                 string text = e.Value.ToString();
-                if (text.Length > 11)
+                if (text.Length > 22)
                 {
-                    e.Value = text.Substring(0, 11) + "...";
+                    e.Value = text.Substring(0, 22) + "...";
                     e.FormattingApplied = true;
                 }
             }
+        }
+
+        private void DgvOrders_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            int newRow = -1;
+            int newCol = -1;
+
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
+
+                if (columnName == "colDetail")
+                {
+                    newRow = e.RowIndex;
+                    newCol = e.ColumnIndex;
+                }
+            }
+
+            if (newRow != hoveredRowIndex || newCol != hoveredColumnIndex)
+            {
+                int oldRow = hoveredRowIndex;
+                int oldCol = hoveredColumnIndex;
+
+                hoveredRowIndex = newRow;
+                hoveredColumnIndex = newCol;
+
+                if (oldRow >= 0 && oldCol >= 0)
+                    dgvOrders.InvalidateCell(oldCol, oldRow);
+
+                if (hoveredRowIndex >= 0 && hoveredColumnIndex >= 0)
+                    dgvOrders.InvalidateCell(hoveredColumnIndex, hoveredRowIndex);
+            }
+        }
+
+        private void DgvOrders_MouseLeave(object sender, EventArgs e)
+        {
+            int oldRow = hoveredRowIndex;
+            int oldCol = hoveredColumnIndex;
+
+            hoveredRowIndex = -1;
+            hoveredColumnIndex = -1;
+
+            if (oldRow >= 0 && oldCol >= 0)
+                dgvOrders.InvalidateCell(oldCol, oldRow);
         }
 
         private void DgvOrders_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
@@ -497,9 +747,21 @@ namespace eMarketing.AdminPanel.Pages
 
             string columnName = dgvOrders.Columns[e.ColumnIndex].Name;
 
-            if (columnName != "SiparisDurumu")
+            if (columnName == "SiparisDurumu")
+            {
+                PaintStatusBadge(e);
                 return;
+            }
 
+            if (columnName == "colDetail")
+            {
+                PaintDetailButton(e);
+                return;
+            }
+        }
+
+        private void PaintStatusBadge(DataGridViewCellPaintingEventArgs e)
+        {
             e.PaintBackground(e.CellBounds, true);
             e.Handled = true;
 
@@ -532,33 +794,86 @@ namespace eMarketing.AdminPanel.Pages
             string displayText = GetStatusDisplayText(text);
 
             Rectangle badgeRect = new Rectangle(
-                e.CellBounds.X + (e.CellBounds.Width - 96) / 2,
+                e.CellBounds.X + (e.CellBounds.Width - 102) / 2,
                 e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
-                96,
+                102,
                 24
             );
 
             using (SolidBrush brush = new SolidBrush(backColor))
             using (SolidBrush textBrush = new SolidBrush(foreColor))
             using (StringFormat sf = new StringFormat())
+            using (Font font = new Font("Segoe UI", 8.5F, FontStyle.Bold))
             {
                 sf.Alignment = StringAlignment.Center;
                 sf.LineAlignment = StringAlignment.Center;
 
                 e.Graphics.FillRectangle(brush, badgeRect);
-                e.Graphics.DrawString(displayText, new Font("Segoe UI", 8.5F, FontStyle.Bold), textBrush, badgeRect, sf);
+                e.Graphics.DrawString(displayText, font, textBrush, badgeRect, sf);
             }
         }
 
-        private string GetStatusDisplayText(string status)
+        private void PaintDetailButton(DataGridViewCellPaintingEventArgs e)
         {
-            if (status == "Hazirlaniyor")
-                return "Hazırlanıyor";
+            e.PaintBackground(e.CellBounds, true);
+            e.Handled = true;
 
-            if (status == "Iptal")
-                return "İptal";
+            bool isHovered = e.RowIndex == hoveredRowIndex && e.ColumnIndex == hoveredColumnIndex;
 
-            return status;
+            Color baseColor = AppColors.Primary;
+            Color fillColor = isHovered ? baseColor : Color.White;
+            Color borderColor = baseColor;
+            Color textColor = isHovered ? Color.White : baseColor;
+
+            Rectangle buttonRect = new Rectangle(
+                e.CellBounds.X + 6,
+                e.CellBounds.Y + 7,
+                e.CellBounds.Width - 12,
+                e.CellBounds.Height - 14
+            );
+
+            using (SolidBrush fillBrush = new SolidBrush(fillColor))
+            using (Pen borderPen = new Pen(borderColor))
+            using (SolidBrush textBrush = new SolidBrush(textColor))
+            using (StringFormat sf = new StringFormat())
+            using (Font font = new Font("Segoe UI", 8.2F, FontStyle.Bold))
+            {
+                sf.Alignment = StringAlignment.Center;
+                sf.LineAlignment = StringAlignment.Center;
+
+                e.Graphics.FillRectangle(fillBrush, buttonRect);
+                e.Graphics.DrawRectangle(borderPen, buttonRect);
+                e.Graphics.DrawString("Detay", font, textBrush, buttonRect, sf);
+            }
+        }
+
+        private void SelectOrderFromRow(int rowIndex)
+        {
+            if (rowIndex < 0)
+                return;
+
+            DataGridViewRow row = dgvOrders.Rows[rowIndex];
+
+            txtOrderId.Text = row.Cells["SiparisId"].Value?.ToString();
+
+            string currentStatus = row.Cells["SiparisDurumu"].Value?.ToString();
+
+            if (!string.IsNullOrWhiteSpace(currentStatus))
+                SelectStatusInCombo(cmbStatus, currentStatus);
+        }
+
+        private void SelectStatusInCombo(ComboBox comboBox, string value)
+        {
+            foreach (object item in comboBox.Items)
+            {
+                StatusItem statusItem = item as StatusItem;
+
+                if (statusItem != null && statusItem.Value == value)
+                {
+                    comboBox.SelectedItem = statusItem;
+                    return;
+                }
+            }
         }
 
         private void BtnUpdateStatus_Click(object sender, EventArgs e)
@@ -573,7 +888,7 @@ namespace eMarketing.AdminPanel.Pages
                 }
 
                 int orderId = int.Parse(txtOrderId.Text);
-                string newStatus = cmbStatus.Text;
+                string newStatus = GetSelectedStatusValue(cmbStatus);
 
                 if (string.IsNullOrWhiteSpace(newStatus))
                 {
@@ -590,15 +905,65 @@ namespace eMarketing.AdminPanel.Pages
                 LoadOrderSummary();
                 LoadOrders();
                 ApplySearch();
-
-                txtOrderId.Clear();
-                cmbStatus.SelectedIndex = 0;
+                ClearSelectedOrder();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Sipariş durumu güncellenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void BtnOpenDetail_Click(object sender, EventArgs e)
+        {
+            if (dgvOrders.CurrentRow == null)
+            {
+                MessageBox.Show("Lütfen bir sipariş seçin.",
+                    "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            OpenOrderDetail(dgvOrders.CurrentRow.Index);
+        }
+
+        private void OpenOrderDetail(int rowIndex)
+        {
+            try
+            {
+                DataRow row = GetDataRowFromGridRow(rowIndex);
+
+                if (row == null)
+                {
+                    MessageBox.Show("Sipariş detayı bulunamadı.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                using (OrderDetailForm frm = new OrderDetailForm(row))
+                {
+                    frm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Sipariş detayı açılırken hata: " + ex.Message,
+                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private DataRow GetDataRowFromGridRow(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvOrders.Rows.Count)
+                return null;
+
+            DataGridViewRow gridRow = dgvOrders.Rows[rowIndex];
+
+            DataRowView rowView = gridRow.DataBoundItem as DataRowView;
+
+            if (rowView == null)
+                return null;
+
+            return rowView.Row;
         }
 
         private void ApplySearch()
@@ -609,27 +974,123 @@ namespace eMarketing.AdminPanel.Pages
                     return;
 
                 string search = txtSearch.Text.Trim().Replace("'", "''");
+                string selectedStatus = GetSelectedStatusValue(cmbFilterStatus);
+
                 DataView view = ordersTable.DefaultView;
 
-                if (string.IsNullOrWhiteSpace(search))
-                {
-                    view.RowFilter = string.Empty;
-                }
+                string searchFilter = BuildSearchFilter(search);
+                string statusFilter = BuildStatusFilter(selectedStatus);
+
+                if (!string.IsNullOrWhiteSpace(searchFilter) && !string.IsNullOrWhiteSpace(statusFilter))
+                    view.RowFilter = "(" + searchFilter + ") AND " + statusFilter;
+                else if (!string.IsNullOrWhiteSpace(searchFilter))
+                    view.RowFilter = searchFilter;
+                else if (!string.IsNullOrWhiteSpace(statusFilter))
+                    view.RowFilter = statusFilter;
                 else
-                {
-                    view.RowFilter =
-                        $"Convert(MusteriAdi, 'System.String') LIKE '%{search}%' " +
-                        $"OR Convert(MusteriEmail, 'System.String') LIKE '%{search}%' " +
-                        $"OR Convert(MusteriTelefon, 'System.String') LIKE '%{search}%' " +
-                        $"OR Convert(UrunAdi, 'System.String') LIKE '%{search}%'";
-                }
+                    view.RowFilter = string.Empty;
 
                 dgvOrders.DataSource = view;
-                ConfigureOrderGridColumns();
+                UpdateInfoLabel(view.Count, ordersTable.Rows.Count);
             }
             catch
             {
             }
+        }
+
+        private string BuildSearchFilter(string search)
+        {
+            if (string.IsNullOrWhiteSpace(search))
+                return string.Empty;
+
+            string filter = string.Empty;
+
+            AddSearchColumnFilter(ref filter, "MusteriAdi", search);
+            AddSearchColumnFilter(ref filter, "MusteriEmail", search);
+            AddSearchColumnFilter(ref filter, "MusteriTelefon", search);
+            AddSearchColumnFilter(ref filter, "UrunAdi", search);
+            AddSearchColumnFilter(ref filter, "SiparisId", search);
+
+            return filter;
+        }
+
+        private void AddSearchColumnFilter(ref string filter, string columnName, string search)
+        {
+            if (ordersTable == null)
+                return;
+
+            if (!ordersTable.Columns.Contains(columnName))
+                return;
+
+            string condition = $"Convert({columnName}, 'System.String') LIKE '%{search}%'";
+
+            if (string.IsNullOrWhiteSpace(filter))
+                filter = condition;
+            else
+                filter += " OR " + condition;
+        }
+
+        private string BuildStatusFilter(string selectedStatus)
+        {
+            if (string.IsNullOrWhiteSpace(selectedStatus))
+                return string.Empty;
+
+            if (ordersTable == null || !ordersTable.Columns.Contains("SiparisDurumu"))
+                return string.Empty;
+
+            selectedStatus = selectedStatus.Replace("'", "''");
+
+            return $"SiparisDurumu = '{selectedStatus}'";
+        }
+
+        private int GetCurrentRowCount()
+        {
+            DataView view = ordersTable?.DefaultView;
+
+            if (view == null)
+                return 0;
+
+            return view.Count;
+        }
+
+        private void UpdateInfoLabel(int displayCount, int totalCount)
+        {
+            if (lblInfo == null)
+                return;
+
+            if (displayCount == totalCount)
+                lblInfo.Text = displayCount + " kayıt";
+            else
+                lblInfo.Text = displayCount + " / " + totalCount + " kayıt";
+        }
+
+        private string GetSelectedStatusValue(ComboBox comboBox)
+        {
+            StatusItem selected = comboBox.SelectedItem as StatusItem;
+
+            if (selected == null)
+                return string.Empty;
+
+            return selected.Value;
+        }
+
+        private string GetStatusDisplayText(string status)
+        {
+            if (status == "Hazirlaniyor")
+                return "Hazırlanıyor";
+
+            if (status == "Iptal")
+                return "İptal";
+
+            return status;
+        }
+
+        private void ClearSelectedOrder()
+        {
+            txtOrderId.Clear();
+
+            if (cmbStatus.Items.Count > 0)
+                cmbStatus.SelectedIndex = 0;
         }
 
         private void TxtSearch_TextChanged(object sender, EventArgs e)
@@ -654,9 +1115,120 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void BtnSearch_Click(object sender, EventArgs e)
+        private void CmbFilterStatus_SelectedIndexChanged(object sender, EventArgs e)
         {
             ApplySearch();
+        }
+
+        private void BtnSearch_Click(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+            ApplySearch();
+        }
+
+        private void BtnClear_Click(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+
+            txtSearch.Clear();
+
+            if (cmbFilterStatus.Items.Count > 0)
+                cmbFilterStatus.SelectedIndex = 0;
+
+            ApplySearch();
+        }
+
+        public void ApplyTheme()
+        {
+            BackColor = AppColors.Background;
+
+            if (headerPanel != null)
+                headerPanel.BackColor = AppColors.Background;
+
+            if (statsPanel != null)
+                statsPanel.BackColor = AppColors.Background;
+
+            if (filterPanel != null)
+                filterPanel.BackColor = AppColors.CardBackground;
+
+            if (gridPanel != null)
+                gridPanel.BackColor = AppColors.CardBackground;
+
+            if (footerPanel != null)
+                footerPanel.BackColor = AppColors.CardBackground;
+
+            if (lblTitle != null)
+                lblTitle.ForeColor = AppColors.TextPrimary;
+
+            if (lblSubtitle != null)
+                lblSubtitle.ForeColor = AppColors.TextSecondary;
+
+            if (lblInfo != null)
+                lblInfo.ForeColor = AppColors.TextSecondary;
+
+            if (lblSelectedOrder != null)
+                lblSelectedOrder.ForeColor = AppColors.TextSecondary;
+
+            if (btnNewOrder != null)
+            {
+                btnNewOrder.BackColor = AppColors.Primary;
+                btnNewOrder.ForeColor = Color.White;
+            }
+
+            if (btnSearch != null)
+            {
+                btnSearch.BackColor = AppColors.Primary;
+                btnSearch.ForeColor = Color.White;
+            }
+
+            if (btnClear != null)
+            {
+                btnClear.BackColor = AppColors.CardBackground;
+                btnClear.ForeColor = AppColors.TextSecondary;
+                btnClear.FlatAppearance.BorderColor = AppColors.Border;
+            }
+
+            if (btnUpdateStatus != null)
+            {
+                btnUpdateStatus.BackColor = AppColors.Primary;
+                btnUpdateStatus.ForeColor = Color.White;
+            }
+
+            if (btnOpenDetail != null)
+            {
+                btnOpenDetail.BackColor = AppColors.CardBackground;
+                btnOpenDetail.ForeColor = AppColors.TextSecondary;
+                btnOpenDetail.FlatAppearance.BorderColor = AppColors.Border;
+            }
+
+            if (dgvOrders != null)
+            {
+                dgvOrders.BackgroundColor = AppColors.CardBackground;
+                dgvOrders.GridColor = AppColors.Border;
+                dgvOrders.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
+                dgvOrders.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
+                dgvOrders.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
+            }
+
+            Invalidate(true);
+            Refresh();
+        }
+
+        private class StatusItem
+        {
+            public string Text { get; }
+            public string Value { get; }
+
+            public StatusItem(string text, string value)
+            {
+                Text = text;
+                Value = value;
+            }
+
+            public override string ToString()
+            {
+                return Text;
+            }
         }
     }
 }
