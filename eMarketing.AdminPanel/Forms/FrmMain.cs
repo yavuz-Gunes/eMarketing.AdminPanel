@@ -4,6 +4,7 @@ using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Pages;
 
+
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class FrmMain : Form
@@ -16,6 +17,9 @@ namespace eMarketing.AdminPanel.Forms
         public FrmMain()
         {
             InitializeComponent();
+
+            PrepareSessionAndStoreSelection();
+
             InitializeLayout();
         }
 
@@ -24,7 +28,7 @@ namespace eMarketing.AdminPanel.Forms
             SuspendLayout();
 
             Text = "eMarketing - Oto Yedek Parça Yönetim Paneli";
-            ShowIcon = false; // ikon kapalı durumda şuanda
+            ShowIcon = false;
             BackColor = AppColors.Background;
             WindowState = FormWindowState.Maximized;
             FormBorderStyle = FormBorderStyle.Sizable;
@@ -74,7 +78,7 @@ namespace eMarketing.AdminPanel.Forms
             LoadPage(
                 new DashboardPage(),
                 "Kontrol Paneli",
-                "Oto yedek parça yönetim özeti"
+                "Genel satış, stok ve sipariş özetleri"
             );
 
             ResumeLayout(true);
@@ -82,12 +86,17 @@ namespace eMarketing.AdminPanel.Forms
 
         private void LoadPage(UserControl page, string title, string subtitle)
         {
+            if (contentPanel == null || topbar == null)
+                return;
+
             contentPanel.SuspendLayout();
 
-            foreach (Control control in contentPanel.Controls)
+            while (contentPanel.Controls.Count > 0)
+            {
+                Control control = contentPanel.Controls[0];
+                contentPanel.Controls.RemoveAt(0);
                 control.Dispose();
-
-            contentPanel.Controls.Clear();
+            }
 
             page.Dock = DockStyle.Fill;
             page.Margin = Padding.Empty;
@@ -96,12 +105,22 @@ namespace eMarketing.AdminPanel.Forms
             contentPanel.Controls.Add(page);
 
             topbar.SetTitle(title);
-            topbar.SetSubtitle(subtitle);
+            topbar.SetSubtitle(GetTopbarSubtitle(subtitle));
 
             if (page is IThemeable themeablePage)
                 themeablePage.ApplyTheme();
 
             contentPanel.ResumeLayout(true);
+        }
+
+        private string GetTopbarSubtitle(string pageSubtitle)
+        {
+            string selectedStore = AppSession.MagazaGorunumAdi;
+
+            if (string.IsNullOrWhiteSpace(pageSubtitle))
+                return "Seçili mağaza: " + selectedStore;
+
+            return pageSubtitle + "  |  Seçili mağaza: " + selectedStore;
         }
 
         private void Sidebar_MenuClicked(object sender, string pageName)
@@ -110,8 +129,8 @@ namespace eMarketing.AdminPanel.Forms
             {
                 LoadPage(
                     new DashboardPage(),
-                  "Kontrol Paneli",
-                  "Genel satış, stok ve sipariş özetleri"
+                    "Kontrol Paneli",
+                    "Genel satış, stok ve sipariş özetleri"
                 );
             }
             else if (pageName == "Products")
@@ -135,7 +154,7 @@ namespace eMarketing.AdminPanel.Forms
                 LoadPage(
                     new OrdersPage(),
                     "Siparişler",
-                    "Müşteri siparişlerini görüntüle ve takip et"
+                    "Seçili mağazaya ait müşteri siparişlerini görüntüle ve takip et"
                 );
             }
             else if (pageName == "Customers")
@@ -143,7 +162,7 @@ namespace eMarketing.AdminPanel.Forms
                 LoadPage(
                     new CustomersPage(),
                     "Müşteriler",
-                    "Müşteri bilgilerini görüntüle ve yönet"
+                    "Müşteri bilgilerini, mağazalarını ve sipariş ilişkilerini yönet"
                 );
             }
             else if (pageName == "Personnel")
@@ -157,6 +176,7 @@ namespace eMarketing.AdminPanel.Forms
             }
             else if (pageName == "Logout")
             {
+                AppSession.CikisYap();
                 Application.Exit();
             }
         }
@@ -176,7 +196,6 @@ namespace eMarketing.AdminPanel.Forms
             if (contentPanel != null)
                 contentPanel.BackColor = AppColors.Background;
 
-            //sidebar?.ApplyTheme();
             topbar?.ApplyTheme();
 
             if (contentPanel != null)
@@ -190,6 +209,7 @@ namespace eMarketing.AdminPanel.Forms
             Invalidate(true);
             Refresh();
         }
+
         private void ApplyThemeRecursive(Control control)
         {
             if (control is IThemeable themeable)
@@ -198,7 +218,6 @@ namespace eMarketing.AdminPanel.Forms
             }
             else
             {
-                // Geçici genel yaklaşım
                 if (control is Panel || control is UserControl)
                     control.BackColor = AppColors.Background;
 
@@ -232,6 +251,27 @@ namespace eMarketing.AdminPanel.Forms
 
             control.Invalidate();
             control.Refresh();
+        }
+
+        private void PrepareSessionAndStoreSelection()
+        {
+            AppSession.GirisBilgisiAyarla(
+                1,
+                "admin",
+                "Admin",
+                "Admin"
+            );
+
+            using (MagazaSecimForm frm = new MagazaSecimForm())
+            {
+                DialogResult result = frm.ShowDialog();
+
+                if (result != DialogResult.OK || !frm.SecimYapildi)
+                {
+                    Environment.Exit(0);
+                    return;
+                }
+            }
         }
 
         private void FrmMain_Load(object sender, EventArgs e)

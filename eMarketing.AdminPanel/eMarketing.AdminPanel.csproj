@@ -67,12 +67,22 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Core\AppColors.cs" />
+    <Compile Include="Core\AppSession.cs" />
     <Compile Include="Core\IThemeable.cs" />
     <Compile Include="Forms\CategoryModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\CategoryModalForm.Designer.cs">
       <DependentUpon>CategoryModalForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\CustomerModalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\CustomerModalForm.Designer.cs">
+      <DependentUpon>CustomerModalForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\CustomerStoreModalForm.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\FrmMain.cs">
       <SubType>Form</SubType>
@@ -85,6 +95,9 @@
     </Compile>
     <Compile Include="Forms\FrmOrders.Designer.cs">
       <DependentUpon>FrmOrders.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\MagazaSecimForm.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\OrderDetailForm.cs">
       <SubType>Form</SubType>

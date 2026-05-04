@@ -36,34 +36,120 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public int AddOrder(string name, string email, string phone, int productId, int quantity, decimal totalPrice)
+        public OrderSummary GetOrderSummary(int? magazaId = null, bool tumMagazalar = true)
         {
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Siparis_Ekle", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Siparis_DurumOzet_Getir", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    cmd.Parameters.Add("@MusteriAdi", SqlDbType.NVarChar, 150)
-                        .Value = name.Trim();
+                    cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
+                        .Value = magazaId.HasValue ? (object)magazaId.Value : DBNull.Value;
 
-                    cmd.Parameters.Add("@MusteriEmail", SqlDbType.NVarChar, 150)
-                        .Value = string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email.Trim();
+                    cmd.Parameters.Add("@TumMagazalar", SqlDbType.Bit)
+                        .Value = tumMagazalar;
 
-                    cmd.Parameters.Add("@MusteriTelefon", SqlDbType.NVarChar, 50)
-                        .Value = string.IsNullOrWhiteSpace(phone) ? (object)DBNull.Value : phone.Trim();
+                    connection.Open();
 
-                    cmd.Parameters.Add("@UrunId", SqlDbType.Int)
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                            return new OrderSummary();
+
+                        return new OrderSummary
+                        {
+                            TotalOrders = GetInt(reader, "ToplamSiparis"),
+                            PreparingOrders = GetInt(reader, "HazirlaniyorSayisi"),
+                            ShippedOrders = GetInt(reader, "KargodaSayisi"),
+                            DeliveredOrders = GetInt(reader, "TeslimEdildiSayisi"),
+                            CancelledOrders = GetInt(reader, "IptalSayisi")
+                        };
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Sipariþ özeti getirilirken veritabaný hatasý oluþtu: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Sipariþ özeti getirilirken hata oluþtu: " + ex.Message);
+            }
+        }
+
+        public DataTable GetAllOrders(int? magazaId = null, bool tumMagazalar = true)
+        {
+            try
+            {
+                DataTable table = new DataTable();
+
+                using (SqlConnection connection = DbHelper.GetConnection())
+                using (SqlCommand cmd = new SqlCommand("sp_Siparis_Listele", connection))
+                using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
+                        .Value = magazaId.HasValue ? (object)magazaId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@TumMagazalar", SqlDbType.Bit)
+                        .Value = tumMagazalar;
+
+                    connection.Open();
+                    adapter.Fill(table);
+                }
+
+                return table;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Sipariþler getirilirken veritabaný hatasý oluþtu: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Sipariþler getirilirken hata oluþtu: " + ex.Message);
+            }
+        }
+
+        public int AddOrder(
+            string customerName,
+            string customerEmail,
+            string customerPhone,
+            int productId,
+            int quantity,
+            decimal totalPrice)
+        {
+            try
+            {
+                using (SqlConnection connection = DbHelper.GetConnection())
+                using (SqlCommand cmd = new SqlCommand("sp_Siparis_Ekle_TekUrun", connection))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@CustomerName", SqlDbType.NVarChar, 300)
+                        .Value = string.IsNullOrWhiteSpace(customerName)
+                            ? throw new Exception("Müþteri adý boþ olamaz.")
+                            : customerName.Trim();
+
+                    cmd.Parameters.Add("@CustomerEmail", SqlDbType.NVarChar, 400)
+                        .Value = GetNullableValue(customerEmail);
+
+                    cmd.Parameters.Add("@CustomerPhone", SqlDbType.NVarChar, 100)
+                        .Value = GetNullableValue(customerPhone);
+
+                    cmd.Parameters.Add("@ProductId", SqlDbType.Int)
                         .Value = productId;
 
-                    cmd.Parameters.Add("@Adet", SqlDbType.Int)
+                    cmd.Parameters.Add("@Quantity", SqlDbType.Int)
                         .Value = quantity;
 
-                    cmd.Parameters.Add("@ToplamTutar", SqlDbType.Decimal)
+                    cmd.Parameters.Add("@TotalPrice", SqlDbType.Decimal)
                         .Value = totalPrice;
-                    cmd.Parameters["@ToplamTutar"].Precision = 18;
-                    cmd.Parameters["@ToplamTutar"].Scale = 2;
+
+                    cmd.Parameters["@TotalPrice"].Precision = 18;
+                    cmd.Parameters["@TotalPrice"].Scale = 2;
 
                     connection.Open();
 
@@ -73,9 +159,6 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 50000)
-                    throw new Exception(ex.Message);
-
                 throw new Exception("Sipariþ eklenirken veritabaný hatasý oluþtu: " + ex.Message);
             }
             catch (Exception ex)
@@ -97,7 +180,7 @@ namespace eMarketing.Data.Repositories
                         .Value = orderId;
 
                     cmd.Parameters.Add("@SiparisDurumu", SqlDbType.NVarChar, 50)
-                        .Value = status;
+                        .Value = status.Trim();
 
                     connection.Open();
                     cmd.ExecuteNonQuery();
@@ -105,9 +188,6 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                if (ex.Number == 50000)
-                    throw new Exception(ex.Message);
-
                 throw new Exception("Sipariþ durumu güncellenirken veritabaný hatasý oluþtu: " + ex.Message);
             }
             catch (Exception ex)
@@ -116,51 +196,48 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public OrderSummary GetOrderSummary()
+        public void CancelOrder(int orderId)
         {
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
-                using (SqlCommand cmd = new SqlCommand("sp_Siparis_DurumOzet_Getir", connection))
+                using (SqlCommand cmd = new SqlCommand("sp_Siparis_IptalEt", connection))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
+                    cmd.Parameters.Add("@SiparisId", SqlDbType.Int)
+                        .Value = orderId;
+
                     connection.Open();
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            return new OrderSummary
-                            {
-                                TotalOrders = GetInt(reader, "ToplamSiparis"),
-                                PreparingOrders = GetInt(reader, "HazirlaniyorSayisi"),
-                                ShippedOrders = GetInt(reader, "KargodaSayisi"),
-                                DeliveredOrders = GetInt(reader, "TeslimEdildiSayisi"),
-                                CancelledOrders = GetInt(reader, "IptalSayisi")
-                            };
-                        }
-                    }
+                    cmd.ExecuteNonQuery();
                 }
-
-                return new OrderSummary();
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþ özeti getirilirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("Sipariþ iptal edilirken veritabaný hatasý oluþtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþ özeti getirilirken hata oluþtu: " + ex.Message);
+                throw new Exception("Sipariþ iptal edilirken hata oluþtu: " + ex.Message);
             }
         }
 
         private int GetInt(SqlDataReader reader, string columnName)
         {
-            if (reader[columnName] == DBNull.Value)
+            int index = reader.GetOrdinal(columnName);
+
+            if (reader.IsDBNull(index))
                 return 0;
 
-            return Convert.ToInt32(reader[columnName]);
+            return Convert.ToInt32(reader.GetValue(index));
+        }
+
+        private object GetNullableValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return DBNull.Value;
+
+            return value.Trim();
         }
     }
 }
