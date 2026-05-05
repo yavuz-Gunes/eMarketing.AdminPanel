@@ -17,6 +17,18 @@ namespace eMarketing.AdminPanel
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            using (LoginForm loginForm = new LoginForm())
+            {
+                if (loginForm.ShowDialog() != DialogResult.OK)
+                    return;
+            }
+
+            using (MagazaSecimForm magazaSecimForm = new MagazaSecimForm())
+            {
+                if (magazaSecimForm.ShowDialog() != DialogResult.OK || !magazaSecimForm.SecimYapildi)
+                    return;
+            }
+
             Application.Run(new FrmMain());
         }
     }
