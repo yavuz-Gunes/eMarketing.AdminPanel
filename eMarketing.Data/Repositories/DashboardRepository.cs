@@ -37,7 +37,18 @@ namespace eMarketing.Data.Repositories
                             LowStockProducts = GetInt(reader, "KritikStok"),
                             TotalCategories = GetInt(reader, "ToplamKategori"),
                             ActiveCategories = GetInt(reader, "AktifKategori"),
-                            TotalOrders = GetInt(reader, "ToplamSiparis")
+                            TotalOrders = GetInt(reader, "ToplamSiparis"),
+                            PreparingOrders = GetInt(reader, "HazirlaniyorSayisi"),
+                            ShippedOrders = GetInt(reader, "KargodaSayisi"),
+                            DeliveredOrders = GetInt(reader, "TeslimEdildiSayisi"),
+                            CancelledOrders = GetInt(reader, "IptalSayisi"),
+                            PendingPaymentOrders = GetInt(reader, "BekleyenOdemeSayisi"),
+                            TotalCustomers = GetInt(reader, "ToplamMusteri"),
+                            ActiveStores = GetInt(reader, "AktifMagaza"),
+                            StaffCount = GetInt(reader, "PersonelSayisi"),
+                            TotalRevenue = GetDecimal(reader, "ToplamCiro"),
+                            TodayRevenue = GetDecimal(reader, "BugunkuCiro"),
+                            MonthlyRevenue = GetDecimal(reader, "AylikCiro")
                         };
                     }
                 }
@@ -88,6 +99,11 @@ namespace eMarketing.Data.Repositories
 
         public DataTable GetCriticalStockProducts()
         {
+            return GetCriticalStockProducts(null, true);
+        }
+
+        public DataTable GetCriticalStockProducts(int? magazaId = null, bool tumMagazalar = true)
+        {
             try
             {
                 DataTable table = new DataTable();
@@ -97,6 +113,12 @@ namespace eMarketing.Data.Repositories
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
+                        .Value = magazaId.HasValue ? (object)magazaId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@TumMagazalar", SqlDbType.Bit)
+                        .Value = tumMagazalar;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -122,6 +144,16 @@ namespace eMarketing.Data.Repositories
                 return 0;
 
             return Convert.ToInt32(reader.GetValue(index));
+        }
+
+        private decimal GetDecimal(SqlDataReader reader, string columnName)
+        {
+            int index = reader.GetOrdinal(columnName);
+
+            if (reader.IsDBNull(index))
+                return 0;
+
+            return Convert.ToDecimal(reader.GetValue(index));
         }
     }
 }

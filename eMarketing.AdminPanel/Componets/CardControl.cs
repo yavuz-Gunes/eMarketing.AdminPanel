@@ -147,12 +147,29 @@ namespace eMarketing.AdminPanel.Componets
                 lblTitle.Text = _title;
 
             if (lblValue != null)
+            {
                 lblValue.Text = _value;
+                lblValue.Font = new Font("Segoe UI", GetValueFontSize(_value), FontStyle.Bold);
+            }
 
             if (lblDescription != null)
                 lblDescription.Text = _description;
 
             Invalidate();
+        }
+
+        private float GetValueFontSize(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 22F;
+
+            if (value.Length > 14)
+                return 17F;
+
+            if (value.Length > 10)
+                return 19F;
+
+            return 22F;
         }
 
         private string GetDefaultDescription(string title)

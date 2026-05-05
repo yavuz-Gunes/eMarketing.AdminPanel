@@ -10,5 +10,18 @@
         public int ActiveCategories { get; set; }
 
         public int TotalOrders { get; set; }
+        public int PreparingOrders { get; set; }
+        public int ShippedOrders { get; set; }
+        public int DeliveredOrders { get; set; }
+        public int CancelledOrders { get; set; }
+        public int PendingPaymentOrders { get; set; }
+
+        public int TotalCustomers { get; set; }
+        public int ActiveStores { get; set; }
+        public int StaffCount { get; set; }
+
+        public decimal TotalRevenue { get; set; }
+        public decimal TodayRevenue { get; set; }
+        public decimal MonthlyRevenue { get; set; }
     }
 }

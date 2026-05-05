@@ -13,8 +13,15 @@ namespace eMarketing.AdminPanel.Forms
     {
         private readonly OrderRepository _orderRepo = new OrderRepository();
         private readonly ProductRepository _productRepo = new ProductRepository();
+        private readonly MagazaRepository _magazaRepo = new MagazaRepository();
 
         private Label lblTitle;
+
+        private Label lblMagaza;
+        private ComboBox cmbMagaza;
+
+        private Label lblSatisKanali;
+        private ComboBox cmbSatisKanali;
 
         private Label lblCustomerName;
         private TextBox txtCustomerName;
@@ -47,6 +54,7 @@ namespace eMarketing.AdminPanel.Forms
 
         private void OrderModalForm_Load(object sender, EventArgs e)
         {
+            LoadMagazalar();
             LoadProducts();
         }
 
@@ -60,7 +68,7 @@ namespace eMarketing.AdminPanel.Forms
             ShowInTaskbar = false;
             BackColor = Color.White;
             Width = 560;
-            Height = 470;
+            Height = 610;
 
             lblTitle = new Label
             {
@@ -73,35 +81,73 @@ namespace eMarketing.AdminPanel.Forms
                 Padding = new Padding(20, 16, 20, 0)
             };
 
-            lblCustomerName = new Label
+            lblMagaza = new Label
             {
-                Text = "Müşteri Adı",
+                Text = "Bayi / Mağaza",
                 AutoSize = true,
                 Location = new Point(24, 68),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
-            txtCustomerName = new TextBox
+            cmbMagaza = new ComboBox
             {
                 Location = new Point(24, 92),
                 Width = 490,
-                Font = new Font("Segoe UI", 10F),
-                MaxLength = 150
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10F)
             };
+            cmbMagaza.SelectedIndexChanged += CmbMagaza_SelectedIndexChanged;
 
-            lblCustomerEmail = new Label
+            lblSatisKanali = new Label
             {
-                Text = "E-Posta",
+                Text = "Satış Tipi",
                 AutoSize = true,
                 Location = new Point(24, 130),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
-            txtCustomerEmail = new TextBox
+            cmbSatisKanali = new ComboBox
             {
                 Location = new Point(24, 154),
+                Width = 220,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10F)
+            };
+            cmbSatisKanali.Items.Add("Bayi Satışı");
+            cmbSatisKanali.SelectedIndex = 0;
+
+            lblCustomerName = new Label
+            {
+                Text = "Müşteri Adı",
+                AutoSize = true,
+                Location = new Point(24, 192),
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = AppColors.TextSecondary
+            };
+
+            txtCustomerName = new TextBox
+            {
+                Location = new Point(24, 216),
+                Width = 490,
+                Font = new Font("Segoe UI", 10F),
+                MaxLength = 150,
+                ReadOnly = true
+            };
+
+            lblCustomerEmail = new Label
+            {
+                Text = "E-Posta",
+                AutoSize = true,
+                Location = new Point(24, 254),
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = AppColors.TextSecondary
+            };
+
+            txtCustomerEmail = new TextBox
+            {
+                Location = new Point(24, 278),
                 Width = 490,
                 Font = new Font("Segoe UI", 10F),
                 MaxLength = 200
@@ -111,17 +157,17 @@ namespace eMarketing.AdminPanel.Forms
             {
                 Text = "Telefon",
                 AutoSize = true,
-                Location = new Point(24, 192),
+                Location = new Point(24, 316),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
             txtCustomerPhone = new TextBox
             {
-                Location = new Point(24, 216),
+                Location = new Point(24, 340),
                 Width = 490,
                 Font = new Font("Segoe UI", 10F),
-                MaxLength = 11
+                MaxLength = 30
             };
 
             txtCustomerPhone.KeyPress += TxtCustomerPhone_KeyPress;
@@ -131,14 +177,14 @@ namespace eMarketing.AdminPanel.Forms
             {
                 Text = "Ürün",
                 AutoSize = true,
-                Location = new Point(24, 254),
+                Location = new Point(24, 378),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
             cmbProduct = new ComboBox
             {
-                Location = new Point(24, 278),
+                Location = new Point(24, 402),
                 Width = 300,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 10F)
@@ -150,14 +196,14 @@ namespace eMarketing.AdminPanel.Forms
             {
                 Text = "Adet",
                 AutoSize = true,
-                Location = new Point(344, 254),
+                Location = new Point(344, 378),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
             txtQuantity = new TextBox
             {
-                Location = new Point(344, 278),
+                Location = new Point(344, 402),
                 Width = 80,
                 Font = new Font("Segoe UI", 10F),
                 Text = "1"
@@ -171,14 +217,14 @@ namespace eMarketing.AdminPanel.Forms
             {
                 Text = "Toplam Tutar",
                 AutoSize = true,
-                Location = new Point(24, 318),
+                Location = new Point(24, 442),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
             txtTotalPrice = new TextBox
             {
-                Location = new Point(24, 342),
+                Location = new Point(24, 466),
                 Width = 160,
                 Font = new Font("Segoe UI", 10F),
                 ReadOnly = true
@@ -233,6 +279,10 @@ namespace eMarketing.AdminPanel.Forms
             Controls.Add(lblCustomerEmail);
             Controls.Add(txtCustomerName);
             Controls.Add(lblCustomerName);
+            Controls.Add(cmbSatisKanali);
+            Controls.Add(lblSatisKanali);
+            Controls.Add(cmbMagaza);
+            Controls.Add(lblMagaza);
             Controls.Add(lblTitle);
 
             AcceptButton = btnSave;
@@ -256,6 +306,59 @@ namespace eMarketing.AdminPanel.Forms
                 MessageBox.Show("Ürünler yüklenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void LoadMagazalar()
+        {
+            try
+            {
+                DataTable magazalar = _magazaRepo.GetMagazaSecimListesi(
+                    "",
+                    true,
+                    AppSession.KullaniciId,
+                    AppSession.AdminMi);
+
+                if (!magazalar.Columns.Contains("MagazaGosterim"))
+                    magazalar.Columns.Add("MagazaGosterim", typeof(string));
+
+                foreach (DataRow row in magazalar.Rows)
+                {
+                    row["MagazaGosterim"] =
+                        Convert.ToString(row["MusteriAdi"]) + " - " +
+                        Convert.ToString(row["MagazaAdi"]);
+                }
+
+                cmbMagaza.DisplayMember = "MagazaGosterim";
+                cmbMagaza.ValueMember = "MagazaId";
+                cmbMagaza.DataSource = magazalar;
+
+                if (AppSession.SeciliMagazaId.HasValue)
+                    cmbMagaza.SelectedValue = AppSession.SeciliMagazaId.Value;
+
+                MagazaBilgisiniFormaYansit();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Bayi/mağaza listesi yüklenirken hata: " + ex.Message,
+                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CmbMagaza_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            MagazaBilgisiniFormaYansit();
+        }
+
+        private void MagazaBilgisiniFormaYansit()
+        {
+            DataRowView rowView = cmbMagaza.SelectedItem as DataRowView;
+            if (rowView == null)
+                return;
+
+            txtCustomerName.Text = Convert.ToString(rowView["MusteriAdi"]);
+
+            if (rowView.Row.Table.Columns.Contains("Telefon") && rowView["Telefon"] != DBNull.Value)
+                txtCustomerPhone.Text = Convert.ToString(rowView["Telefon"]);
         }
 
         private void CmbProduct_SelectedIndexChanged(object sender, EventArgs e)
@@ -307,9 +410,9 @@ namespace eMarketing.AdminPanel.Forms
             if (string.IsNullOrWhiteSpace(phone))
                 return;
 
-            if (phone.Length < 10 || phone.Length > 11)
+            if (phone.Length < 10 || phone.Length > 30)
             {
-                MessageBox.Show("Telefon numarası 10 veya 11 haneli olmalıdır.",
+                MessageBox.Show("Telefon numarası 10-30 hane aralığında olmalıdır.",
                     "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtCustomerPhone.Focus();
             }
@@ -401,9 +504,9 @@ namespace eMarketing.AdminPanel.Forms
                 }
 
                 if (!string.IsNullOrWhiteSpace(customerPhone) &&
-                    (customerPhone.Length < 10 || customerPhone.Length > 11))
+                    (customerPhone.Length < 10 || customerPhone.Length > 30))
                 {
-                    MessageBox.Show("Telefon numarası 10 veya 11 haneli olmalıdır.",
+                    MessageBox.Show("Telefon numarası 10-30 hane aralığında olmalıdır.",
                         "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtCustomerPhone.Focus();
                     return;
@@ -414,6 +517,14 @@ namespace eMarketing.AdminPanel.Forms
                     MessageBox.Show("Ürün seçiniz.",
                         "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     cmbProduct.Focus();
+                    return;
+                }
+
+                if (cmbMagaza.SelectedValue == null || !(cmbMagaza.SelectedItem is DataRowView magazaRow))
+                {
+                    MessageBox.Show("Sipariş için bayi/mağaza seçiniz.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    cmbMagaza.Focus();
                     return;
                 }
 
@@ -446,6 +557,9 @@ namespace eMarketing.AdminPanel.Forms
                 decimal price = Convert.ToDecimal(rowView["Fiyat"]);
                 decimal totalPrice = price * quantity;
                 int productId = Convert.ToInt32(cmbProduct.SelectedValue);
+                int magazaId = Convert.ToInt32(cmbMagaza.SelectedValue);
+
+                customerName = Convert.ToString(magazaRow["MusteriAdi"]);
 
                 _orderRepo.AddOrder(
                     customerName,
@@ -453,7 +567,10 @@ namespace eMarketing.AdminPanel.Forms
                     customerPhone,
                     productId,
                     quantity,
-                    totalPrice);
+                    totalPrice,
+                    magazaId,
+                    GetSiparisTipi(),
+                    "AdminPanel");
 
                 DialogResult = DialogResult.OK;
                 Close();
@@ -463,6 +580,11 @@ namespace eMarketing.AdminPanel.Forms
                 MessageBox.Show("Sipariş kaydedilirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private string GetSiparisTipi()
+        {
+            return "Bayi";
         }
 
         private bool IsValidCustomerName(string customerName)

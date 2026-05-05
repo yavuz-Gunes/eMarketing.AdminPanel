@@ -52,6 +52,11 @@ namespace eMarketing.AdminPanel.Pages
         private int hoveredRowIndex = -1;
         private int hoveredColumnIndex = -1;
 
+        private bool AdminModu
+        {
+            get { return AppSession.AdminMi; }
+        }
+
         public OrdersPage()
         {
             Dock = DockStyle.Fill;
@@ -105,7 +110,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblTitle = new Label
             {
-                Text = "Siparişler",
+                Text = AdminModu ? "Siparişler" : "Verilen Siparişler",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary,
                 AutoSize = true,
@@ -114,7 +119,9 @@ namespace eMarketing.AdminPanel.Pages
 
             lblSubtitle = new Label
             {
-                Text = "Sipariş kayıtlarını görüntüleyin, detayları inceleyin ve durumlarını yönetin.",
+                Text = AdminModu
+                    ? "Sipariş kayıtlarını görüntüleyin, detayları inceleyin ve durumlarını yönetin."
+                    : "Merkez tarafından hazırlanan siparişlerinizin durumunu takip edin.",
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary,
                 AutoSize = true,
@@ -138,11 +145,14 @@ namespace eMarketing.AdminPanel.Pages
 
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSubtitle);
-            headerPanel.Controls.Add(btnNewOrder);
+
+            if (AdminModu)
+                headerPanel.Controls.Add(btnNewOrder);
 
             headerPanel.Resize += (s, e) =>
             {
-                btnNewOrder.Location = new Point(headerPanel.Width - btnNewOrder.Width, 6);
+                if (AdminModu)
+                    btnNewOrder.Location = new Point(headerPanel.Width - btnNewOrder.Width, 6);
             };
         }
 
@@ -181,7 +191,7 @@ namespace eMarketing.AdminPanel.Pages
             cTotal.SetData("🧾", "Toplam", "0");
             cPreparing.SetData("🟠", "Hazırlanıyor", "0");
             cShipped.SetData("🚚", "Kargoda", "0");
-            cDelivered.SetData("✅", "Teslim", "0");
+            cDelivered.SetData("✅", AdminModu ? "Teslim" : "Teslim Alındı", "0");
             cCancelled.SetData("❌", "İptal", "0");
 
             grid.Controls.Add(cTotal, 0, 0);
@@ -374,33 +384,46 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Name = "SiparisNo",
                 DataPropertyName = "SiparisId",
-                HeaderText = "ID",
+                HeaderText = AdminModu ? "ID" : "Sipariş",
                 Width = 70
             });
 
-            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            if (AdminModu)
             {
-                Name = "MusteriAdi",
-                DataPropertyName = "MusteriAdi",
-                HeaderText = "Müşteri",
-                Width = 150
-            });
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
+                    Name = "MusteriAdi",
+                    DataPropertyName = "MusteriAdi",
+                    HeaderText = "Bayi",
+                    Width = 150
+                });
 
-            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "MusteriTelefon",
-                DataPropertyName = "MusteriTelefon",
-                HeaderText = "Telefon",
-                Width = 120
-            });
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
+                    Name = "MusteriTelefon",
+                    DataPropertyName = "MusteriTelefon",
+                    HeaderText = "Telefon",
+                    Width = 120
+                });
 
-            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
+                    Name = "MusteriEmail",
+                    DataPropertyName = "MusteriEmail",
+                    HeaderText = "E-Posta",
+                    Width = 170
+                });
+            }
+            else
             {
-                Name = "MusteriEmail",
-                DataPropertyName = "MusteriEmail",
-                HeaderText = "E-Posta",
-                Width = 170
-            });
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
+                    Name = "MagazaAdi",
+                    DataPropertyName = "MagazaAdi",
+                    HeaderText = "Mağaza",
+                    Width = 170
+                });
+            }
 
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -465,7 +488,7 @@ namespace eMarketing.AdminPanel.Pages
             footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 78,
+                Height = AdminModu ? 78 : 62,
                 BackColor = AppColors.CardBackground,
                 Padding = new Padding(16, 16, 16, 16)
             };
@@ -527,10 +550,20 @@ namespace eMarketing.AdminPanel.Pages
             btnOpenDetail.FlatAppearance.BorderColor = AppColors.Border;
             btnOpenDetail.Click += BtnOpenDetail_Click;
 
-            footerPanel.Controls.Add(lblSelectedOrder);
-            footerPanel.Controls.Add(txtOrderId);
-            footerPanel.Controls.Add(cmbStatus);
-            footerPanel.Controls.Add(btnUpdateStatus);
+            if (AdminModu)
+            {
+                footerPanel.Controls.Add(lblSelectedOrder);
+                footerPanel.Controls.Add(txtOrderId);
+                footerPanel.Controls.Add(cmbStatus);
+                footerPanel.Controls.Add(btnUpdateStatus);
+            }
+            else
+            {
+                btnOpenDetail.Location = new Point(16, 14);
+                btnOpenDetail.Text = "Seçili Sipariş Detayı";
+                btnOpenDetail.Width = 160;
+            }
+
             footerPanel.Controls.Add(btnOpenDetail);
         }
 
@@ -555,7 +588,7 @@ namespace eMarketing.AdminPanel.Pages
 
         private int? GetCurrentMagazaId()
         {
-            if (AppSession.TumMagazalar)
+            if (AdminModu && AppSession.TumMagazalar)
                 return null;
 
             return AppSession.SeciliMagazaId;
@@ -563,7 +596,7 @@ namespace eMarketing.AdminPanel.Pages
 
         private bool IsTumMagazalar()
         {
-            return AppSession.TumMagazalar || !AppSession.SeciliMagazaId.HasValue;
+            return AdminModu && (AppSession.TumMagazalar || !AppSession.SeciliMagazaId.HasValue);
         }
         private void LoadOrderSummary()
         {
@@ -577,7 +610,7 @@ namespace eMarketing.AdminPanel.Pages
                 cTotal.SetData("🧾", "Toplam", summary.TotalOrders.ToString());
                 cPreparing.SetData("🟠", "Hazırlanıyor", summary.PreparingOrders.ToString());
                 cShipped.SetData("🚚", "Kargoda", summary.ShippedOrders.ToString());
-                cDelivered.SetData("✅", "Teslim", summary.DeliveredOrders.ToString());
+                cDelivered.SetData("✅", AdminModu ? "Teslim" : "Teslim Alındı", summary.DeliveredOrders.ToString());
                 cCancelled.SetData("❌", "İptal", summary.CancelledOrders.ToString());
             }
             catch
@@ -585,7 +618,7 @@ namespace eMarketing.AdminPanel.Pages
                 cTotal.SetData("🧾", "Toplam", "0");
                 cPreparing.SetData("🟠", "Hazırlanıyor", "0");
                 cShipped.SetData("🚚", "Kargoda", "0");
-                cDelivered.SetData("✅", "Teslim", "0");
+                cDelivered.SetData("✅", AdminModu ? "Teslim" : "Teslim Alındı", "0");
                 cCancelled.SetData("❌", "İptal", "0");
             }
         }

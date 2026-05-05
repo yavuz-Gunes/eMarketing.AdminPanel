@@ -4,7 +4,6 @@ using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Pages;
 
-
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class FrmMain : Form
@@ -14,10 +13,13 @@ namespace eMarketing.AdminPanel.Forms
         private SidebarControl sidebar;
         private Panel bodyPanel;
 
+        private string currentPageKey = "Dashboard";
+
+        public bool KullaniciDegistirIstendi { get; private set; }
+
         public FrmMain()
         {
             InitializeComponent();
-
             InitializeLayout();
         }
 
@@ -57,6 +59,9 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             topbar.ThemeToggleClicked += Topbar_ThemeToggleClicked;
+            topbar.StoreChangeClicked += Topbar_StoreChangeClicked;
+            topbar.SetUserName(AppSession.AdSoyad);
+            topbar.SetStoreName(AppSession.MagazaGorunumAdi);
 
             sidebar = new SidebarControl
             {
@@ -73,20 +78,104 @@ namespace eMarketing.AdminPanel.Forms
             Controls.Add(bodyPanel);
             Controls.Add(sidebar);
 
-            LoadPage(
-                new DashboardPage(),
-                "Kontrol Paneli",
-                "Genel satış, stok ve sipariş özetleri"
-            );
+            LoadPage("Dashboard");
 
             ResumeLayout(true);
         }
 
-        private void LoadPage(UserControl page, string title, string subtitle)
+        private void LoadPage(string pageKey)
+        {
+            UserControl page;
+            string title;
+            string subtitle;
+
+            if (!CanAccessPage(pageKey))
+            {
+                page = new PlaceholderPage(
+                    "Yetkisiz Erişim",
+                    "Bu modül yalnızca yönetici rolündeki kullanıcılar tarafından görüntülenebilir.");
+                title = "Yetkisiz Erişim";
+                subtitle = "Bu alan için yönetici yetkisi gerekir";
+            }
+            else if (pageKey == "Products")
+            {
+                page = new ProductsPage();
+                title = "Ürünler";
+                subtitle = "Oto yedek parça ürünlerini listele, ekle ve düzenle";
+            }
+            else if (pageKey == "DealerStock")
+            {
+                page = new BayiStokPage();
+                title = "Bayi Stokları";
+                subtitle = AppSession.AdminMi
+                    ? "Tüm bayilerin mağaza stoklarını takip et"
+                    : "Seçili mağazanın stoklarını ve eksik ürünlerini takip et";
+            }
+            else if (pageKey == "Categories")
+            {
+                page = new CategoriesPage();
+                title = "Kategoriler";
+                subtitle = "Ürün kategorilerini yönet";
+            }
+            else if (pageKey == "Orders")
+            {
+                page = new OrdersPage();
+                title = AppSession.AdminMi ? "Siparişler" : "Verilen Siparişler";
+                subtitle = AppSession.AdminMi
+                    ? "Seçili mağazaya ait müşteri siparişlerini görüntüle ve takip et"
+                    : "Merkezden gelen siparişlerin hazırlık, kargo ve teslim durumunu takip et";
+            }
+            else if (pageKey == "Customers")
+            {
+                page = new CustomersPage();
+                title = "Müşteriler";
+                subtitle = "Müşteri bilgilerini, mağazalarını ve sipariş ilişkilerini yönet";
+            }
+            else if (pageKey == "Stores")
+            {
+                page = new MagazalarPage();
+                title = "Mağazalar";
+                subtitle = "Bayileri, mağaza kartlarını ve mağaza operasyonunu yönet";
+            }
+            else if (pageKey == "Personnel")
+            {
+                page = new PersonelPage();
+                title = "Personel";
+                subtitle = "Kullanıcı, rol ve mağaza yetkilendirmeleri";
+            }
+            else if (pageKey == "Reports")
+            {
+                page = new PlaceholderPage(
+                    "Raporlar",
+                    "Raporlar ekranı hazırlanıyor. Satış, ciro, stok ve mağaza performans raporları burada toplanacak.");
+                title = "Raporlar";
+                subtitle = "Satış, stok ve mağaza performans analizleri";
+            }
+            else if (pageKey == "Settings")
+            {
+                page = new PlaceholderPage(
+                    "Ayarlar",
+                    "Ayarlar ekranı hazırlanıyor. Sistem tercihleri ve uygulama davranışları bu modülde yönetilecek.");
+                title = "Ayarlar";
+                subtitle = "Sistem tercihleri ve yönetim ayarları";
+            }
+            else
+            {
+                page = new DashboardPage();
+                title = "Kontrol Paneli";
+                subtitle = "Genel satış, stok ve sipariş özetleri";
+                pageKey = "Dashboard";
+            }
+
+            LoadPage(pageKey, page, title, subtitle);
+        }
+
+        private void LoadPage(string pageKey, UserControl page, string title, string subtitle)
         {
             if (contentPanel == null || topbar == null)
                 return;
 
+            currentPageKey = pageKey;
             contentPanel.SuspendLayout();
 
             while (contentPanel.Controls.Count > 0)
@@ -103,7 +192,9 @@ namespace eMarketing.AdminPanel.Forms
             contentPanel.Controls.Add(page);
 
             topbar.SetTitle(title);
-            topbar.SetSubtitle(GetTopbarSubtitle(subtitle));
+            topbar.SetSubtitle(subtitle);
+            topbar.SetStoreName(AppSession.MagazaGorunumAdi);
+            topbar.SetUserName(AppSession.AdSoyad);
 
             if (page is IThemeable themeablePage)
                 themeablePage.ApplyTheme();
@@ -111,72 +202,64 @@ namespace eMarketing.AdminPanel.Forms
             contentPanel.ResumeLayout(true);
         }
 
-        private string GetTopbarSubtitle(string pageSubtitle)
-        {
-            string selectedStore = AppSession.MagazaGorunumAdi;
-
-            if (string.IsNullOrWhiteSpace(pageSubtitle))
-                return "Seçili mağaza: " + selectedStore;
-
-            return pageSubtitle + "  |  Seçili mağaza: " + selectedStore;
-        }
-
         private void Sidebar_MenuClicked(object sender, string pageName)
         {
-            if (pageName == "Dashboard")
+            if (pageName == "Dashboard" ||
+                pageName == "Products" ||
+                pageName == "DealerStock" ||
+                pageName == "Categories" ||
+                pageName == "Orders" ||
+                pageName == "Customers" ||
+                pageName == "Stores" ||
+                pageName == "Personnel" ||
+                pageName == "Reports" ||
+                pageName == "Settings")
             {
-                LoadPage(
-                    new DashboardPage(),
-                    "Kontrol Paneli",
-                    "Genel satış, stok ve sipariş özetleri"
-                );
-            }
-            else if (pageName == "Products")
-            {
-                LoadPage(
-                    new ProductsPage(),
-                    "Ürünler",
-                    "Oto yedek parça ürünlerini listele, ekle ve düzenle"
-                );
-            }
-            else if (pageName == "Categories")
-            {
-                LoadPage(
-                    new CategoriesPage(),
-                    "Kategoriler",
-                    "Ürün kategorilerini yönet"
-                );
-            }
-            else if (pageName == "Orders")
-            {
-                LoadPage(
-                    new OrdersPage(),
-                    "Siparişler",
-                    "Seçili mağazaya ait müşteri siparişlerini görüntüle ve takip et"
-                );
-            }
-            else if (pageName == "Customers")
-            {
-                LoadPage(
-                    new CustomersPage(),
-                    "Müşteriler",
-                    "Müşteri bilgilerini, mağazalarını ve sipariş ilişkilerini yönet"
-                );
-            }
-            else if (pageName == "Personnel")
-            {
-                MessageBox.Show(
-                    "Personel sayfası henüz oluşturulmadı.",
-                    "Bilgi",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                LoadPage(pageName);
             }
             else if (pageName == "Logout")
             {
                 AppSession.CikisYap();
                 Application.Exit();
             }
+            else if (pageName == "SwitchUser")
+            {
+                KullaniciDegistirIstendi = true;
+                Close();
+            }
+        }
+
+        private bool CanAccessPage(string pageKey)
+        {
+            if (pageKey == "Customers" ||
+                pageKey == "Stores" ||
+                pageKey == "Products" ||
+                pageKey == "Categories" ||
+                pageKey == "Personnel" ||
+                pageKey == "Reports" ||
+                pageKey == "Settings")
+            {
+                return AppSession.AdminMi;
+            }
+
+            return true;
+        }
+
+        private void Topbar_StoreChangeClicked()
+        {
+            using (MagazaSecimForm magazaSecimForm = new MagazaSecimForm())
+            {
+                if (magazaSecimForm.ShowDialog(this) != DialogResult.OK || !magazaSecimForm.SecimYapildi)
+                    return;
+            }
+
+            topbar.SetStoreName(AppSession.MagazaGorunumAdi);
+            LoadPage(currentPageKey);
+        }
+
+        public void MagazaSeciminiYenile()
+        {
+            topbar?.SetStoreName(AppSession.MagazaGorunumAdi);
         }
 
         private void Topbar_ThemeToggleClicked()

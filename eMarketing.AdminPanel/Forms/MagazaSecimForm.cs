@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.Data.Repositories;
@@ -9,11 +10,15 @@ namespace eMarketing.AdminPanel.Forms
 {
     public class MagazaSecimForm : Form
     {
-        private readonly MagazaRepository _repo = new MagazaRepository();
+        private readonly MagazaRepository repo = new MagazaRepository();
 
-        private ListBox lstMagazalar;
-        private Button btnSec;
+        private FlowLayoutPanel kartListesi;
+        private TextBox txtArama;
         private Button btnTumMagazalar;
+        private Button btnVazgec;
+        private Label lblBaslik;
+        private Label lblAciklama;
+        private Label lblBosDurum;
 
         public bool SecimYapildi { get; private set; }
 
@@ -24,7 +29,8 @@ namespace eMarketing.AdminPanel.Forms
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(520, 420);
+            ClientSize = new Size(860, 620);
+            BackColor = AppColors.Background;
 
             BuildUi();
             Load += MagazaSecimForm_Load;
@@ -32,57 +38,233 @@ namespace eMarketing.AdminPanel.Forms
 
         private void BuildUi()
         {
-            lstMagazalar = new ListBox { Left = 20, Top = 20, Width = 480, Height = 320, DisplayMember = "MagazaGosterim" };
-            btnSec = new Button { Text = "Seçili Mağazayı Kullan", Left = 20, Top = 356, Width = 230, Height = 34 };
-            btnTumMagazalar = new Button { Text = "Tüm Mağazalar", Left = 270, Top = 356, Width = 230, Height = 34 };
+            Panel header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 118,
+                Padding = new Padding(24, 20, 24, 12),
+                BackColor = AppColors.CardBackground
+            };
 
-            btnSec.Click += BtnSec_Click;
+            lblBaslik = new Label
+            {
+                Text = "Mağaza Seçimi",
+                Dock = DockStyle.Top,
+                Height = 34,
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary
+            };
+
+            lblAciklama = new Label
+            {
+                Text = AppSession.AdminMi
+                    ? "Çalışmak istediğiniz mağazayı seçin ya da tüm mağazalarla devam edin."
+                    : "Yetkili olduğunuz mağazalardan birini seçin.",
+                Dock = DockStyle.Top,
+                Height = 26,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = AppColors.TextSecondary
+            };
+
+            txtArama = new TextBox
+            {
+                Width = 360,
+                Height = 28,
+                Left = 24,
+                Top = 78,
+                Font = new Font("Segoe UI", 10F),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            txtArama.TextChanged += TxtArama_TextChanged;
+
+            header.Controls.Add(txtArama);
+            header.Controls.Add(lblAciklama);
+            header.Controls.Add(lblBaslik);
+
+            kartListesi = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                AutoScroll = true,
+                Padding = new Padding(24, 22, 24, 12),
+                BackColor = AppColors.Background
+            };
+
+            lblBosDurum = new Label
+            {
+                Text = "Yetkili mağaza bulunamadı.",
+                AutoSize = false,
+                Width = 780,
+                Height = 80,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = AppColors.TextSecondary,
+                Visible = false
+            };
+
+            Panel footer = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 74,
+                Padding = new Padding(24, 14, 24, 16),
+                BackColor = AppColors.CardBackground
+            };
+
+            btnTumMagazalar = new Button
+            {
+                Text = "Tüm Mağazalar",
+                Width = 170,
+                Height = 38,
+                Left = 24,
+                Top = 16,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Visible = AppSession.AdminMi
+            };
             btnTumMagazalar.Click += BtnTumMagazalar_Click;
 
-            Controls.Add(lstMagazalar);
-            Controls.Add(btnSec);
-            Controls.Add(btnTumMagazalar);
+            btnVazgec = new Button
+            {
+                Text = "Vazgeç",
+                Width = 120,
+                Height = 38,
+                Left = ClientSize.Width - 150,
+                Top = 16,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnVazgec.Click += (sender, e) => Close();
+
+            StyleButton(btnTumMagazalar, true);
+            StyleButton(btnVazgec, false);
+
+            footer.Controls.Add(btnTumMagazalar);
+            footer.Controls.Add(btnVazgec);
+
+            Controls.Add(kartListesi);
+            Controls.Add(footer);
+            Controls.Add(header);
         }
 
         private void MagazaSecimForm_Load(object sender, EventArgs e)
         {
+            MagazalariYukle();
+        }
+
+        private void TxtArama_TextChanged(object sender, EventArgs e)
+        {
+            MagazalariYukle();
+        }
+
+        private void MagazalariYukle()
+        {
             try
             {
-                DataTable table = _repo.GetAktifMagazalar();
-                table.Columns.Add("MagazaGosterim", typeof(string));
+                kartListesi.SuspendLayout();
+                kartListesi.Controls.Clear();
+
+                DataTable table = repo.GetMagazaSecimListesi(
+                    txtArama.Text.Trim(),
+                    true,
+                    AppSession.KullaniciId,
+                    AppSession.AdminMi);
+
+                if (table.Rows.Count == 0)
+                {
+                    lblBosDurum.Visible = true;
+                    kartListesi.Controls.Add(lblBosDurum);
+                    return;
+                }
+
+                lblBosDurum.Visible = false;
 
                 foreach (DataRow row in table.Rows)
                 {
-                    string musteri = Convert.ToString(row["MusteriAdi"]);
-                    string magaza = Convert.ToString(row["MagazaAdi"]);
-                    string sehir = Convert.ToString(row["Sehir"]);
-                    row["MagazaGosterim"] = string.Format("{0} - {1} ({2})", musteri, magaza, sehir);
+                    kartListesi.Controls.Add(CreateMagazaCard(row));
                 }
-
-                lstMagazalar.DataSource = table;
-                lstMagazalar.ValueMember = "MagazaId";
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                kartListesi.ResumeLayout(true);
+            }
         }
 
-        private void BtnSec_Click(object sender, EventArgs e)
+        private Panel CreateMagazaCard(DataRow row)
         {
-            DataRowView selected = lstMagazalar.SelectedItem as DataRowView;
-            if (selected == null)
+            Panel card = new Panel
             {
-                MessageBox.Show("Lütfen bir mağaza seçiniz.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+                Width = 250,
+                Height = 158,
+                Margin = new Padding(0, 0, 16, 16),
+                Padding = new Padding(16),
+                BackColor = AppColors.CardBackground,
+                Cursor = Cursors.Hand,
+                Tag = row
+            };
 
+            Label magazaAdi = CreateLabel(GetText(row, "MagazaAdi", "Mağaza"), 11F, FontStyle.Bold, AppColors.TextPrimary, 42);
+            Label musteriAdi = CreateLabel(GetText(row, "MusteriAdi", "Müşteri"), 9F, FontStyle.Regular, AppColors.TextSecondary, 24);
+            Label konum = CreateLabel(GetKonumText(row), 8.5F, FontStyle.Regular, AppColors.TextMuted, 22);
+            Label ozet = CreateLabel(GetOzetText(row), 8.5F, FontStyle.Bold, AppColors.Primary, 24);
+
+            magazaAdi.Dock = DockStyle.Top;
+            musteriAdi.Dock = DockStyle.Top;
+            konum.Dock = DockStyle.Top;
+            ozet.Dock = DockStyle.Bottom;
+
+            card.Controls.Add(ozet);
+            card.Controls.Add(konum);
+            card.Controls.Add(musteriAdi);
+            card.Controls.Add(magazaAdi);
+
+            AttachCardClick(card, row);
+
+            card.MouseEnter += (sender, e) => card.BackColor = AppColors.PrimarySoft;
+            card.MouseLeave += (sender, e) => card.BackColor = AppColors.CardBackground;
+            card.Paint += Card_Paint;
+
+            return card;
+        }
+
+        private Label CreateLabel(string text, float size, FontStyle style, Color color, int height)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Height = height,
+                Font = new Font("Segoe UI", size, style),
+                ForeColor = color,
+                BackColor = Color.Transparent,
+                AutoEllipsis = true
+            };
+        }
+
+        private void AttachCardClick(Control control, DataRow row)
+        {
+            control.Click += (sender, e) => MagazaSec(row);
+
+            foreach (Control child in control.Controls)
+            {
+                child.Cursor = Cursors.Hand;
+                child.Click += (sender, e) => MagazaSec(row);
+            }
+        }
+
+        private void MagazaSec(DataRow row)
+        {
             AppSession.MagazaSec(
-                Convert.ToInt32(selected["MusteriId"]),
-                Convert.ToInt32(selected["MagazaId"]),
-                Convert.ToString(selected["MusteriAdi"]),
-                Convert.ToString(selected["MagazaAdi"]),
-                Convert.ToString(selected["Sehir"]));
+                Convert.ToInt32(row["MusteriId"]),
+                Convert.ToInt32(row["MagazaId"]),
+                Convert.ToString(row["MusteriAdi"]),
+                Convert.ToString(row["MagazaAdi"]),
+                Convert.ToString(row["Sehir"]));
 
             SecimYapildi = true;
             DialogResult = DialogResult.OK;
@@ -95,6 +277,72 @@ namespace eMarketing.AdminPanel.Forms
             SecimYapildi = true;
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private string GetKonumText(DataRow row)
+        {
+            string sehir = GetText(row, "Sehir", "");
+            string ilce = GetText(row, "Ilce", "");
+
+            if (!string.IsNullOrWhiteSpace(sehir) && !string.IsNullOrWhiteSpace(ilce))
+                return sehir + " / " + ilce;
+
+            if (!string.IsNullOrWhiteSpace(sehir))
+                return sehir;
+
+            return "Konum girilmemiş";
+        }
+
+        private string GetOzetText(DataRow row)
+        {
+            int siparisSayisi = GetInt(row, "SiparisSayisi");
+            decimal toplamCiro = GetDecimal(row, "ToplamCiro");
+            return siparisSayisi + " sipariş  |  " + toplamCiro.ToString("N2", new CultureInfo("tr-TR")) + " TL";
+        }
+
+        private string GetText(DataRow row, string columnName, string defaultValue)
+        {
+            if (!row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return defaultValue;
+
+            string value = Convert.ToString(row[columnName]);
+            return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+        }
+
+        private int GetInt(DataRow row, string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return 0;
+
+            return Convert.ToInt32(row[columnName]);
+        }
+
+        private decimal GetDecimal(DataRow row, string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return 0;
+
+            return Convert.ToDecimal(row[columnName]);
+        }
+
+        private void StyleButton(Button button, bool primary)
+        {
+            button.FlatAppearance.BorderSize = 0;
+            button.BackColor = primary ? AppColors.Primary : AppColors.PrimarySoft;
+            button.ForeColor = primary ? Color.White : AppColors.Primary;
+            button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        }
+
+        private void Card_Paint(object sender, PaintEventArgs e)
+        {
+            Control card = sender as Control;
+            if (card == null)
+                return;
+
+            using (Pen pen = new Pen(AppColors.Border))
+            {
+                e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+            }
         }
     }
 }

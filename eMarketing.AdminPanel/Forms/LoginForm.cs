@@ -9,11 +9,12 @@ namespace eMarketing.AdminPanel.Forms
 {
     public class LoginForm : Form
     {
-        private readonly LoginRepository _repo = new LoginRepository();
+        private readonly LoginRepository repo = new LoginRepository();
 
         private TextBox txtKullaniciAdi;
         private TextBox txtSifre;
         private Button btnGiris;
+        private Label lblMesaj;
 
         public LoginForm()
         {
@@ -22,29 +23,161 @@ namespace eMarketing.AdminPanel.Forms
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(360, 220);
+            ShowIcon = false;
+            ClientSize = new Size(760, 460);
+            BackColor = AppColors.Background;
 
             BuildUi();
         }
 
         private void BuildUi()
         {
-            Label lblKullanici = new Label { Text = "Kullanıcı Adı", Left = 24, Top = 30, Width = 120 };
-            txtKullaniciAdi = new TextBox { Left = 24, Top = 52, Width = 312 };
+            Panel solPanel = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 300,
+                BackColor = AppColors.Primary,
+                Padding = new Padding(30)
+            };
 
-            Label lblSifre = new Label { Text = "Şifre", Left = 24, Top = 90, Width = 120 };
-            txtSifre = new TextBox { Left = 24, Top = 112, Width = 312, UseSystemPasswordChar = true };
+            Label lblMarka = new Label
+            {
+                Text = "eMarketing",
+                Dock = DockStyle.Top,
+                Height = 48,
+                Font = new Font("Segoe UI", 22F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent
+            };
 
-            btnGiris = new Button { Text = "Giriş Yap", Left = 24, Top = 156, Width = 312, Height = 34 };
+            Label lblMarkaAlt = new Label
+            {
+                Text = "Bayi, stok ve sipariş yönetimi",
+                Dock = DockStyle.Top,
+                Height = 58,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(232, 240, 255),
+                BackColor = Color.Transparent
+            };
+
+            Label lblSurum = new Label
+            {
+                Text = "Yönetim Paneli",
+                Dock = DockStyle.Bottom,
+                Height = 34,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(232, 240, 255),
+                BackColor = Color.Transparent
+            };
+
+            solPanel.Controls.Add(lblSurum);
+            solPanel.Controls.Add(lblMarkaAlt);
+            solPanel.Controls.Add(lblMarka);
+
+            Panel formPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = AppColors.CardBackground,
+                Padding = new Padding(54, 48, 54, 42)
+            };
+
+            Label lblBaslik = new Label
+            {
+                Text = "Giriş Yap",
+                Dock = DockStyle.Top,
+                Height = 42,
+                Font = new Font("Segoe UI", 19F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary,
+                BackColor = Color.Transparent
+            };
+
+            Label lblAlt = new Label
+            {
+                Text = "Hesabınızla devam edin.",
+                Dock = DockStyle.Top,
+                Height = 32,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = AppColors.TextSecondary,
+                BackColor = Color.Transparent
+            };
+
+            Label lblKullanici = CreateLabel("Kullanıcı Adı", 0, 106);
+            txtKullaniciAdi = CreateTextBox(0, 130);
+
+            Label lblSifre = CreateLabel("Şifre", 0, 188);
+            txtSifre = CreateTextBox(0, 212);
+            txtSifre.UseSystemPasswordChar = true;
+
+            lblMesaj = new Label
+            {
+                Text = "",
+                Location = new Point(0, 258),
+                Width = 340,
+                Height = 26,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = AppColors.Danger,
+                BackColor = Color.Transparent
+            };
+
+            btnGiris = new Button
+            {
+                Text = "Giriş Yap",
+                Location = new Point(0, 298),
+                Width = 340,
+                Height = 42,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = AppColors.Primary,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnGiris.FlatAppearance.BorderSize = 0;
             btnGiris.Click += BtnGiris_Click;
 
-            Controls.Add(lblKullanici);
-            Controls.Add(txtKullaniciAdi);
-            Controls.Add(lblSifre);
-            Controls.Add(txtSifre);
-            Controls.Add(btnGiris);
+            formPanel.Controls.Add(btnGiris);
+            formPanel.Controls.Add(lblMesaj);
+            formPanel.Controls.Add(txtSifre);
+            formPanel.Controls.Add(lblSifre);
+            formPanel.Controls.Add(txtKullaniciAdi);
+            formPanel.Controls.Add(lblKullanici);
+            formPanel.Controls.Add(lblAlt);
+            formPanel.Controls.Add(lblBaslik);
+
+            Controls.Add(formPanel);
+            Controls.Add(solPanel);
 
             AcceptButton = btnGiris;
+            Shown += (sender, e) => txtKullaniciAdi.Focus();
+        }
+
+        private Label CreateLabel(string text, int left, int top)
+        {
+            return new Label
+            {
+                Text = text,
+                Left = left,
+                Top = top,
+                Width = 340,
+                Height = 22,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = AppColors.TextSecondary,
+                BackColor = Color.Transparent
+            };
+        }
+
+        private TextBox CreateTextBox(int left, int top)
+        {
+            return new TextBox
+            {
+                Left = left,
+                Top = top,
+                Width = 340,
+                Height = 32,
+                Font = new Font("Segoe UI", 11F),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary
+            };
         }
 
         private void BtnGiris_Click(object sender, EventArgs e)
@@ -52,29 +185,44 @@ namespace eMarketing.AdminPanel.Forms
             string kullaniciAdi = txtKullaniciAdi.Text.Trim();
             string sifre = txtSifre.Text;
 
+            lblMesaj.Text = "";
+
             if (string.IsNullOrWhiteSpace(kullaniciAdi) || string.IsNullOrWhiteSpace(sifre))
             {
-                MessageBox.Show("Kullanıcı adı ve şifre zorunludur.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                lblMesaj.Text = "Kullanıcı adı ve şifre zorunludur.";
                 return;
             }
 
             try
             {
-                KullaniciGirisModel kullanici = _repo.GirisYap(kullaniciAdi, sifre);
+                btnGiris.Enabled = false;
+                btnGiris.Text = "Kontrol ediliyor...";
+
+                KullaniciGirisModel kullanici = repo.GirisYap(kullaniciAdi, sifre);
 
                 if (kullanici == null)
                 {
-                    MessageBox.Show("Kullanıcı adı veya şifre hatalı.", "Giriş Başarısız", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    lblMesaj.Text = "Kullanıcı adı veya şifre hatalı.";
                     return;
                 }
 
-                AppSession.GirisBilgisiAyarla(kullanici.KullaniciId, kullanici.KullaniciAdi, kullanici.AdSoyad, kullanici.Rol);
+                AppSession.GirisBilgisiAyarla(
+                    kullanici.KullaniciId,
+                    kullanici.KullaniciAdi,
+                    kullanici.AdSoyad,
+                    kullanici.Rol);
+
                 DialogResult = DialogResult.OK;
                 Close();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnGiris.Enabled = true;
+                btnGiris.Text = "Giriş Yap";
             }
         }
     }

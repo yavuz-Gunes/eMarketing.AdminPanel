@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
 
 namespace eMarketing.AdminPanel
@@ -17,19 +18,31 @@ namespace eMarketing.AdminPanel
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            using (LoginForm loginForm = new LoginForm())
-            {
-                if (loginForm.ShowDialog() != DialogResult.OK)
-                    return;
-            }
 
-            using (MagazaSecimForm magazaSecimForm = new MagazaSecimForm())
+            while (true)
             {
-                if (magazaSecimForm.ShowDialog() != DialogResult.OK || !magazaSecimForm.SecimYapildi)
-                    return;
-            }
+                using (LoginForm loginForm = new LoginForm())
+                {
+                    if (loginForm.ShowDialog() != DialogResult.OK)
+                        return;
+                }
 
-            Application.Run(new FrmMain());
+                using (MagazaSecimForm magazaSecimForm = new MagazaSecimForm())
+                {
+                    if (magazaSecimForm.ShowDialog() != DialogResult.OK || !magazaSecimForm.SecimYapildi)
+                        return;
+                }
+
+                using (FrmMain mainForm = new FrmMain())
+                {
+                    Application.Run(mainForm);
+
+                    if (!mainForm.KullaniciDegistirIstendi)
+                        return;
+                }
+
+                AppSession.CikisYap();
+            }
         }
     }
 }

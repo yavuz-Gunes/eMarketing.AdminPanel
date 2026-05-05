@@ -19,12 +19,15 @@ namespace eMarketing.AdminPanel.Pages
         private TableLayoutPanel cardsGrid;
         private TableLayoutPanel bodyGrid;
 
-        private CardControl cTotalProducts;
-        private CardControl cActiveProducts;
-        private CardControl cLowStock;
-        private CardControl cTotalCategories;
-        private CardControl cActiveCategories;
+        private CardControl cTotalRevenue;
         private CardControl cTotalOrders;
+        private CardControl cActiveStores;
+        private CardControl cTotalCustomers;
+        private CardControl cPendingPayments;
+        private CardControl cLowStock;
+        private CardControl cPreparingOrders;
+        private CardControl cShippedOrders;
+        private CardControl cDeliveredOrders;
 
         private Panel bodyArea;
 
@@ -67,7 +70,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 300F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 430F));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             cardsGrid.Dock = DockStyle.Fill;
@@ -88,7 +91,7 @@ namespace eMarketing.AdminPanel.Pages
             cardsGrid = new TableLayoutPanel
             {
                 ColumnCount = 3,
-                RowCount = 2,
+                RowCount = 3,
                 BackColor = AppColors.Background,
                 Margin = Padding.Empty,
                 Padding = Padding.Empty
@@ -100,24 +103,33 @@ namespace eMarketing.AdminPanel.Pages
             cardsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
             cardsGrid.RowStyles.Clear();
-            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
+            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
+            cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 33.34F));
 
-            cTotalProducts = CreateCard("Toplam Ürün", "0", new Padding(0, 0, 18, 18));
-            cActiveProducts = CreateCard("Aktif Ürün", "0", new Padding(0, 0, 18, 18));
+            cTotalRevenue = CreateCard("Toplam Ciro", "0,00 TL", new Padding(0, 0, 18, 18));
+            cTotalOrders = CreateCard("Toplam Sipariş", "0", new Padding(0, 0, 18, 18));
+            cActiveStores = CreateCard("Aktif Mağaza", "0", new Padding(0, 0, 0, 18));
+
+            cTotalCustomers = CreateCard("Müşteri", "0", new Padding(0, 0, 18, 18));
+            cPendingPayments = CreateCard("Bekleyen Ödeme", "0", new Padding(0, 0, 18, 18));
             cLowStock = CreateCard("Kritik Stok", "0", new Padding(0, 0, 0, 18));
 
-            cTotalCategories = CreateCard("Toplam Kategori", "0", new Padding(0, 0, 18, 0));
-            cActiveCategories = CreateCard("Aktif Kategori", "0", new Padding(0, 0, 18, 0));
-            cTotalOrders = CreateCard("Toplam Sipariş", "0", Padding.Empty);
+            cPreparingOrders = CreateCard("Hazırlanıyor", "0", new Padding(0, 0, 18, 0));
+            cShippedOrders = CreateCard("Kargoda", "0", new Padding(0, 0, 18, 0));
+            cDeliveredOrders = CreateCard("Teslim Edildi", "0", Padding.Empty);
 
-            cardsGrid.Controls.Add(cTotalProducts, 0, 0);
-            cardsGrid.Controls.Add(cActiveProducts, 1, 0);
-            cardsGrid.Controls.Add(cLowStock, 2, 0);
+            cardsGrid.Controls.Add(cTotalRevenue, 0, 0);
+            cardsGrid.Controls.Add(cTotalOrders, 1, 0);
+            cardsGrid.Controls.Add(cActiveStores, 2, 0);
 
-            cardsGrid.Controls.Add(cTotalCategories, 0, 1);
-            cardsGrid.Controls.Add(cActiveCategories, 1, 1);
-            cardsGrid.Controls.Add(cTotalOrders, 2, 1);
+            cardsGrid.Controls.Add(cTotalCustomers, 0, 1);
+            cardsGrid.Controls.Add(cPendingPayments, 1, 1);
+            cardsGrid.Controls.Add(cLowStock, 2, 1);
+
+            cardsGrid.Controls.Add(cPreparingOrders, 0, 2);
+            cardsGrid.Controls.Add(cShippedOrders, 1, 2);
+            cardsGrid.Controls.Add(cDeliveredOrders, 2, 2);
         }
 
         private void BuildBodyArea()
@@ -268,14 +280,17 @@ namespace eMarketing.AdminPanel.Pages
                     IsTumMagazalar()
                 );
 
-                cTotalProducts.SetData("Toplam Ürün", summary.TotalProducts.ToString());
-                cActiveProducts.SetData("Aktif Ürün", summary.ActiveProducts.ToString());
-                cLowStock.SetData("Kritik Stok", summary.LowStockProducts.ToString());
+                cTotalRevenue.SetData("Toplam Ciro", FormatMoney(summary.TotalRevenue), GetScopeText("seçili mağaza cirosu"));
+                cTotalOrders.SetData("Toplam Sipariş", summary.TotalOrders.ToString(), GetScopeText("sipariş adedi"));
+                cActiveStores.SetData("Aktif Mağaza", summary.ActiveStores.ToString(), IsTumMagazalar() ? "aktif mağaza sayısı" : "seçili mağaza");
 
-                cTotalCategories.SetData("Toplam Kategori", summary.TotalCategories.ToString());
-                cActiveCategories.SetData("Aktif Kategori", summary.ActiveCategories.ToString());
+                cTotalCustomers.SetData("Müşteri", summary.TotalCustomers.ToString(), GetScopeText("sipariş veren müşteri"));
+                cPendingPayments.SetData("Bekleyen Ödeme", summary.PendingPaymentOrders.ToString(), "ödeme bekleyen siparişler");
+                cLowStock.SetData("Kritik Stok", summary.LowStockProducts.ToString(), "stok seviyesi düşük ürün");
 
-                cTotalOrders.SetData("Toplam Sipariş", summary.TotalOrders.ToString());
+                cPreparingOrders.SetData("Hazırlanıyor", summary.PreparingOrders.ToString(), "operasyonda bekleyen sipariş");
+                cShippedOrders.SetData("Kargoda", summary.ShippedOrders.ToString(), "sevkiyatta olan sipariş");
+                cDeliveredOrders.SetData("Teslim Edildi", summary.DeliveredOrders.ToString(), "tamamlanan sipariş");
             }
             catch (Exception ex)
             {
@@ -331,7 +346,10 @@ namespace eMarketing.AdminPanel.Pages
             {
                 criticalStockList.Controls.Clear();
 
-                DataTable table = _repo.GetCriticalStockProducts();
+                DataTable table = _repo.GetCriticalStockProducts(
+                    GetCurrentMagazaId(),
+                    IsTumMagazalar()
+                );
 
                 if (table.Rows.Count == 0)
                 {
@@ -635,13 +653,26 @@ namespace eMarketing.AdminPanel.Pages
         private string GetMoneyText(DataRow row, string columnName)
         {
             if (!row.Table.Columns.Contains(columnName))
-                return "0,00 ₺";
+                return "0,00 TL";
 
             if (row[columnName] == DBNull.Value)
-                return "0,00 ₺";
+                return "0,00 TL";
 
             decimal value = Convert.ToDecimal(row[columnName]);
-            return value.ToString("N2", new CultureInfo("tr-TR")) + " ₺";
+            return FormatMoney(value);
+        }
+
+        private string FormatMoney(decimal value)
+        {
+            return value.ToString("N2", new CultureInfo("tr-TR")) + " TL";
+        }
+
+        private string GetScopeText(string text)
+        {
+            if (IsTumMagazalar())
+                return "tüm mağazalarda " + text;
+
+            return text;
         }
 
         private void FitListItemWidths(FlowLayoutPanel list)
@@ -706,12 +737,15 @@ namespace eMarketing.AdminPanel.Pages
             if (lblCriticalStockSubTitle != null)
                 lblCriticalStockSubTitle.ForeColor = AppColors.TextSecondary;
 
-            cTotalProducts?.ApplyTheme();
-            cActiveProducts?.ApplyTheme();
-            cLowStock?.ApplyTheme();
-            cTotalCategories?.ApplyTheme();
-            cActiveCategories?.ApplyTheme();
+            cTotalRevenue?.ApplyTheme();
             cTotalOrders?.ApplyTheme();
+            cActiveStores?.ApplyTheme();
+            cTotalCustomers?.ApplyTheme();
+            cPendingPayments?.ApplyTheme();
+            cLowStock?.ApplyTheme();
+            cPreparingOrders?.ApplyTheme();
+            cShippedOrders?.ApplyTheme();
+            cDeliveredOrders?.ApplyTheme();
 
             Invalidate(true);
             Refresh();

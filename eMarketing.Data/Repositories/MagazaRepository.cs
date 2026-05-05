@@ -9,6 +9,15 @@ namespace eMarketing.Data.Repositories
     {
         public DataTable GetMagazaSecimListesi(string arama = "", bool sadeceAktif = true)
         {
+            return GetMagazaSecimListesi(arama, sadeceAktif, null, false);
+        }
+
+        public DataTable GetMagazaSecimListesi(
+            string arama,
+            bool sadeceAktif,
+            int? kullaniciId,
+            bool adminMi)
+        {
             try
             {
                 DataTable table = new DataTable();
@@ -24,6 +33,12 @@ namespace eMarketing.Data.Repositories
 
                     cmd.Parameters.Add("@SadeceAktif", SqlDbType.Bit)
                         .Value = sadeceAktif;
+
+                    cmd.Parameters.Add("@KullaniciId", SqlDbType.Int)
+                        .Value = kullaniciId.HasValue ? (object)kullaniciId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@AdminMi", SqlDbType.Bit)
+                        .Value = adminMi;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -46,7 +61,17 @@ namespace eMarketing.Data.Repositories
             return GetMagazaSecimListesi("", true);
         }
 
+        public DataTable GetAktifMagazalar(int kullaniciId, bool adminMi)
+        {
+            return GetMagazaSecimListesi("", true, kullaniciId, adminMi);
+        }
+
         public DataRow GetMagazaById(int magazaId)
+        {
+            return GetMagazaById(magazaId, null, false);
+        }
+
+        public DataRow GetMagazaById(int magazaId, int? kullaniciId, bool adminMi)
         {
             try
             {
@@ -60,6 +85,12 @@ namespace eMarketing.Data.Repositories
 
                     cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
                         .Value = magazaId;
+
+                    cmd.Parameters.Add("@KullaniciId", SqlDbType.Int)
+                        .Value = kullaniciId.HasValue ? (object)kullaniciId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@AdminMi", SqlDbType.Bit)
+                        .Value = adminMi;
 
                     connection.Open();
                     adapter.Fill(table);

@@ -28,11 +28,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþler getirilirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸler getirilirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþler getirilirken hata oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸler getirilirken hata oluÅŸtu: " + ex.Message);
             }
         }
 
@@ -71,11 +71,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþ özeti getirilirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ Ã¶zeti getirilirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþ özeti getirilirken hata oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ Ã¶zeti getirilirken hata oluÅŸtu: " + ex.Message);
             }
         }
 
@@ -105,11 +105,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþler getirilirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸler getirilirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþler getirilirken hata oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸler getirilirken hata oluÅŸtu: " + ex.Message);
             }
         }
 
@@ -121,6 +121,29 @@ namespace eMarketing.Data.Repositories
             int quantity,
             decimal totalPrice)
         {
+            return AddOrder(
+                customerName,
+                customerEmail,
+                customerPhone,
+                productId,
+                quantity,
+                totalPrice,
+                null,
+                "Bayi",
+                "AdminPanel");
+        }
+
+        public int AddOrder(
+            string customerName,
+            string customerEmail,
+            string customerPhone,
+            int productId,
+            int quantity,
+            decimal totalPrice,
+            int? magazaId,
+            string siparisTipi,
+            string siparisKaynagi)
+        {
             try
             {
                 using (SqlConnection connection = DbHelper.GetConnection())
@@ -130,7 +153,7 @@ namespace eMarketing.Data.Repositories
 
                     cmd.Parameters.Add("@CustomerName", SqlDbType.NVarChar, 300)
                         .Value = string.IsNullOrWhiteSpace(customerName)
-                            ? throw new Exception("Müþteri adý boþ olamaz.")
+                            ? throw new Exception("MÃ¼ÅŸteri adÄ± boÅŸ olamaz.")
                             : customerName.Trim();
 
                     cmd.Parameters.Add("@CustomerEmail", SqlDbType.NVarChar, 400)
@@ -151,6 +174,15 @@ namespace eMarketing.Data.Repositories
                     cmd.Parameters["@TotalPrice"].Precision = 18;
                     cmd.Parameters["@TotalPrice"].Scale = 2;
 
+                    cmd.Parameters.Add("@CustomerStoreId", SqlDbType.Int)
+                        .Value = magazaId.HasValue ? (object)magazaId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@OrderType", SqlDbType.NVarChar, 50)
+                        .Value = string.IsNullOrWhiteSpace(siparisTipi) ? "Bayi" : siparisTipi.Trim();
+
+                    cmd.Parameters.Add("@OrderSource", SqlDbType.NVarChar, 50)
+                        .Value = string.IsNullOrWhiteSpace(siparisKaynagi) ? "AdminPanel" : siparisKaynagi.Trim();
+
                     connection.Open();
 
                     object result = cmd.ExecuteScalar();
@@ -159,11 +191,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþ eklenirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ eklenirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþ eklenirken hata oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ eklenirken hata oluÅŸtu: " + ex.Message);
             }
         }
 
@@ -188,11 +220,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþ durumu güncellenirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ durumu gÃ¼ncellenirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþ durumu güncellenirken hata oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ durumu gÃ¼ncellenirken hata oluÅŸtu: " + ex.Message);
             }
         }
 
@@ -214,11 +246,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Sipariþ iptal edilirken veritabaný hatasý oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ iptal edilirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Sipariþ iptal edilirken hata oluþtu: " + ex.Message);
+                throw new Exception("SipariÅŸ iptal edilirken hata oluÅŸtu: " + ex.Message);
             }
         }
 

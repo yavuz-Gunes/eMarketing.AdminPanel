@@ -9,6 +9,7 @@ namespace eMarketing.AdminPanel.Componets
     public class TopbarControl : Panel
     {
         public event Action ThemeToggleClicked;
+        public event Action StoreChangeClicked;
 
         private Panel leftPanel;
         private FlowLayoutPanel rightPanel;
@@ -16,14 +17,13 @@ namespace eMarketing.AdminPanel.Componets
         private Label titleLabel;
         private Label subtitleLabel;
 
-        private Panel brandBadge;
         private Panel dateBadge;
         private Panel adminBadge;
 
-        private Label brandLabel;
         private Label dateTimeLabel;
         private Label adminLabel;
 
+        private Button btnStore;
         private Button btnTheme;
 
         private Timer clockTimer;
@@ -85,7 +85,7 @@ namespace eMarketing.AdminPanel.Componets
             rightPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
-                Width = 620,
+                Width = 760,
                 Height = 52,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
@@ -97,12 +97,12 @@ namespace eMarketing.AdminPanel.Componets
             adminBadge = CreateBadgePanel(out adminLabel, "Admin", 118);
             btnTheme = CreateThemeButton();
             dateBadge = CreateBadgePanel(out dateTimeLabel, DateTime.Now.ToString("dd.MM.yyyy HH:mm"), 178);
-            brandBadge = CreateBadgePanel(out brandLabel, "⚙ eMarketing", 158);
+            btnStore = CreateStoreButton();
 
             rightPanel.Controls.Add(adminBadge);
             rightPanel.Controls.Add(btnTheme);
             rightPanel.Controls.Add(dateBadge);
-            rightPanel.Controls.Add(brandBadge);
+            rightPanel.Controls.Add(btnStore);
 
             Controls.Add(leftPanel);
             Controls.Add(rightPanel);
@@ -156,6 +156,29 @@ namespace eMarketing.AdminPanel.Componets
             return button;
         }
 
+        private Button CreateStoreButton()
+        {
+            Button button = new Button
+            {
+                Width = 300,
+                Height = 38,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 0, 0, 0),
+                Text = "Mağaza: Tüm Mağazalar",
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(12, 0, 12, 0),
+                AutoEllipsis = true
+            };
+
+            button.FlatAppearance.BorderSize = 0;
+            button.Click += (sender, e) => StoreChangeClicked?.Invoke();
+            button.Resize += (sender, e) => ApplyRoundedRegion(button, 12);
+
+            return button;
+        }
+
         private void ClockTimer_Tick(object sender, EventArgs e)
         {
             UpdateClock();
@@ -192,6 +215,24 @@ namespace eMarketing.AdminPanel.Componets
             SetSubtitle(subtitle);
         }
 
+        public void SetStoreName(string storeName)
+        {
+            if (btnStore == null)
+                return;
+
+            btnStore.Text = "Mağaza: " + (string.IsNullOrWhiteSpace(storeName)
+                ? "Mağaza Seçilmedi"
+                : storeName);
+        }
+
+        public void SetUserName(string userName)
+        {
+            if (adminLabel == null)
+                return;
+
+            adminLabel.Text = string.IsNullOrWhiteSpace(userName) ? "Admin" : userName;
+        }
+
         public void ApplyTheme()
         {
             BackColor = AppColors.TopbarBackground;
@@ -199,9 +240,11 @@ namespace eMarketing.AdminPanel.Componets
             titleLabel.ForeColor = AppColors.TextPrimary;
             subtitleLabel.ForeColor = AppColors.TextSecondary;
 
-            ApplyBadgeTheme(brandBadge, brandLabel, true);
             ApplyBadgeTheme(dateBadge, dateTimeLabel, false);
             ApplyBadgeTheme(adminBadge, adminLabel, true);
+
+            btnStore.BackColor = AppColors.PrimarySoft;
+            btnStore.ForeColor = AppColors.Primary;
 
             btnTheme.BackColor = AppColors.PrimarySoft;
             btnTheme.ForeColor = AppColors.Primary;

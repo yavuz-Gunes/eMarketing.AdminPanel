@@ -117,6 +117,9 @@
     <Compile Include="Forms\ProductModalForm.Designer.cs">
       <DependentUpon>ProductModalForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Pages\BayiStokPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Pages\CategoriesPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -126,7 +129,16 @@
     <Compile Include="Pages\DashboardPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Pages\MagazalarPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Pages\OrderPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Pages\PersonelPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Pages\PlaceholderPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Pages\ProductsPage.cs">

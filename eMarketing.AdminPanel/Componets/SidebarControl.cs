@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Core;
 
 namespace eMarketing.AdminPanel.Componets
 {
@@ -9,27 +10,27 @@ namespace eMarketing.AdminPanel.Componets
     {
         public event EventHandler<string> MenuClicked;
 
-        private readonly Dictionary<string, Button> _menuButtons = new Dictionary<string, Button>();
+        private readonly Dictionary<string, Button> menuButtons = new Dictionary<string, Button>();
 
-        private readonly Color _sidebarBack = Color.FromArgb(20, 27, 38);
-        private readonly Color _sidebarSecond = Color.FromArgb(28, 36, 50);
-        private readonly Color _activeBack = Color.FromArgb(59, 130, 246);
-        private readonly Color _hoverBack = Color.FromArgb(36, 47, 66);
-        private readonly Color _textColor = Color.FromArgb(230, 236, 245);
-        private readonly Color _mutedTextColor = Color.FromArgb(140, 150, 165);
-        private readonly Color _dangerColor = Color.FromArgb(239, 68, 68);
+        private readonly Color sidebarBack = Color.FromArgb(20, 27, 38);
+        private readonly Color sidebarSecond = Color.FromArgb(28, 36, 50);
+        private readonly Color activeBack = Color.FromArgb(59, 130, 246);
+        private readonly Color hoverBack = Color.FromArgb(36, 47, 66);
+        private readonly Color textColor = Color.FromArgb(230, 236, 245);
+        private readonly Color mutedTextColor = Color.FromArgb(140, 150, 165);
+        private readonly Color dangerColor = Color.FromArgb(239, 68, 68);
 
         private FlowLayoutPanel menuPanel;
         private Panel logoPanel;
         private Panel bottomPanel;
 
-        private string _activeKey = "Dashboard";
+        private string activeKey = "Dashboard";
 
         public SidebarControl()
         {
             Width = 240;
             Dock = DockStyle.Left;
-            BackColor = _sidebarBack;
+            BackColor = sidebarBack;
 
             BuildLayout();
             SetActiveMenu("Dashboard");
@@ -50,7 +51,7 @@ namespace eMarketing.AdminPanel.Componets
             {
                 Dock = DockStyle.Top,
                 Height = 105,
-                BackColor = _sidebarBack,
+                BackColor = sidebarBack,
                 Padding = new Padding(18, 18, 18, 12)
             };
 
@@ -66,10 +67,10 @@ namespace eMarketing.AdminPanel.Componets
 
             Label lblSubTitle = new Label
             {
-                Text = "Oto Yedek Parça Paneli",
+                Text = AppSession.AdminMi ? "Yönetim Paneli" : "Mağaza Operasyonu",
                 Dock = DockStyle.Top,
                 Height = 24,
-                ForeColor = _mutedTextColor,
+                ForeColor = mutedTextColor,
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -93,19 +94,27 @@ namespace eMarketing.AdminPanel.Componets
             menuPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                BackColor = _sidebarBack,
+                BackColor = sidebarBack,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = false,
                 Padding = new Padding(12, 20, 12, 10)
             };
 
-            AddMenuButton("Dashboard", "  Kontrol Paneli");
-            AddMenuButton("Products", "  Ürünler");
-            AddMenuButton("Categories", "  Kategoriler");
-            AddMenuButton("Orders", "  Siparişler");
-            AddMenuButton("Customers", "  Müşteriler");
-            AddMenuButton("Personnel", "  Personel");
+            AddMenuButton("Dashboard", "Kontrol Paneli", "▦");
+            AddMenuButton("Orders", AppSession.AdminMi ? "Siparişler" : "Sipariş Takibi", "≡");
+            AddMenuButton("DealerStock", "Bayi Stokları", "▤");
+
+            if (AppSession.AdminMi)
+            {
+                AddMenuButton("Products", "Ürünler", "□");
+                AddMenuButton("Customers", "Müşteriler", "◇");
+                AddMenuButton("Stores", "Mağazalar", "⌂");
+                AddMenuButton("Categories", "Kategoriler", "⌁");
+                AddMenuButton("Personnel", "Personel", "○");
+                AddMenuButton("Reports", "Raporlar", "↗");
+                AddMenuButton("Settings", "Ayarlar", "⚙");
+            }
 
             Controls.Add(menuPanel);
             menuPanel.BringToFront();
@@ -116,69 +125,87 @@ namespace eMarketing.AdminPanel.Componets
             bottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 86,
-                BackColor = _sidebarBack,
+                Height = 136,
+                BackColor = sidebarBack,
                 Padding = new Padding(12, 10, 12, 14)
             };
 
-            Button btnLogout = new Button
+            Button btnSwitchUser = CreateBottomButton("  Kullanıcı Değiştir", textColor);
+            btnSwitchUser.Dock = DockStyle.Top;
+            btnSwitchUser.Height = 42;
+            btnSwitchUser.Click += (sender, e) =>
             {
-                Text = "  Çıkış Yap",
-                Dock = DockStyle.Fill,
-                Height = 46,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = _sidebarSecond,
-                ForeColor = _dangerColor,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Cursor = Cursors.Hand
+                MenuClicked?.Invoke(this, "SwitchUser");
             };
 
-            btnLogout.FlatAppearance.BorderSize = 0;
+            Button btnLogout = CreateBottomButton("  Çıkış Yap", dangerColor);
+            btnLogout.Dock = DockStyle.Bottom;
+            btnLogout.Height = 42;
             btnLogout.FlatAppearance.MouseOverBackColor = Color.FromArgb(52, 35, 42);
             btnLogout.FlatAppearance.MouseDownBackColor = Color.FromArgb(70, 40, 48);
-
             btnLogout.Click += (sender, e) =>
             {
                 MenuClicked?.Invoke(this, "Logout");
             };
 
+            bottomPanel.Controls.Add(btnSwitchUser);
             bottomPanel.Controls.Add(btnLogout);
             Controls.Add(bottomPanel);
         }
 
-        private void AddMenuButton(string key, string text)
+        private Button CreateBottomButton(string text, Color foreColor)
+        {
+            Button button = new Button
+            {
+                Text = text,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = sidebarSecond,
+                ForeColor = foreColor,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand
+            };
+
+            button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = hoverBack;
+            button.FlatAppearance.MouseDownBackColor = activeBack;
+
+            return button;
+        }
+
+        private void AddMenuButton(string key, string text, string icon)
         {
             Button button = new Button
             {
                 Name = "btn" + key,
-                Text = text,
+                Text = FormatMenuText(icon, text),
                 Width = 216,
                 Height = 44,
                 Margin = new Padding(0, 0, 0, 8),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = _sidebarBack,
-                ForeColor = _textColor,
+                BackColor = sidebarBack,
+                ForeColor = textColor,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
-                Tag = key
+                Tag = text,
+                AccessibleName = icon
             };
 
             button.FlatAppearance.BorderSize = 0;
-            button.FlatAppearance.MouseOverBackColor = _hoverBack;
-            button.FlatAppearance.MouseDownBackColor = _activeBack;
+            button.FlatAppearance.MouseOverBackColor = hoverBack;
+            button.FlatAppearance.MouseDownBackColor = activeBack;
 
             button.MouseEnter += (sender, e) =>
             {
-                if (_activeKey != key)
-                    button.BackColor = _hoverBack;
+                if (activeKey != key)
+                    button.BackColor = hoverBack;
             };
 
             button.MouseLeave += (sender, e) =>
             {
-                if (_activeKey != key)
-                    button.BackColor = _sidebarBack;
+                if (activeKey != key)
+                    button.BackColor = sidebarBack;
             };
 
             button.Click += (sender, e) =>
@@ -187,32 +214,38 @@ namespace eMarketing.AdminPanel.Componets
                 MenuClicked?.Invoke(this, key);
             };
 
-            _menuButtons[key] = button;
+            menuButtons[key] = button;
             menuPanel.Controls.Add(button);
         }
 
         public void SetActiveMenu(string key)
         {
-            _activeKey = key;
+            activeKey = key;
 
-            foreach (var item in _menuButtons)
+            foreach (var item in menuButtons)
             {
                 Button button = item.Value;
-                string cleanText = button.Text.Replace("●", "").Trim();
+                string text = Convert.ToString(button.Tag);
+                string icon = Convert.ToString(button.AccessibleName);
+
+                button.Text = FormatMenuText(icon, text);
 
                 if (item.Key == key)
                 {
-                    button.BackColor = _activeBack;
+                    button.BackColor = activeBack;
                     button.ForeColor = Color.White;
-                    button.Text = "  ● " + cleanText;
                 }
                 else
                 {
-                    button.BackColor = _sidebarBack;
-                    button.ForeColor = _textColor;
-                    button.Text = "  " + cleanText;
+                    button.BackColor = sidebarBack;
+                    button.ForeColor = textColor;
                 }
             }
+        }
+
+        private string FormatMenuText(string icon, string text)
+        {
+            return "  " + icon + "  " + text;
         }
     }
 }
