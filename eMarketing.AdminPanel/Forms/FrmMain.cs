@@ -18,8 +18,6 @@ namespace eMarketing.AdminPanel.Forms
         {
             InitializeComponent();
 
-            PrepareSessionAndStoreSelection();
-
             InitializeLayout();
         }
 
@@ -251,27 +249,6 @@ namespace eMarketing.AdminPanel.Forms
 
             control.Invalidate();
             control.Refresh();
-        }
-
-        private void PrepareSessionAndStoreSelection()
-        {
-            AppSession.GirisBilgisiAyarla(
-                1,
-                "admin",
-                "Admin",
-                "Admin"
-            );
-
-            using (MagazaSecimForm frm = new MagazaSecimForm())
-            {
-                DialogResult result = frm.ShowDialog();
-
-                if (result != DialogResult.OK || !frm.SecimYapildi)
-                {
-                    Environment.Exit(0);
-                    return;
-                }
-            }
         }
 
         private void FrmMain_Load(object sender, EventArgs e)
