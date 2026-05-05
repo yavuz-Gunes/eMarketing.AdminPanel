@@ -552,11 +552,27 @@ namespace eMarketing.AdminPanel.Pages
             cmbFilterStatus.SelectedIndex = 0;
         }
 
+
+        private int? GetCurrentMagazaId()
+        {
+            if (AppSession.TumMagazalar)
+                return null;
+
+            return AppSession.SeciliMagazaId;
+        }
+
+        private bool IsTumMagazalar()
+        {
+            return AppSession.TumMagazalar || !AppSession.SeciliMagazaId.HasValue;
+        }
         private void LoadOrderSummary()
         {
             try
             {
-                OrderSummary summary = _repo.GetOrderSummary();
+                OrderSummary summary = _repo.GetOrderSummary(
+                    GetCurrentMagazaId(),
+                    IsTumMagazalar()
+                );
 
                 cTotal.SetData("🧾", "Toplam", summary.TotalOrders.ToString());
                 cPreparing.SetData("🟠", "Hazırlanıyor", summary.PreparingOrders.ToString());
@@ -578,10 +594,14 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                ordersTable = _repo.GetAllOrders();
+                ordersTable = _repo.GetAllOrders(
+                    GetCurrentMagazaId(),
+                    IsTumMagazalar()
+                );
+
                 dgvOrders.DataSource = ordersTable;
 
-                UpdateInfoLabel(GetCurrentRowCount(), ordersTable.Rows.Count);
+                ConfigureOrderGridColumns();
             }
             catch (Exception ex)
             {

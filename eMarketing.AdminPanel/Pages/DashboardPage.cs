@@ -247,12 +247,26 @@ namespace eMarketing.AdminPanel.Pages
             LoadRecentOrders();
             LoadCriticalStockProducts();
         }
+        private int? GetCurrentMagazaId()
+        {
+            if (AppSession.TumMagazalar)
+                return null;
 
+            return AppSession.SeciliMagazaId;
+        }
+
+        private bool IsTumMagazalar()
+        {
+            return AppSession.TumMagazalar || !AppSession.SeciliMagazaId.HasValue;
+        }
         private void LoadDashboardSummary()
         {
             try
             {
-                DashboardSummary summary = _repo.GetSummary();
+                DashboardSummary summary = _repo.GetSummary(
+                    GetCurrentMagazaId(),
+                    IsTumMagazalar()
+                );
 
                 cTotalProducts.SetData("Toplam Ürün", summary.TotalProducts.ToString());
                 cActiveProducts.SetData("Aktif Ürün", summary.ActiveProducts.ToString());
@@ -279,11 +293,14 @@ namespace eMarketing.AdminPanel.Pages
             {
                 recentOrdersList.Controls.Clear();
 
-                DataTable table = _repo.GetRecentOrders();
+                DataTable table = _repo.GetRecentOrders(
+                    GetCurrentMagazaId(),
+                    IsTumMagazalar()
+                );
 
                 if (table.Rows.Count == 0)
                 {
-                    recentOrdersList.Controls.Add(CreateEmptyItem("Henüz sipariş bulunmuyor."));
+                    recentOrdersList.Controls.Add(CreateEmptyItem("Seçili mağaza için henüz sipariş bulunmuyor."));
                     FitListItemWidths(recentOrdersList);
                     return;
                 }

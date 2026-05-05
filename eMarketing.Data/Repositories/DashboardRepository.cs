@@ -8,7 +8,7 @@ namespace eMarketing.Data.Repositories
 {
     public class DashboardRepository
     {
-        public DashboardSummary GetSummary()
+        public DashboardSummary GetSummary(int? magazaId = null, bool tumMagazalar = true)
         {
             try
             {
@@ -17,33 +17,30 @@ namespace eMarketing.Data.Repositories
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
+                    cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
+                        .Value = magazaId.HasValue ? (object)magazaId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@TumMagazalar", SqlDbType.Bit)
+                        .Value = tumMagazalar;
+
                     connection.Open();
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        if (reader.Read())
+                        if (!reader.Read())
+                            return new DashboardSummary();
+
+                        return new DashboardSummary
                         {
-                            return new DashboardSummary
-                            {
-                                TotalProducts = GetInt(reader, "ToplamUrun"),
-                                ActiveProducts = GetInt(reader, "AktifUrun"),
-                                LowStockProducts = GetInt(reader, "KritikStok"),
-
-                                TotalCategories = HasColumn(reader, "ToplamKategori")
-                                    ? GetInt(reader, "ToplamKategori")
-                                    : 0,
-
-                                ActiveCategories = HasColumn(reader, "AktifKategori")
-                                    ? GetInt(reader, "AktifKategori")
-                                    : 0,
-
-                                TotalOrders = GetInt(reader, "ToplamSiparis")
-                            };
-                        }
+                            TotalProducts = GetInt(reader, "ToplamUrun"),
+                            ActiveProducts = GetInt(reader, "AktifUrun"),
+                            LowStockProducts = GetInt(reader, "KritikStok"),
+                            TotalCategories = GetInt(reader, "ToplamKategori"),
+                            ActiveCategories = GetInt(reader, "AktifKategori"),
+                            TotalOrders = GetInt(reader, "ToplamSiparis")
+                        };
                     }
                 }
-
-                return CreateEmptySummary();
             }
             catch (SqlException ex)
             {
@@ -55,7 +52,7 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public DataTable GetRecentOrders()
+        public DataTable GetRecentOrders(int? magazaId = null, bool tumMagazalar = true)
         {
             try
             {
@@ -66,6 +63,12 @@ namespace eMarketing.Data.Repositories
                 using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
+                        .Value = magazaId.HasValue ? (object)magazaId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@TumMagazalar", SqlDbType.Bit)
+                        .Value = tumMagazalar;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -113,34 +116,12 @@ namespace eMarketing.Data.Repositories
 
         private int GetInt(SqlDataReader reader, string columnName)
         {
-            if (reader[columnName] == DBNull.Value)
+            int index = reader.GetOrdinal(columnName);
+
+            if (reader.IsDBNull(index))
                 return 0;
 
-            return Convert.ToInt32(reader[columnName]);
-        }
-
-        private bool HasColumn(SqlDataReader reader, string columnName)
-        {
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                if (reader.GetName(i).Equals(columnName, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private DashboardSummary CreateEmptySummary()
-        {
-            return new DashboardSummary
-            {
-                TotalProducts = 0,
-                ActiveProducts = 0,
-                LowStockProducts = 0,
-                TotalCategories = 0,
-                ActiveCategories = 0,
-                TotalOrders = 0
-            };
+            return Convert.ToInt32(reader.GetValue(index));
         }
     }
 }
