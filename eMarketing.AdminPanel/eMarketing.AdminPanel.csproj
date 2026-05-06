@@ -75,6 +75,9 @@
     <Compile Include="Forms\CategoryModalForm.Designer.cs">
       <DependentUpon>CategoryModalForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\BayiYetkiliModalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\CustomerModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -89,12 +92,6 @@
     </Compile>
     <Compile Include="Forms\FrmMain.Designer.cs">
       <DependentUpon>FrmMain.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\FrmOrders.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\FrmOrders.Designer.cs">
-      <DependentUpon>FrmOrders.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\LoginForm.cs">
       <SubType>Form</SubType>
@@ -149,9 +146,6 @@
     <EmbeddedResource Include="Forms\FrmMain.resx">
       <DependentUpon>FrmMain.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\FrmOrders.resx">
-      <DependentUpon>FrmOrders.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -175,7 +169,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="DataAccess\" />
     <Folder Include="Images\Products\" />
     <Folder Include="Layout\" />
     <Folder Include="Models\" />

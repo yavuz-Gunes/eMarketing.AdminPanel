@@ -16,7 +16,7 @@ BEGIN
 END
 GO
 
-ALTER PROCEDURE dbo.sp_Magaza_Secim_Listele
+CREATE OR ALTER PROCEDURE dbo.sp_Magaza_Secim_Listele
     @Arama NVARCHAR(200) = '',
     @SadeceAktif BIT = 1,
     @KullaniciId INT = NULL,
@@ -77,7 +77,7 @@ BEGIN
 END
 GO
 
-ALTER PROCEDURE dbo.sp_Magaza_Secim_Getir
+CREATE OR ALTER PROCEDURE dbo.sp_Magaza_Secim_Getir
     @MagazaId INT,
     @KullaniciId INT = NULL,
     @AdminMi BIT = 0

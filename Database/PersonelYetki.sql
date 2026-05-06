@@ -50,29 +50,58 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Kullanici_Listele
     @Arama NVARCHAR(200) = '',
-    @SadeceAktif BIT = 0
+    @SadeceAktif BIT = 0,
+    @GoruntuleyenKullaniciId INT = NULL,
+    @AdminMi BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
 
     SELECT
-        KullaniciId,
-        KullaniciAdi,
-        AdSoyad,
-        Rol,
-        AktifMi,
-        OlusturmaTarihi,
-        MagazaSayisi
-    FROM dbo.vw_Kullanici_Liste
+        k.KullaniciId,
+        k.KullaniciAdi,
+        k.AdSoyad,
+        k.Rol,
+        k.AktifMi,
+        k.OlusturmaTarihi,
+        k.MagazaSayisi
+    FROM dbo.vw_Kullanici_Liste k
     WHERE
         (
             @Arama = ''
-            OR KullaniciAdi LIKE '%' + @Arama + '%'
-            OR AdSoyad LIKE '%' + @Arama + '%'
-            OR Rol LIKE '%' + @Arama + '%'
+            OR k.KullaniciAdi LIKE '%' + @Arama + '%'
+            OR k.AdSoyad LIKE '%' + @Arama + '%'
+            OR k.Rol LIKE '%' + @Arama + '%'
         )
-        AND (@SadeceAktif = 0 OR AktifMi = 1)
-    ORDER BY AktifMi DESC, AdSoyad, KullaniciAdi;
+        AND (@SadeceAktif = 0 OR k.AktifMi = 1)
+        AND
+        (
+            @AdminMi = 1
+            OR
+            (
+                k.Rol <> N'Admin'
+                AND
+                (
+                    k.KullaniciId = @GoruntuleyenKullaniciId
+                    OR EXISTS
+                    (
+                        SELECT 1
+                        FROM dbo.KullaniciMagazalari hedefKm
+                        INNER JOIN dbo.CustomerStores hedefMagaza
+                            ON hedefMagaza.CustomerStoreId = hedefKm.MagazaId
+                        INNER JOIN dbo.KullaniciMagazalari aktifKm
+                            ON aktifKm.KullaniciId = @GoruntuleyenKullaniciId
+                           AND aktifKm.AktifMi = 1
+                        INNER JOIN dbo.CustomerStores aktifMagaza
+                            ON aktifMagaza.CustomerStoreId = aktifKm.MagazaId
+                        WHERE hedefKm.KullaniciId = k.KullaniciId
+                          AND hedefKm.AktifMi = 1
+                          AND hedefMagaza.CustomerId = aktifMagaza.CustomerId
+                    )
+                )
+            )
+        )
+    ORDER BY k.AktifMi DESC, k.AdSoyad, k.KullaniciAdi;
 END
 GO
 
@@ -136,7 +165,9 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_KullaniciMagaza_Listele
-    @KullaniciId INT
+    @KullaniciId INT,
+    @GoruntuleyenKullaniciId INT = NULL,
+    @AdminMi BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -155,16 +186,34 @@ BEGIN
         ToplamCiro,
         AktifMi,
         OlusturmaTarihi
-    FROM dbo.vw_KullaniciMagaza_Liste
-    WHERE KullaniciId = @KullaniciId
-      AND AktifMi = 1
-    ORDER BY MusteriAdi, MagazaAdi;
+    FROM dbo.vw_KullaniciMagaza_Liste v
+    WHERE v.KullaniciId = @KullaniciId
+      AND v.AktifMi = 1
+      AND
+      (
+          @AdminMi = 1
+          OR EXISTS
+          (
+              SELECT 1
+              FROM dbo.KullaniciMagazalari aktifKm
+              INNER JOIN dbo.CustomerStores aktifMagaza
+                  ON aktifMagaza.CustomerStoreId = aktifKm.MagazaId
+              INNER JOIN dbo.CustomerStores hedefMagaza
+                  ON hedefMagaza.CustomerStoreId = v.MagazaId
+              WHERE aktifKm.KullaniciId = @GoruntuleyenKullaniciId
+                AND aktifKm.AktifMi = 1
+                AND hedefMagaza.CustomerId = aktifMagaza.CustomerId
+          )
+      )
+    ORDER BY v.MusteriAdi, v.MagazaAdi;
 END
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_KullaniciMagaza_AtanmamisMagaza_Listele
     @KullaniciId INT,
-    @Arama NVARCHAR(200) = ''
+    @Arama NVARCHAR(200) = '',
+    @GoruntuleyenKullaniciId INT = NULL,
+    @AdminMi BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -189,6 +238,20 @@ BEGIN
             OR m.MusteriAdi LIKE '%' + @Arama + '%'
             OR m.MagazaAdi LIKE '%' + @Arama + '%'
             OR m.Sehir LIKE '%' + @Arama + '%'
+      )
+      AND
+      (
+            @AdminMi = 1
+            OR EXISTS
+            (
+                SELECT 1
+                FROM dbo.KullaniciMagazalari aktifKm
+                INNER JOIN dbo.CustomerStores aktifMagaza
+                    ON aktifMagaza.CustomerStoreId = aktifKm.MagazaId
+                WHERE aktifKm.KullaniciId = @GoruntuleyenKullaniciId
+                  AND aktifKm.AktifMi = 1
+                  AND aktifMagaza.CustomerId = m.MusteriId
+            )
       )
       AND NOT EXISTS
       (

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
@@ -12,51 +12,29 @@ namespace eMarketing.AdminPanel.Pages
 {
     public class CustomersPage : UserControl, IThemeable
     {
-        private readonly CustomerRepository _repo = new CustomerRepository();
+        private readonly BayiYetkiliRepository repo = new BayiYetkiliRepository();
 
         private Panel headerPanel;
         private Panel statsPanel;
         private Panel filterPanel;
-        private SplitContainer contentSplit;
-
-        private Panel customersPanel;
-        private Panel storesPanel;
-
+        private Panel gridPanel;
         private Label lblTitle;
         private Label lblSubtitle;
-        private Label lblCustomerInfo;
-        private Label lblStoresTitle;
-        private Label lblStoresSubtitle;
-
-        private Button btnNewCustomer;
-        private Button btnNewStore;
-
-        private TextBox txtSearch;
-        private ComboBox cmbStatus;
-        private Button btnSearch;
-        private Button btnClear;
-
-        private DataGridView dgvCustomers;
-        private DataGridView dgvStores;
-
-        private CategoriesCard cTotal;
-        private CategoriesCard cActive;
-        private CategoriesCard cPassive;
-        private CategoriesCard cStores;
-        private CategoriesCard cRevenue;
-
-        private Timer searchTimer;
-
-        private DataTable customersTable;
-        private DataTable storesTable;
-
-        private int selectedCustomerId = 0;
-
-        private int hoveredCustomerRowIndex = -1;
-        private int hoveredCustomerColumnIndex = -1;
-
-        private int hoveredStoreRowIndex = -1;
-        private int hoveredStoreColumnIndex = -1;
+        private Label lblInfo;
+        private TextBox txtArama;
+        private ComboBox cmbDurum;
+        private Button btnYeni;
+        private Button btnAra;
+        private Button btnTemizle;
+        private DataGridView dgvYetkililer;
+        private CategoriesCard cToplam;
+        private CategoriesCard cAktif;
+        private CategoriesCard cPasif;
+        private CategoriesCard cSiparis;
+        private Timer aramaTimer;
+        private DataTable yetkiliTable;
+        private int hoveredRow = -1;
+        private int hoveredCol = -1;
 
         public CustomersPage()
         {
@@ -64,40 +42,27 @@ namespace eMarketing.AdminPanel.Pages
             BackColor = AppColors.Background;
             Padding = new Padding(24, 18, 24, 18);
 
-            searchTimer = new Timer
-            {
-                Interval = 350
-            };
-
-            searchTimer.Tick += SearchTimer_Tick;
+            aramaTimer = new Timer { Interval = 350 };
+            aramaTimer.Tick += AramaTimer_Tick;
 
             BuildLayout();
             Load += CustomersPage_Load;
         }
 
-        private void CustomersPage_Load(object sender, EventArgs e)
-        {
-            LoadCustomers();
-        }
-
         private void BuildLayout()
         {
-            SuspendLayout();
+            BuildHeader();
+            BuildStats();
+            BuildFilters();
+            BuildGrid();
 
-            BuildHeaderPanel();
-            BuildStatsPanel();
-            BuildFilterPanel();
-            BuildContentArea();
-
-            Controls.Add(contentSplit);
+            Controls.Add(gridPanel);
             Controls.Add(filterPanel);
             Controls.Add(statsPanel);
             Controls.Add(headerPanel);
-
-            ResumeLayout(true);
         }
 
-        private void BuildHeaderPanel()
+        private void BuildHeader()
         {
             headerPanel = new Panel
             {
@@ -108,26 +73,26 @@ namespace eMarketing.AdminPanel.Pages
 
             lblTitle = new Label
             {
-                Text = "Müşteriler",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = AppColors.TextPrimary,
+                Text = "Müşteriler / Yetkililer",
+                Location = new Point(0, 2),
                 AutoSize = true,
-                Location = new Point(0, 2)
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary
             };
 
             lblSubtitle = new Label
             {
-                Text = "Firma müşterilerini, mağaza/şube bilgilerini ve sipariş ilişkilerini yönetin.",
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                ForeColor = AppColors.TextSecondary,
+                Text = "Bayilere bağlı sipariş veren kişi ve iletişim bilgilerini yönetin.",
+                Location = new Point(2, 38),
                 AutoSize = true,
-                Location = new Point(2, 38)
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = AppColors.TextSecondary
             };
 
-            btnNewCustomer = new Button
+            btnYeni = new Button
             {
-                Text = "+ Yeni Müşteri",
-                Width = 160,
+                Text = "+ Yeni Yetkili",
+                Width = 150,
                 Height = 42,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = AppColors.Primary,
@@ -135,68 +100,59 @@ namespace eMarketing.AdminPanel.Pages
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-
-            btnNewCustomer.FlatAppearance.BorderSize = 0;
-            btnNewCustomer.Click += BtnNewCustomer_Click;
+            btnYeni.FlatAppearance.BorderSize = 0;
+            btnYeni.Click += BtnYeni_Click;
 
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSubtitle);
-            headerPanel.Controls.Add(btnNewCustomer);
-
-            headerPanel.Resize += (s, e) =>
+            headerPanel.Controls.Add(btnYeni);
+            headerPanel.Resize += (sender, e) =>
             {
-                btnNewCustomer.Location = new Point(headerPanel.Width - btnNewCustomer.Width, 6);
+                btnYeni.Location = new Point(headerPanel.Width - btnYeni.Width, 6);
             };
         }
 
-        private void BuildStatsPanel()
+        private void BuildStats()
         {
             statsPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 124,
+                Height = 116,
                 BackColor = AppColors.Background
             };
 
             TableLayoutPanel grid = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 5,
+                ColumnCount = 4,
                 RowCount = 1,
-                BackColor = AppColors.Background,
-                Margin = Padding.Empty,
-                Padding = Padding.Empty
+                BackColor = AppColors.Background
             };
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
 
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            cToplam = CreateStatCard("Toplam", "0", new Padding(0, 0, 16, 0));
+            cAktif = CreateStatCard("Aktif", "0", new Padding(0, 0, 16, 0));
+            cPasif = CreateStatCard("Pasif", "0", new Padding(0, 0, 16, 0));
+            cSiparis = CreateStatCard("Sipariş Veren", "0", Padding.Empty);
 
-            cTotal = new CategoriesCard { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 16, 0) };
-            cActive = new CategoriesCard { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 16, 0) };
-            cPassive = new CategoriesCard { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 16, 0) };
-            cStores = new CategoriesCard { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 16, 0) };
-            cRevenue = new CategoriesCard { Dock = DockStyle.Fill, Margin = Padding.Empty };
-
-            cTotal.SetData("🏢", "Toplam", "0");
-            cActive.SetData("✅", "Aktif", "0");
-            cPassive.SetData("⛔", "Pasif", "0");
-            cStores.SetData("🏬", "Mağaza", "0");
-            cRevenue.SetData("₺", "Ciro", "0");
-
-            grid.Controls.Add(cTotal, 0, 0);
-            grid.Controls.Add(cActive, 1, 0);
-            grid.Controls.Add(cPassive, 2, 0);
-            grid.Controls.Add(cStores, 3, 0);
-            grid.Controls.Add(cRevenue, 4, 0);
-
+            grid.Controls.Add(cToplam, 0, 0);
+            grid.Controls.Add(cAktif, 1, 0);
+            grid.Controls.Add(cPasif, 2, 0);
+            grid.Controls.Add(cSiparis, 3, 0);
             statsPanel.Controls.Add(grid);
         }
 
-        private void BuildFilterPanel()
+        private CategoriesCard CreateStatCard(string title, string value, Padding margin)
+        {
+            CategoriesCard card = new CategoriesCard { Dock = DockStyle.Fill, Margin = margin };
+            card.SetData("□", title, value);
+            return card;
+        }
+
+        private void BuildFilters()
         {
             filterPanel = new Panel
             {
@@ -206,53 +162,32 @@ namespace eMarketing.AdminPanel.Pages
                 Padding = new Padding(16, 14, 16, 14)
             };
 
-            txtSearch = new TextBox
+            txtArama = new TextBox
             {
                 Width = 320,
-                Font = new Font("Segoe UI", 10F)
+                Font = new Font("Segoe UI", 10F),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary
             };
 
-            cmbStatus = new ComboBox
+            cmbDurum = new ComboBox
             {
                 Width = 140,
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 10F)
+                Font = new Font("Segoe UI", 10F),
+                BackColor = AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary
             };
+            cmbDurum.Items.Add("Hepsi");
+            cmbDurum.Items.Add("Aktif");
+            cmbDurum.Items.Add("Pasif");
+            cmbDurum.SelectedIndex = 0;
 
-            cmbStatus.Items.Add("Hepsi");
-            cmbStatus.Items.Add("Aktif");
-            cmbStatus.Items.Add("Pasif");
-            cmbStatus.SelectedIndex = 0;
+            btnAra = CreateButton("Ara", true);
+            btnTemizle = CreateButton("Temizle", false);
 
-            btnSearch = new Button
-            {
-                Text = "Ara",
-                Width = 88,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = AppColors.Primary,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-
-            btnSearch.FlatAppearance.BorderSize = 0;
-
-            btnClear = new Button
-            {
-                Text = "Temizle",
-                Width = 92,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
-                ForeColor = AppColors.TextSecondary,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-
-            btnClear.FlatAppearance.BorderColor = AppColors.Border;
-
-            lblCustomerInfo = new Label
+            lblInfo = new Label
             {
                 Text = "0 kayıt",
                 Width = 180,
@@ -263,20 +198,37 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = Color.Transparent
             };
 
-            txtSearch.TextChanged += TxtSearch_TextChanged;
-            txtSearch.KeyDown += TxtSearch_KeyDown;
-            cmbStatus.SelectedIndexChanged += CmbStatus_SelectedIndexChanged;
-            btnSearch.Click += BtnSearch_Click;
-            btnClear.Click += BtnClear_Click;
+            txtArama.TextChanged += TxtArama_TextChanged;
+            txtArama.KeyDown += TxtArama_KeyDown;
+            cmbDurum.SelectedIndexChanged += (sender, e) => YetkilileriYukle();
+            btnAra.Click += (sender, e) => YetkilileriYukle();
+            btnTemizle.Click += BtnTemizle_Click;
 
-            filterPanel.Controls.Add(txtSearch);
-            filterPanel.Controls.Add(cmbStatus);
-            filterPanel.Controls.Add(btnSearch);
-            filterPanel.Controls.Add(btnClear);
-            filterPanel.Controls.Add(lblCustomerInfo);
-
-            filterPanel.Resize += (s, e) => PlaceFilterControls();
+            filterPanel.Controls.Add(txtArama);
+            filterPanel.Controls.Add(cmbDurum);
+            filterPanel.Controls.Add(btnAra);
+            filterPanel.Controls.Add(btnTemizle);
+            filterPanel.Controls.Add(lblInfo);
+            filterPanel.Resize += (sender, e) => PlaceFilterControls();
             PlaceFilterControls();
+        }
+
+        private Button CreateButton(string text, bool primary)
+        {
+            Button button = new Button
+            {
+                Text = text,
+                Width = primary ? 88 : 92,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = primary ? AppColors.Primary : AppColors.CardBackground,
+                ForeColor = primary ? Color.White : AppColors.TextSecondary,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            button.FlatAppearance.BorderColor = AppColors.Border;
+            button.FlatAppearance.BorderSize = primary ? 0 : 1;
+            return button;
         }
 
         private void PlaceFilterControls()
@@ -284,84 +236,31 @@ namespace eMarketing.AdminPanel.Pages
             int x = 16;
             int y = 20;
 
-            txtSearch.Location = new Point(x, y);
-            x += txtSearch.Width + 14;
+            txtArama.Location = new Point(x, y);
+            x += txtArama.Width + 14;
 
-            cmbStatus.Location = new Point(x, y);
-            x += cmbStatus.Width + 14;
+            cmbDurum.Location = new Point(x, y);
+            x += cmbDurum.Width + 14;
 
-            btnSearch.Location = new Point(x, y - 2);
-            x += btnSearch.Width + 10;
+            btnAra.Location = new Point(x, y - 2);
+            x += btnAra.Width + 10;
 
-            btnClear.Location = new Point(x, y - 2);
+            btnTemizle.Location = new Point(x, y - 2);
 
-            lblCustomerInfo.Location = new Point(filterPanel.Width - lblCustomerInfo.Width - 16, y);
-            lblCustomerInfo.Visible = lblCustomerInfo.Left > btnClear.Right + 20;
+            lblInfo.Location = new Point(filterPanel.Width - lblInfo.Width - 16, y);
+            lblInfo.Visible = lblInfo.Left > btnTemizle.Right + 20;
         }
 
-        private void BuildContentArea()
+        private void BuildGrid()
         {
-            contentSplit = new SplitContainer
-            {
-                Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal,
-                BackColor = AppColors.Background
-            };
-
-            BuildCustomersPanel();
-            BuildStoresPanel();
-
-            contentSplit.Panel1.Controls.Add(customersPanel);
-            contentSplit.Panel2.Controls.Add(storesPanel);
-
-            contentSplit.HandleCreated += (s, e) => SetSafeSplitterDistance();
-            contentSplit.SizeChanged += (s, e) => SetSafeSplitterDistance();
-        }
-        private void SetSafeSplitterDistance()
-        {
-            if (contentSplit == null)
-                return;
-
-            if (contentSplit.Height <= 0)
-                return;
-
-            int totalHeight = contentSplit.Height;
-
-            int panel1Min = 180;
-            int panel2Min = 140;
-
-            if (totalHeight <= panel1Min + panel2Min + contentSplit.SplitterWidth)
-                return;
-
-            int maxDistance = totalHeight - panel2Min - contentSplit.SplitterWidth;
-            int desiredDistance = 360;
-
-            if (desiredDistance < panel1Min)
-                desiredDistance = panel1Min;
-
-            if (desiredDistance > maxDistance)
-                desiredDistance = maxDistance;
-
-            try
-            {
-                contentSplit.SplitterDistance = desiredDistance;
-            }
-            catch
-            {
-                // İlk yüklenme anında ölçü oturmazsa sessiz geçsin.
-            }
-        }
-
-        private void BuildCustomersPanel()
-        {
-            customersPanel = new Panel
+            gridPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = AppColors.CardBackground,
                 Padding = new Padding(12)
             };
 
-            dgvCustomers = new DataGridView
+            dgvYetkililer = new DataGridView
             {
                 Dock = DockStyle.Fill,
                 BackgroundColor = AppColors.CardBackground,
@@ -377,553 +276,186 @@ namespace eMarketing.AdminPanel.Pages
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
             };
 
-            ApplyGridStyle(dgvCustomers);
-            ConfigureCustomerGridColumns();
+            dgvYetkililer.EnableHeadersVisualStyles = false;
+            dgvYetkililer.ColumnHeadersHeight = 42;
+            dgvYetkililer.RowTemplate.Height = 50;
+            dgvYetkililer.GridColor = AppColors.Border;
+            dgvYetkililer.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvYetkililer.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dgvYetkililer.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
+            dgvYetkililer.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgvYetkililer.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
+            dgvYetkililer.DefaultCellStyle.SelectionBackColor = Color.FromArgb(238, 243, 255);
+            dgvYetkililer.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
-            dgvCustomers.CellClick += DgvCustomers_CellClick;
-            dgvCustomers.CellDoubleClick += DgvCustomers_CellDoubleClick;
-            dgvCustomers.CellFormatting += DgvCustomers_CellFormatting;
-            dgvCustomers.CellPainting += DgvCustomers_CellPainting;
-            dgvCustomers.CellMouseMove += DgvCustomers_CellMouseMove;
-            dgvCustomers.MouseLeave += DgvCustomers_MouseLeave;
+            ConfigureColumns();
+            dgvYetkililer.CellDoubleClick += DgvYetkililer_CellDoubleClick;
+            dgvYetkililer.CellContentClick += DgvYetkililer_CellContentClick;
+            dgvYetkililer.CellPainting += DgvYetkililer_CellPainting;
+            dgvYetkililer.CellMouseMove += DgvYetkililer_CellMouseMove;
+            dgvYetkililer.MouseLeave += DgvYetkililer_MouseLeave;
+            dgvYetkililer.CellFormatting += DgvYetkililer_CellFormatting;
 
-            customersPanel.Controls.Add(dgvCustomers);
+            gridPanel.Controls.Add(dgvYetkililer);
         }
 
-        private void BuildStoresPanel()
+        private void ConfigureColumns()
         {
-            storesPanel = new Panel
+            dgvYetkililer.Columns.Clear();
+            AddColumn("BayiYetkiliId", "Id", 50, false);
+            AddColumn("AdSoyad", "Ad Soyad", 170, true);
+            AddColumn("BayiAdi", "Bayi", 180, true);
+            AddColumn("MagazaAdi", "Mağaza", 170, true);
+            AddColumn("Telefon", "Telefon", 120, true);
+            AddColumn("Email", "E-Posta", 170, true);
+            AddColumn("Gorev", "Görev", 120, true);
+            AddColumn("SiparisSayisi", "Sipariş", 75, true);
+            AddColumn("SonSiparisTarihi", "Son İşlem", 120, true);
+            AddColumn("AktifMi", "Durum", 90, true);
+
+            dgvYetkililer.Columns.Add(new DataGridViewButtonColumn
             {
-                Dock = DockStyle.Fill,
-                BackColor = AppColors.CardBackground,
-                Padding = new Padding(12)
-            };
-
-            Panel storeHeader = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 56,
-                BackColor = AppColors.CardBackground
-            };
-
-            lblStoresTitle = new Label
-            {
-                Text = "Müşteri Mağazaları / Şubeleri",
-                Location = new Point(0, 2),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
-                ForeColor = AppColors.TextPrimary
-            };
-
-            lblStoresSubtitle = new Label
-            {
-                Text = "Bir müşteri seçildiğinde mağaza/şube kayıtları burada görünür.",
-                Location = new Point(2, 28),
-                AutoSize = true,
-                Font = new Font("Segoe UI", 8.5F),
-                ForeColor = AppColors.TextSecondary
-            };
-
-            btnNewStore = new Button
-            {
-                Text = "+ Yeni Mağaza",
-                Width = 145,
-                Height = 34,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = AppColors.Primary,
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-
-            btnNewStore.FlatAppearance.BorderSize = 0;
-            btnNewStore.Click += BtnNewStore_Click;
-
-            storeHeader.Controls.Add(lblStoresTitle);
-            storeHeader.Controls.Add(lblStoresSubtitle);
-            storeHeader.Controls.Add(btnNewStore);
-
-            storeHeader.Resize += (s, e) =>
-            {
-                btnNewStore.Location = new Point(storeHeader.Width - btnNewStore.Width, 8);
-            };
-
-            dgvStores = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = AppColors.CardBackground,
-                BorderStyle = BorderStyle.None,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AllowUserToResizeRows = false,
-                ReadOnly = true,
-                RowHeadersVisible = false,
-                AutoGenerateColumns = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
-            };
-
-            ApplyGridStyle(dgvStores);
-            ConfigureStoreGridColumns();
-
-            dgvStores.CellClick += DgvStores_CellClick;
-            dgvStores.CellDoubleClick += DgvStores_CellDoubleClick;
-            dgvStores.CellPainting += DgvStores_CellPainting;
-            dgvStores.CellMouseMove += DgvStores_CellMouseMove;
-            dgvStores.MouseLeave += DgvStores_MouseLeave;
-
-            storesPanel.Controls.Add(dgvStores);
-            storesPanel.Controls.Add(storeHeader);
-        }
-
-        private void ApplyGridStyle(DataGridView grid)
-        {
-            grid.EnableHeadersVisualStyles = false;
-            grid.ColumnHeadersHeight = 42;
-            grid.RowTemplate.Height = 48;
-            grid.GridColor = AppColors.Border;
-            grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-
-            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke;
-            grid.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
-            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.WhiteSmoke;
-
-            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            grid.DefaultCellStyle.BackColor = Color.White;
-            grid.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
-            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(238, 243, 255);
-            grid.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
-
-            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
-        }
-
-        private void ConfigureCustomerGridColumns()
-        {
-            dgvCustomers.Columns.Clear();
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CustomerId",
-                DataPropertyName = "CustomerId",
-                Visible = false
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CompanyName",
-                DataPropertyName = "CompanyName",
-                HeaderText = "Firma",
-                Width = 170
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "FullName",
-                DataPropertyName = "FullName",
-                HeaderText = "Görünen Ad",
-                Width = 150
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "AuthorizedPerson",
-                DataPropertyName = "AuthorizedPerson",
-                HeaderText = "Yetkili",
-                Width = 130
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Phone",
-                DataPropertyName = "Phone",
-                HeaderText = "Telefon",
-                Width = 120
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Email",
-                DataPropertyName = "Email",
-                HeaderText = "E-Posta",
-                Width = 170
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CustomerType",
-                DataPropertyName = "CustomerType",
-                HeaderText = "Tip",
-                Width = 90
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "StoreCount",
-                DataPropertyName = "StoreCount",
-                HeaderText = "Mağaza",
-                Width = 75
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "OrderCount",
-                DataPropertyName = "OrderCount",
-                HeaderText = "Sipariş",
-                Width = 75
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "TotalRevenue",
-                DataPropertyName = "TotalRevenue",
-                HeaderText = "Ciro",
-                Width = 110
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "IsActive",
-                DataPropertyName = "IsActive",
-                HeaderText = "Durum",
-                Width = 90
-            });
-
-            dgvCustomers.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colCustomerEdit",
+                Name = "colEdit",
                 HeaderText = "",
                 Text = "Düzenle",
                 UseColumnTextForButtonValue = true,
                 Width = 92
             });
 
-            dgvCustomers.Columns.Add(new DataGridViewButtonColumn
+            dgvYetkililer.Columns.Add(new DataGridViewButtonColumn
             {
-                Name = "colCustomerStatus",
+                Name = "colStatus",
                 HeaderText = "",
                 Text = "Durum",
                 UseColumnTextForButtonValue = true,
-                Width = 100
+                Width = 98
             });
         }
 
-        private void ConfigureStoreGridColumns()
+        private void AddColumn(string name, string header, int width, bool visible)
         {
-            dgvStores.Columns.Clear();
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
+            dgvYetkililer.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "CustomerStoreId",
-                DataPropertyName = "CustomerStoreId",
-                Visible = false
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "CustomerId",
-                DataPropertyName = "CustomerId",
-                Visible = false
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "StoreName",
-                DataPropertyName = "StoreName",
-                HeaderText = "Mağaza / Şube",
-                Width = 220
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "City",
-                DataPropertyName = "City",
-                HeaderText = "Şehir",
-                Width = 110
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "District",
-                DataPropertyName = "District",
-                HeaderText = "İlçe",
-                Width = 110
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "ResponsiblePerson",
-                DataPropertyName = "ResponsiblePerson",
-                HeaderText = "Sorumlu",
-                Width = 140
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Phone",
-                DataPropertyName = "Phone",
-                HeaderText = "Telefon",
-                Width = 120
-            });
-
-            dgvStores.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "IsActive",
-                DataPropertyName = "IsActive",
-                HeaderText = "Durum",
-                Width = 90
-            });
-
-            dgvStores.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colStoreEdit",
-                HeaderText = "",
-                Text = "Düzenle",
-                UseColumnTextForButtonValue = true,
-                Width = 92
-            });
-
-            dgvStores.Columns.Add(new DataGridViewButtonColumn
-            {
-                Name = "colStoreStatus",
-                HeaderText = "",
-                Text = "Durum",
-                UseColumnTextForButtonValue = true,
-                Width = 100
+                Name = name,
+                DataPropertyName = name,
+                HeaderText = header,
+                Width = width,
+                Visible = visible
             });
         }
 
-        private void LoadCustomers()
+        private void CustomersPage_Load(object sender, EventArgs e)
+        {
+            YetkilileriYukle();
+        }
+
+        private void YetkilileriYukle()
         {
             try
             {
-                customersTable = _repo.GetCustomers(txtSearch.Text.Trim(), GetSelectedStatus());
-                dgvCustomers.DataSource = customersTable;
-
-                UpdateStats(customersTable);
-                UpdateInfoLabel(customersTable.Rows.Count);
-
-                selectedCustomerId = 0;
-                dgvStores.DataSource = null;
-                lblStoresSubtitle.Text = "Bir müşteri seçildiğinde mağaza/şube kayıtları burada görünür.";
+                yetkiliTable = repo.GetYetkililer(txtArama.Text.Trim(), GetDurum());
+                dgvYetkililer.DataSource = yetkiliTable;
+                lblInfo.Text = yetkiliTable.Rows.Count + " kayıt";
+                UpdateStats();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Müşteriler yüklenirken hata: " + ex.Message,
-                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void LoadStores(int customerId)
+        private int GetDurum()
         {
-            try
-            {
-                selectedCustomerId = customerId;
-                storesTable = _repo.GetCustomerStores(customerId, -1);
-                dgvStores.DataSource = storesTable;
-
-                lblStoresSubtitle.Text = "Seçili müşteriye ait " + storesTable.Rows.Count + " mağaza/şube kaydı listeleniyor.";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Müşteri mağazaları yüklenirken hata: " + ex.Message,
-                    "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private int GetSelectedStatus()
-        {
-            if (cmbStatus.SelectedIndex == 1)
+            if (cmbDurum.SelectedIndex == 1)
                 return 1;
 
-            if (cmbStatus.SelectedIndex == 2)
+            if (cmbDurum.SelectedIndex == 2)
                 return 0;
 
             return -1;
         }
 
-        private void UpdateStats(DataTable table)
+        private void UpdateStats()
         {
             int total = 0;
             int active = 0;
             int passive = 0;
-            int storeCount = 0;
-            decimal revenue = 0;
+            int ordered = 0;
 
-            if (table != null)
+            if (yetkiliTable != null)
             {
-                total = table.Rows.Count;
-
-                foreach (DataRow row in table.Rows)
+                total = yetkiliTable.Rows.Count;
+                foreach (DataRow row in yetkiliTable.Rows)
                 {
-                    bool isActive = row["IsActive"] != DBNull.Value && Convert.ToBoolean(row["IsActive"]);
+                    bool aktif = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
+                    int siparis = row["SiparisSayisi"] == DBNull.Value ? 0 : Convert.ToInt32(row["SiparisSayisi"]);
 
-                    if (isActive)
+                    if (aktif)
                         active++;
                     else
                         passive++;
 
-                    if (table.Columns.Contains("StoreCount") && row["StoreCount"] != DBNull.Value)
-                        storeCount += Convert.ToInt32(row["StoreCount"]);
-
-                    if (table.Columns.Contains("TotalRevenue") && row["TotalRevenue"] != DBNull.Value)
-                        revenue += Convert.ToDecimal(row["TotalRevenue"]);
+                    if (siparis > 0)
+                        ordered++;
                 }
             }
 
-            cTotal.SetData("🏢", "Toplam", total.ToString());
-            cActive.SetData("✅", "Aktif", active.ToString());
-            cPassive.SetData("⛔", "Pasif", passive.ToString());
-            cStores.SetData("🏬", "Mağaza", storeCount.ToString());
-            cRevenue.SetData("₺", "Ciro", revenue.ToString("N0", new CultureInfo("tr-TR")));
+            cToplam.SetData("□", "Toplam", total.ToString());
+            cAktif.SetData("□", "Aktif", active.ToString());
+            cPasif.SetData("□", "Pasif", passive.ToString());
+            cSiparis.SetData("□", "Sipariş Veren", ordered.ToString());
         }
 
-        private void UpdateInfoLabel(int count)
+        private void BtnYeni_Click(object sender, EventArgs e)
         {
-            lblCustomerInfo.Text = count + " kayıt";
-        }
-
-        private int GetCustomerIdFromRow(int rowIndex)
-        {
-            if (rowIndex < 0)
-                return 0;
-
-            object value = dgvCustomers.Rows[rowIndex].Cells["CustomerId"].Value;
-
-            if (value == null || value == DBNull.Value)
-                return 0;
-
-            return Convert.ToInt32(value);
-        }
-
-        private int GetCustomerStoreIdFromRow(int rowIndex)
-        {
-            if (rowIndex < 0)
-                return 0;
-
-            object value = dgvStores.Rows[rowIndex].Cells["CustomerStoreId"].Value;
-
-            if (value == null || value == DBNull.Value)
-                return 0;
-
-            return Convert.ToInt32(value);
-        }
-
-        private bool GetGridRowActiveStatus(DataGridView grid, int rowIndex)
-        {
-            if (rowIndex < 0)
-                return false;
-
-            object value = grid.Rows[rowIndex].Cells["IsActive"].Value;
-
-            if (value == null || value == DBNull.Value)
-                return false;
-
-            try
+            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm())
             {
-                return Convert.ToBoolean(value);
-            }
-            catch
-            {
-                string text = value.ToString();
-                return text == "Aktif" || text == "True" || text == "true";
+                if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
+                    YetkilileriYukle();
             }
         }
 
-        private void BtnNewCustomer_Click(object sender, EventArgs e)
+        private void DgvYetkililer_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            using (CustomerModalForm frm = new CustomerModalForm())
-            {
-                if (frm.ShowDialog() == DialogResult.OK)
-                    LoadCustomers();
-            }
-        }
-
-        private void BtnNewStore_Click(object sender, EventArgs e)
-        {
-            if (selectedCustomerId <= 0)
-            {
-                MessageBox.Show("Mağaza eklemek için önce müşteri seçmelisiniz.",
-                    "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (e.RowIndex < 0)
                 return;
-            }
 
-            using (CustomerStoreModalForm frm = new CustomerStoreModalForm(selectedCustomerId))
-            {
-                if (frm.ShowDialog() == DialogResult.OK)
-                {
-                    LoadStores(selectedCustomerId);
-                    LoadCustomers();
-                }
-            }
+            OpenEdit(e.RowIndex);
         }
 
-        private void DgvCustomers_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void DgvYetkililer_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
-            int customerId = GetCustomerIdFromRow(e.RowIndex);
+            string columnName = dgvYetkililer.Columns[e.ColumnIndex].Name;
 
-            if (customerId <= 0)
-                return;
-
-            selectedCustomerId = customerId;
-            LoadStores(customerId);
-
-            string columnName = dgvCustomers.Columns[e.ColumnIndex].Name;
-
-            if (columnName == "colCustomerEdit")
-            {
-                OpenCustomerForm(customerId);
-            }
-            else if (columnName == "colCustomerStatus")
-            {
-                ToggleCustomerStatus(e.RowIndex, customerId);
-            }
+            if (columnName == "colEdit")
+                OpenEdit(e.RowIndex);
+            else if (columnName == "colStatus")
+                ToggleStatus(e.RowIndex);
         }
 
-        private void DgvCustomers_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        private void OpenEdit(int rowIndex)
         {
-            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+            int id = GetId(rowIndex);
+            if (id <= 0)
                 return;
 
-            string columnName = dgvCustomers.Columns[e.ColumnIndex].Name;
-
-            if (columnName == "colCustomerEdit" || columnName == "colCustomerStatus")
-                return;
-
-            int customerId = GetCustomerIdFromRow(e.RowIndex);
-
-            if (customerId > 0)
-                OpenCustomerForm(customerId);
-        }
-
-        private void OpenCustomerForm(int customerId)
-        {
-            using (CustomerModalForm frm = new CustomerModalForm(customerId))
+            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm(id))
             {
-                if (frm.ShowDialog() == DialogResult.OK)
-                {
-                    LoadCustomers();
-
-                    if (customerId > 0)
-                        LoadStores(customerId);
-                }
+                if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
+                    YetkilileriYukle();
             }
         }
 
-        private void ToggleCustomerStatus(int rowIndex, int customerId)
+        private void ToggleStatus(int rowIndex)
         {
-            bool isActive = GetGridRowActiveStatus(dgvCustomers, rowIndex);
-            string message = isActive
-                ? "Bu müşteriyi pasife almak istiyor musunuz?"
-                : "Bu müşteriyi tekrar aktifleştirmek istiyor musunuz?";
+            int id = GetId(rowIndex);
+            bool aktif = GetActive(rowIndex);
 
             DialogResult result = MessageBox.Show(
-                message,
+                aktif ? "Bu yetkiliyi pasife almak istiyor musunuz?" : "Bu yetkiliyi tekrar aktifleştirmek istiyor musunuz?",
                 "Onay",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -931,470 +463,198 @@ namespace eMarketing.AdminPanel.Pages
             if (result != DialogResult.Yes)
                 return;
 
-            _repo.SetCustomerActiveStatus(customerId, !isActive);
-            LoadCustomers();
+            repo.DurumGuncelle(id, !aktif);
+            YetkilileriYukle();
         }
 
-        private void DgvStores_CellClick(object sender, DataGridViewCellEventArgs e)
+        private int GetId(int rowIndex)
+        {
+            object value = dgvYetkililer.Rows[rowIndex].Cells["BayiYetkiliId"].Value;
+            return value == null || value == DBNull.Value ? 0 : Convert.ToInt32(value);
+        }
+
+        private bool GetActive(int rowIndex)
+        {
+            object value = dgvYetkililer.Rows[rowIndex].Cells["AktifMi"].Value;
+            return value != null && value != DBNull.Value && Convert.ToBoolean(value);
+        }
+
+        private void DgvYetkililer_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
-            string columnName = dgvStores.Columns[e.ColumnIndex].Name;
-            int customerStoreId = GetCustomerStoreIdFromRow(e.RowIndex);
+            string columnName = dgvYetkililer.Columns[e.ColumnIndex].Name;
 
-            if (customerStoreId <= 0)
-                return;
-
-            if (columnName == "colStoreEdit")
+            if (columnName == "SonSiparisTarihi" && e.Value != null && e.Value != DBNull.Value)
             {
-                OpenStoreForm(customerStoreId);
+                e.Value = Convert.ToDateTime(e.Value).ToString("dd.MM.yyyy", new CultureInfo("tr-TR"));
+                e.FormattingApplied = true;
             }
-            else if (columnName == "colStoreStatus")
+
+            if ((columnName == "Email" || columnName == "BayiAdi" || columnName == "MagazaAdi") && e.Value != null)
             {
-                ToggleStoreStatus(e.RowIndex, customerStoreId);
-            }
-        }
-
-        private void DgvStores_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0 || e.ColumnIndex < 0)
-                return;
-
-            string columnName = dgvStores.Columns[e.ColumnIndex].Name;
-
-            if (columnName == "colStoreEdit" || columnName == "colStoreStatus")
-                return;
-
-            int customerStoreId = GetCustomerStoreIdFromRow(e.RowIndex);
-
-            if (customerStoreId > 0)
-                OpenStoreForm(customerStoreId);
-        }
-
-        private void OpenStoreForm(int customerStoreId)
-        {
-            if (selectedCustomerId <= 0)
-                return;
-
-            using (CustomerStoreModalForm frm = new CustomerStoreModalForm(selectedCustomerId, customerStoreId))
-            {
-                if (frm.ShowDialog() == DialogResult.OK)
+                string text = Convert.ToString(e.Value);
+                if (text.Length > 24)
                 {
-                    LoadStores(selectedCustomerId);
-                    LoadCustomers();
-                }
-            }
-        }
-
-        private void ToggleStoreStatus(int rowIndex, int customerStoreId)
-        {
-            bool isActive = GetGridRowActiveStatus(dgvStores, rowIndex);
-            string message = isActive
-                ? "Bu mağazayı pasife almak istiyor musunuz?"
-                : "Bu mağazayı tekrar aktifleştirmek istiyor musunuz?";
-
-            DialogResult result = MessageBox.Show(
-                message,
-                "Onay",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (result != DialogResult.Yes)
-                return;
-
-            _repo.SetCustomerStoreActiveStatus(customerStoreId, !isActive);
-
-            if (selectedCustomerId > 0)
-                LoadStores(selectedCustomerId);
-
-            LoadCustomers();
-        }
-
-        private void DgvCustomers_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-        {
-            if (e.RowIndex < 0 || e.ColumnIndex < 0)
-                return;
-
-            string columnName = dgvCustomers.Columns[e.ColumnIndex].Name;
-
-            if (columnName == "TotalRevenue" && e.Value != null && e.Value != DBNull.Value)
-            {
-                decimal value;
-
-                if (decimal.TryParse(e.Value.ToString(), out value))
-                {
-                    e.Value = value.ToString("N2", new CultureInfo("tr-TR")) + " ₺";
-                    e.FormattingApplied = true;
-                }
-            }
-
-            if ((columnName == "CompanyName" || columnName == "FullName" || columnName == "Email") && e.Value != null)
-            {
-                string text = e.Value.ToString();
-
-                if (text.Length > 22)
-                {
-                    e.Value = text.Substring(0, 22) + "...";
+                    e.Value = text.Substring(0, 24) + "...";
                     e.FormattingApplied = true;
                 }
             }
         }
 
-        private void DgvCustomers_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
-        {
-            PaintGridSpecialCells(
-                dgvCustomers,
-                e,
-                "colCustomerEdit",
-                "colCustomerStatus",
-                hoveredCustomerRowIndex,
-                hoveredCustomerColumnIndex);
-        }
-
-        private void DgvStores_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
-        {
-            PaintGridSpecialCells(
-                dgvStores,
-                e,
-                "colStoreEdit",
-                "colStoreStatus",
-                hoveredStoreRowIndex,
-                hoveredStoreColumnIndex);
-        }
-
-        private void PaintGridSpecialCells(
-            DataGridView grid,
-            DataGridViewCellPaintingEventArgs e,
-            string editColumnName,
-            string statusColumnName,
-            int hoveredRow,
-            int hoveredCol)
+        private void DgvYetkililer_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
 
-            string columnName = grid.Columns[e.ColumnIndex].Name;
+            string columnName = dgvYetkililer.Columns[e.ColumnIndex].Name;
 
-            if (columnName == "IsActive")
+            if (columnName == "AktifMi")
             {
-                PaintStatusBadge(grid, e);
+                PaintStatusBadge(e);
                 return;
             }
 
-            if (columnName == editColumnName || columnName == statusColumnName)
+            if (columnName == "colEdit" || columnName == "colStatus")
             {
-                PaintActionButton(grid, e, editColumnName, statusColumnName, hoveredRow, hoveredCol);
+                PaintActionButton(e, columnName);
                 return;
             }
         }
 
-        private void PaintStatusBadge(DataGridView grid, DataGridViewCellPaintingEventArgs e)
+        private void PaintStatusBadge(DataGridViewCellPaintingEventArgs e)
         {
             e.PaintBackground(e.CellBounds, true);
             e.Handled = true;
 
-            bool isActive = false;
+            bool aktif = e.Value != null && e.Value != DBNull.Value && Convert.ToBoolean(e.Value);
+            string text = aktif ? "Aktif" : "Pasif";
+            Color backColor = aktif ? AppColors.SuccessSoft : AppColors.DangerSoft;
+            Color foreColor = aktif ? AppColors.Success : AppColors.Danger;
 
-            if (e.Value != null && e.Value != DBNull.Value)
-                isActive = Convert.ToBoolean(e.Value);
-
-            string text = isActive ? "Aktif" : "Pasif";
-
-            Color backColor = isActive
-                ? Color.FromArgb(232, 245, 233)
-                : Color.FromArgb(245, 245, 245);
-
-            Color foreColor = isActive
-                ? Color.FromArgb(46, 125, 50)
-                : Color.FromArgb(97, 97, 97);
-
-            Rectangle badgeRect = new Rectangle(
-                e.CellBounds.X + (e.CellBounds.Width - 72) / 2,
-                e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
-                72,
-                24
-            );
-
-            using (SolidBrush brush = new SolidBrush(backColor))
-            using (SolidBrush textBrush = new SolidBrush(foreColor))
+            Rectangle rect = new Rectangle(e.CellBounds.X + 8, e.CellBounds.Y + 12, e.CellBounds.Width - 16, 24);
+            using (SolidBrush back = new SolidBrush(backColor))
+            using (SolidBrush fore = new SolidBrush(foreColor))
             using (StringFormat sf = new StringFormat())
             using (Font font = new Font("Segoe UI", 8.5F, FontStyle.Bold))
             {
                 sf.Alignment = StringAlignment.Center;
                 sf.LineAlignment = StringAlignment.Center;
-
-                e.Graphics.FillRectangle(brush, badgeRect);
-                e.Graphics.DrawString(text, font, textBrush, badgeRect, sf);
+                e.Graphics.FillRectangle(back, rect);
+                e.Graphics.DrawString(text, font, fore, rect, sf);
             }
         }
 
-        private void PaintActionButton(
-            DataGridView grid,
-            DataGridViewCellPaintingEventArgs e,
-            string editColumnName,
-            string statusColumnName,
-            int hoveredRow,
-            int hoveredCol)
+        private void PaintActionButton(DataGridViewCellPaintingEventArgs e, string columnName)
         {
             e.PaintBackground(e.CellBounds, true);
             e.Handled = true;
 
-            string columnName = grid.Columns[e.ColumnIndex].Name;
-
-            bool isEdit = columnName == editColumnName;
             bool isHovered = e.RowIndex == hoveredRow && e.ColumnIndex == hoveredCol;
-            bool rowIsActive = GetGridRowActiveStatus(grid, e.RowIndex);
-
-            string text;
-            Color baseColor;
-
-            if (isEdit)
-            {
-                text = "Düzenle";
-                baseColor = AppColors.Primary;
-            }
-            else
-            {
-                text = rowIsActive ? "Pasife Al" : "Aktifleştir";
-                baseColor = rowIsActive
-                    ? Color.FromArgb(220, 53, 69)
-                    : Color.FromArgb(25, 135, 84);
-            }
-
+            bool active = GetActive(e.RowIndex);
+            bool edit = columnName == "colEdit";
+            string text = edit ? "Düzenle" : (active ? "Pasife Al" : "Aktifleştir");
+            Color baseColor = edit ? AppColors.Primary : (active ? AppColors.Danger : AppColors.Success);
             Color fillColor = isHovered ? baseColor : Color.White;
-            Color borderColor = baseColor;
             Color textColor = isHovered ? Color.White : baseColor;
 
-            Rectangle buttonRect = new Rectangle(
-                e.CellBounds.X + 6,
-                e.CellBounds.Y + 7,
-                e.CellBounds.Width - 12,
-                e.CellBounds.Height - 14
-            );
-
-            using (SolidBrush fillBrush = new SolidBrush(fillColor))
-            using (Pen borderPen = new Pen(borderColor))
-            using (SolidBrush textBrush = new SolidBrush(textColor))
+            Rectangle rect = new Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 7, e.CellBounds.Width - 12, e.CellBounds.Height - 14);
+            using (SolidBrush fill = new SolidBrush(fillColor))
+            using (Pen border = new Pen(baseColor))
+            using (SolidBrush fore = new SolidBrush(textColor))
             using (StringFormat sf = new StringFormat())
             using (Font font = new Font("Segoe UI", 8.2F, FontStyle.Bold))
             {
                 sf.Alignment = StringAlignment.Center;
                 sf.LineAlignment = StringAlignment.Center;
-
-                e.Graphics.FillRectangle(fillBrush, buttonRect);
-                e.Graphics.DrawRectangle(borderPen, buttonRect);
-                e.Graphics.DrawString(text, font, textBrush, buttonRect, sf);
+                e.Graphics.FillRectangle(fill, rect);
+                e.Graphics.DrawRectangle(border, rect);
+                e.Graphics.DrawString(text, font, fore, rect, sf);
             }
         }
 
-        private void DgvCustomers_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
-        {
-            HandleHover(
-                dgvCustomers,
-                e,
-                "colCustomerEdit",
-                "colCustomerStatus",
-                ref hoveredCustomerRowIndex,
-                ref hoveredCustomerColumnIndex);
-        }
-
-        private void DgvStores_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
-        {
-            HandleHover(
-                dgvStores,
-                e,
-                "colStoreEdit",
-                "colStoreStatus",
-                ref hoveredStoreRowIndex,
-                ref hoveredStoreColumnIndex);
-        }
-
-        private void HandleHover(
-            DataGridView grid,
-            DataGridViewCellMouseEventArgs e,
-            string editColumnName,
-            string statusColumnName,
-            ref int hoveredRow,
-            ref int hoveredCol)
+        private void DgvYetkililer_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
         {
             int newRow = -1;
             int newCol = -1;
 
             if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
             {
-                string columnName = grid.Columns[e.ColumnIndex].Name;
-
-                if (columnName == editColumnName || columnName == statusColumnName)
+                string name = dgvYetkililer.Columns[e.ColumnIndex].Name;
+                if (name == "colEdit" || name == "colStatus")
                 {
                     newRow = e.RowIndex;
                     newCol = e.ColumnIndex;
                 }
             }
 
-            if (newRow != hoveredRow || newCol != hoveredCol)
-            {
-                int oldRow = hoveredRow;
-                int oldCol = hoveredCol;
+            if (newRow == hoveredRow && newCol == hoveredCol)
+                return;
 
-                hoveredRow = newRow;
-                hoveredCol = newCol;
+            int oldRow = hoveredRow;
+            int oldCol = hoveredCol;
+            hoveredRow = newRow;
+            hoveredCol = newCol;
 
-                if (oldRow >= 0 && oldCol >= 0)
-                    grid.InvalidateCell(oldCol, oldRow);
+            if (oldRow >= 0 && oldCol >= 0)
+                dgvYetkililer.InvalidateCell(oldCol, oldRow);
 
-                if (hoveredRow >= 0 && hoveredCol >= 0)
-                    grid.InvalidateCell(hoveredCol, hoveredRow);
-            }
+            if (hoveredRow >= 0 && hoveredCol >= 0)
+                dgvYetkililer.InvalidateCell(hoveredCol, hoveredRow);
         }
 
-        private void DgvCustomers_MouseLeave(object sender, EventArgs e)
-        {
-            ClearHover(dgvCustomers, ref hoveredCustomerRowIndex, ref hoveredCustomerColumnIndex);
-        }
-
-        private void DgvStores_MouseLeave(object sender, EventArgs e)
-        {
-            ClearHover(dgvStores, ref hoveredStoreRowIndex, ref hoveredStoreColumnIndex);
-        }
-
-        private void ClearHover(DataGridView grid, ref int hoveredRow, ref int hoveredCol)
+        private void DgvYetkililer_MouseLeave(object sender, EventArgs e)
         {
             int oldRow = hoveredRow;
             int oldCol = hoveredCol;
-
             hoveredRow = -1;
             hoveredCol = -1;
 
             if (oldRow >= 0 && oldCol >= 0)
-                grid.InvalidateCell(oldCol, oldRow);
+                dgvYetkililer.InvalidateCell(oldCol, oldRow);
         }
 
-        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        private void TxtArama_TextChanged(object sender, EventArgs e)
         {
-            searchTimer.Stop();
-            searchTimer.Start();
+            aramaTimer.Stop();
+            aramaTimer.Start();
         }
 
-        private void SearchTimer_Tick(object sender, EventArgs e)
-        {
-            searchTimer.Stop();
-            LoadCustomers();
-        }
-
-        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
+        private void TxtArama_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                searchTimer.Stop();
-                LoadCustomers();
+                aramaTimer.Stop();
+                YetkilileriYukle();
                 e.SuppressKeyPress = true;
             }
         }
 
-        private void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
+        private void AramaTimer_Tick(object sender, EventArgs e)
         {
-            LoadCustomers();
+            aramaTimer.Stop();
+            YetkilileriYukle();
         }
 
-        private void BtnSearch_Click(object sender, EventArgs e)
+        private void BtnTemizle_Click(object sender, EventArgs e)
         {
-            searchTimer.Stop();
-            LoadCustomers();
-        }
-
-        private void BtnClear_Click(object sender, EventArgs e)
-        {
-            searchTimer.Stop();
-
-            txtSearch.Clear();
-            cmbStatus.SelectedIndex = 0;
-
-            LoadCustomers();
+            aramaTimer.Stop();
+            txtArama.Clear();
+            cmbDurum.SelectedIndex = 0;
+            YetkilileriYukle();
         }
 
         public void ApplyTheme()
         {
             BackColor = AppColors.Background;
-
-            if (headerPanel != null)
-                headerPanel.BackColor = AppColors.Background;
-
-            if (statsPanel != null)
-                statsPanel.BackColor = AppColors.Background;
-
-            if (filterPanel != null)
-                filterPanel.BackColor = AppColors.CardBackground;
-
-            if (customersPanel != null)
-                customersPanel.BackColor = AppColors.CardBackground;
-
-            if (storesPanel != null)
-                storesPanel.BackColor = AppColors.CardBackground;
-
-            if (contentSplit != null)
-                contentSplit.BackColor = AppColors.Background;
-
-            if (lblTitle != null)
-                lblTitle.ForeColor = AppColors.TextPrimary;
-
-            if (lblSubtitle != null)
-                lblSubtitle.ForeColor = AppColors.TextSecondary;
-
-            if (lblCustomerInfo != null)
-                lblCustomerInfo.ForeColor = AppColors.TextSecondary;
-
-            if (lblStoresTitle != null)
-                lblStoresTitle.ForeColor = AppColors.TextPrimary;
-
-            if (lblStoresSubtitle != null)
-                lblStoresSubtitle.ForeColor = AppColors.TextSecondary;
-
-            if (btnNewCustomer != null)
-            {
-                btnNewCustomer.BackColor = AppColors.Primary;
-                btnNewCustomer.ForeColor = Color.White;
-            }
-
-            if (btnNewStore != null)
-            {
-                btnNewStore.BackColor = AppColors.Primary;
-                btnNewStore.ForeColor = Color.White;
-            }
-
-            if (btnSearch != null)
-            {
-                btnSearch.BackColor = AppColors.Primary;
-                btnSearch.ForeColor = Color.White;
-            }
-
-            if (btnClear != null)
-            {
-                btnClear.BackColor = AppColors.CardBackground;
-                btnClear.ForeColor = AppColors.TextSecondary;
-                btnClear.FlatAppearance.BorderColor = AppColors.Border;
-            }
-
-            if (dgvCustomers != null)
-            {
-                dgvCustomers.BackgroundColor = AppColors.CardBackground;
-                dgvCustomers.GridColor = AppColors.Border;
-                dgvCustomers.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
-                dgvCustomers.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
-                dgvCustomers.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
-            }
-
-            if (dgvStores != null)
-            {
-                dgvStores.BackgroundColor = AppColors.CardBackground;
-                dgvStores.GridColor = AppColors.Border;
-                dgvStores.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
-                dgvStores.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
-                dgvStores.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
-            }
-
-            Invalidate(true);
-            Refresh();
+            if (headerPanel != null) headerPanel.BackColor = AppColors.Background;
+            if (statsPanel != null) statsPanel.BackColor = AppColors.Background;
+            if (filterPanel != null) filterPanel.BackColor = AppColors.CardBackground;
+            if (gridPanel != null) gridPanel.BackColor = AppColors.CardBackground;
+            if (lblTitle != null) lblTitle.ForeColor = AppColors.TextPrimary;
+            if (lblSubtitle != null) lblSubtitle.ForeColor = AppColors.TextSecondary;
+            if (lblInfo != null) lblInfo.ForeColor = AppColors.TextSecondary;
         }
     }
 }

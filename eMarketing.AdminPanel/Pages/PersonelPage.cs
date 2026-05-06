@@ -38,6 +38,11 @@ namespace eMarketing.AdminPanel.Pages
         private bool kullaniciAdiOtomatik = true;
         private bool kullaniciAdiKodlaDegisiyor;
 
+        private bool YonetimModu
+        {
+            get { return AppSession.AdminMi; }
+        }
+
         public PersonelPage()
         {
             Dock = DockStyle.Fill;
@@ -88,8 +93,10 @@ namespace eMarketing.AdminPanel.Pages
 
         private void BuildPersonelPanel()
         {
-            Label title = CreateTitle("Personel");
-            Label subtitle = CreateSubtitle("Kullanıcı bilgileri, rol ve mağaza erişimi");
+            Label title = CreateTitle(YonetimModu ? "Personel" : "Bayi Personeli");
+            Label subtitle = CreateSubtitle(YonetimModu
+                ? "Kullanıcı bilgileri, rol ve mağaza erişimi"
+                : "Bayinize bağlı kullanıcıları ve mağaza erişimlerini görüntüleyin");
 
             txtArama = CreateTextBox();
             txtArama.Dock = DockStyle.Top;
@@ -111,6 +118,9 @@ namespace eMarketing.AdminPanel.Pages
             personelKartListesi.SizeChanged += (sender, e) => FitCards(personelKartListesi);
 
             Panel form = BuildFormPanel();
+            form.Visible = YonetimModu;
+            if (!YonetimModu)
+                form.Height = 0;
 
             personelPanel.Controls.Add(personelKartListesi);
             personelPanel.Controls.Add(txtArama);
@@ -231,8 +241,10 @@ namespace eMarketing.AdminPanel.Pages
 
         private void BuildYetkiPanel()
         {
-            Label title = CreateTitle("Mağaza Yetkileri");
-            Label subtitle = CreateSubtitle("Personelin çalıştığı mağazaları kart üzerinden yönetin");
+            Label title = CreateTitle(YonetimModu ? "Mağaza Yetkileri" : "Bağlı Mağazalar");
+            Label subtitle = CreateSubtitle(YonetimModu
+                ? "Personelin çalıştığı mağazaları kart üzerinden yönetin"
+                : "Seçili personelin bayiniz içindeki mağaza erişimleri");
 
             lblSeciliPersonel = new Label
             {
@@ -254,17 +266,23 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 4,
+                RowCount = YonetimModu ? 4 : 2,
                 BackColor = AppColors.CardBackground
             };
             magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, 48F));
-            magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
-            magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, 52F));
+            magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, YonetimModu ? 48F : 100F));
+            if (YonetimModu)
+            {
+                magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
+                magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, 52F));
+            }
             magazaYerlesim.Controls.Add(lblYetkiliMagazaBaslik, 0, 0);
             magazaYerlesim.Controls.Add(yetkiliMagazaKartListesi, 0, 1);
-            magazaYerlesim.Controls.Add(lblAtanabilirMagazaBaslik, 0, 2);
-            magazaYerlesim.Controls.Add(atanabilirMagazaKartListesi, 0, 3);
+            if (YonetimModu)
+            {
+                magazaYerlesim.Controls.Add(lblAtanabilirMagazaBaslik, 0, 2);
+                magazaYerlesim.Controls.Add(atanabilirMagazaKartListesi, 0, 3);
+            }
 
             yetkiPanel.Controls.Add(magazaYerlesim);
             yetkiPanel.Controls.Add(lblSeciliPersonel);
@@ -297,7 +315,11 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                DataTable table = repo.GetPersoneller(txtArama == null ? "" : txtArama.Text.Trim(), false);
+                DataTable table = repo.GetPersoneller(
+                    txtArama == null ? "" : txtArama.Text.Trim(),
+                    false,
+                    AppSession.KullaniciId,
+                    AppSession.AdminMi);
 
                 personelKartListesi.SuspendLayout();
                 personelKartListesi.Controls.Clear();
@@ -387,14 +409,25 @@ namespace eMarketing.AdminPanel.Pages
 
             try
             {
-                DataTable yetkili = repo.GetPersonelMagazalari(seciliKullaniciId.Value);
-                DataTable atanabilir = repo.GetAtanabilirMagazalar(seciliKullaniciId.Value);
+                DataTable yetkili = repo.GetPersonelMagazalari(
+                    seciliKullaniciId.Value,
+                    AppSession.KullaniciId,
+                    AppSession.AdminMi);
+                DataTable atanabilir = YonetimModu
+                    ? repo.GetAtanabilirMagazalar(
+                        seciliKullaniciId.Value,
+                        "",
+                        AppSession.KullaniciId,
+                        AppSession.AdminMi)
+                    : new DataTable();
 
                 FillMagazaCards(yetkiliMagazaKartListesi, yetkili, true);
-                FillMagazaCards(atanabilirMagazaKartListesi, atanabilir, false);
+                if (YonetimModu)
+                    FillMagazaCards(atanabilirMagazaKartListesi, atanabilir, false);
 
                 lblYetkiliMagazaBaslik.Text = "Yetkili Mağazalar (" + yetkili.Rows.Count + ")";
-                lblAtanabilirMagazaBaslik.Text = "Atanabilir Mağazalar (" + atanabilir.Rows.Count + ")";
+                if (YonetimModu)
+                    lblAtanabilirMagazaBaslik.Text = "Atanabilir Mağazalar (" + atanabilir.Rows.Count + ")";
             }
             catch (Exception ex)
             {
@@ -429,22 +462,25 @@ namespace eMarketing.AdminPanel.Pages
             Label konum = CreateCardLabel(GetKonumText(row), 8.5F, FontStyle.Regular, AppColors.TextMuted, 20);
             Label ozet = CreateCardLabel(GetInt(row, "SiparisSayisi") + " sipariş  |  " + GetMoney(row, "ToplamCiro"), 8.5F, FontStyle.Bold, AppColors.Primary, 22);
 
-            Button action = CreateSmallButton(yetkili ? "Kaldır" : "Ata", !yetkili);
-            action.Dock = DockStyle.Bottom;
-            action.Click += (sender, e) =>
-            {
-                if (yetkili)
-                    MagazaKaldir(row);
-                else
-                    MagazaAta(row);
-            };
-
             magaza.Dock = DockStyle.Top;
             musteri.Dock = DockStyle.Top;
             konum.Dock = DockStyle.Top;
             ozet.Dock = DockStyle.Top;
 
-            card.Controls.Add(action);
+            if (YonetimModu)
+            {
+                Button action = CreateSmallButton(yetkili ? "Kaldır" : "Ata", !yetkili);
+                action.Dock = DockStyle.Bottom;
+                action.Click += (sender, e) =>
+                {
+                    if (yetkili)
+                        MagazaKaldir(row);
+                    else
+                        MagazaAta(row);
+                };
+                card.Controls.Add(action);
+            }
+
             card.Controls.Add(ozet);
             card.Controls.Add(konum);
             card.Controls.Add(musteri);
@@ -481,6 +517,9 @@ namespace eMarketing.AdminPanel.Pages
 
         private void MagazaAta(DataRow row)
         {
+            if (!YonetimModu)
+                return;
+
             if (!seciliKullaniciId.HasValue)
                 return;
 
@@ -499,6 +538,9 @@ namespace eMarketing.AdminPanel.Pages
 
         private void MagazaKaldir(DataRow row)
         {
+            if (!YonetimModu)
+                return;
+
             try
             {
                 repo.MagazaKaldir(Convert.ToInt32(row["KullaniciMagazaId"]));
@@ -514,6 +556,9 @@ namespace eMarketing.AdminPanel.Pages
 
         private void BtnKaydet_Click(object sender, EventArgs e)
         {
+            if (!YonetimModu)
+                return;
+
             try
             {
                 int id = repo.PersonelKaydet(

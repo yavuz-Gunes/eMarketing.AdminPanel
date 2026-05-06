@@ -7,7 +7,11 @@ namespace eMarketing.Data.Repositories
 {
     public class PersonelRepository
     {
-        public DataTable GetPersoneller(string arama = "", bool sadeceAktif = false)
+        public DataTable GetPersoneller(
+            string arama = "",
+            bool sadeceAktif = false,
+            int? goruntuleyenKullaniciId = null,
+            bool adminMi = true)
         {
             try
             {
@@ -20,6 +24,9 @@ namespace eMarketing.Data.Repositories
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@Arama", SqlDbType.NVarChar, 200).Value = GetText(arama);
                     cmd.Parameters.Add("@SadeceAktif", SqlDbType.Bit).Value = sadeceAktif;
+                    cmd.Parameters.Add("@GoruntuleyenKullaniciId", SqlDbType.Int).Value =
+                        goruntuleyenKullaniciId.HasValue ? (object)goruntuleyenKullaniciId.Value : DBNull.Value;
+                    cmd.Parameters.Add("@AdminMi", SqlDbType.Bit).Value = adminMi;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -66,7 +73,10 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public DataTable GetPersonelMagazalari(int kullaniciId)
+        public DataTable GetPersonelMagazalari(
+            int kullaniciId,
+            int? goruntuleyenKullaniciId = null,
+            bool adminMi = true)
         {
             try
             {
@@ -78,6 +88,9 @@ namespace eMarketing.Data.Repositories
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = kullaniciId;
+                    cmd.Parameters.Add("@GoruntuleyenKullaniciId", SqlDbType.Int).Value =
+                        goruntuleyenKullaniciId.HasValue ? (object)goruntuleyenKullaniciId.Value : DBNull.Value;
+                    cmd.Parameters.Add("@AdminMi", SqlDbType.Bit).Value = adminMi;
 
                     connection.Open();
                     adapter.Fill(table);
@@ -91,7 +104,11 @@ namespace eMarketing.Data.Repositories
             }
         }
 
-        public DataTable GetAtanabilirMagazalar(int kullaniciId, string arama = "")
+        public DataTable GetAtanabilirMagazalar(
+            int kullaniciId,
+            string arama = "",
+            int? goruntuleyenKullaniciId = null,
+            bool adminMi = true)
         {
             try
             {
@@ -104,6 +121,9 @@ namespace eMarketing.Data.Repositories
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = kullaniciId;
                     cmd.Parameters.Add("@Arama", SqlDbType.NVarChar, 200).Value = GetText(arama);
+                    cmd.Parameters.Add("@GoruntuleyenKullaniciId", SqlDbType.Int).Value =
+                        goruntuleyenKullaniciId.HasValue ? (object)goruntuleyenKullaniciId.Value : DBNull.Value;
+                    cmd.Parameters.Add("@AdminMi", SqlDbType.Bit).Value = adminMi;
 
                     connection.Open();
                     adapter.Fill(table);

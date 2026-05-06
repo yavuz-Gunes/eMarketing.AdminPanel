@@ -14,6 +14,7 @@ namespace eMarketing.AdminPanel.Forms
         private readonly OrderRepository _orderRepo = new OrderRepository();
         private readonly ProductRepository _productRepo = new ProductRepository();
         private readonly MagazaRepository _magazaRepo = new MagazaRepository();
+        private readonly BayiYetkiliRepository _yetkiliRepo = new BayiYetkiliRepository();
 
         private Label lblTitle;
 
@@ -25,6 +26,9 @@ namespace eMarketing.AdminPanel.Forms
 
         private Label lblCustomerName;
         private TextBox txtCustomerName;
+
+        private Label lblYetkili;
+        private ComboBox cmbYetkili;
 
         private Label lblCustomerEmail;
         private TextBox txtCustomerEmail;
@@ -120,7 +124,7 @@ namespace eMarketing.AdminPanel.Forms
 
             lblCustomerName = new Label
             {
-                Text = "Müşteri Adı",
+                Text = "Bayi Adı",
                 AutoSize = true,
                 Location = new Point(24, 192),
                 Font = new Font("Segoe UI", 9F),
@@ -136,19 +140,37 @@ namespace eMarketing.AdminPanel.Forms
                 ReadOnly = true
             };
 
-            lblCustomerEmail = new Label
+            lblYetkili = new Label
             {
-                Text = "E-Posta",
+                Text = "Sipariş Yetkilisi",
                 AutoSize = true,
                 Location = new Point(24, 254),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
-            txtCustomerEmail = new TextBox
+            cmbYetkili = new ComboBox
             {
                 Location = new Point(24, 278),
                 Width = 490,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10F)
+            };
+            cmbYetkili.SelectedIndexChanged += CmbYetkili_SelectedIndexChanged;
+
+            lblCustomerEmail = new Label
+            {
+                Text = "E-Posta",
+                AutoSize = true,
+                Location = new Point(24, 316),
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = AppColors.TextSecondary
+            };
+
+            txtCustomerEmail = new TextBox
+            {
+                Location = new Point(24, 340),
+                Width = 230,
                 Font = new Font("Segoe UI", 10F),
                 MaxLength = 200
             };
@@ -157,15 +179,15 @@ namespace eMarketing.AdminPanel.Forms
             {
                 Text = "Telefon",
                 AutoSize = true,
-                Location = new Point(24, 316),
+                Location = new Point(284, 316),
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
             txtCustomerPhone = new TextBox
             {
-                Location = new Point(24, 340),
-                Width = 490,
+                Location = new Point(284, 340),
+                Width = 230,
                 Font = new Font("Segoe UI", 10F),
                 MaxLength = 30
             };
@@ -277,6 +299,8 @@ namespace eMarketing.AdminPanel.Forms
             Controls.Add(lblCustomerPhone);
             Controls.Add(txtCustomerEmail);
             Controls.Add(lblCustomerEmail);
+            Controls.Add(cmbYetkili);
+            Controls.Add(lblYetkili);
             Controls.Add(txtCustomerName);
             Controls.Add(lblCustomerName);
             Controls.Add(cmbSatisKanali);
@@ -356,6 +380,63 @@ namespace eMarketing.AdminPanel.Forms
                 return;
 
             txtCustomerName.Text = Convert.ToString(rowView["MusteriAdi"]);
+
+            if (rowView.Row.Table.Columns.Contains("Telefon") && rowView["Telefon"] != DBNull.Value)
+                txtCustomerPhone.Text = Convert.ToString(rowView["Telefon"]);
+
+            txtCustomerEmail.Text = "";
+            LoadYetkililer(rowView.Row);
+        }
+
+        private void LoadYetkililer(DataRow magazaRow)
+        {
+            try
+            {
+                int bayiId = Convert.ToInt32(magazaRow["MusteriId"]);
+                int magazaId = Convert.ToInt32(magazaRow["MagazaId"]);
+                DataTable yetkililer = _yetkiliRepo.GetYetkililer("", 1, bayiId, magazaId);
+
+                if (!yetkililer.Columns.Contains("YetkiliGosterim"))
+                    yetkililer.Columns.Add("YetkiliGosterim", typeof(string));
+
+                DataTable source = yetkililer.Clone();
+                DataRow empty = source.NewRow();
+                empty["BayiYetkiliId"] = DBNull.Value;
+                empty["AdSoyad"] = "Yetkili seçilmedi";
+                empty["YetkiliGosterim"] = "Yetkili seçilmedi";
+                source.Rows.Add(empty);
+
+                foreach (DataRow row in yetkililer.Rows)
+                {
+                    string adSoyad = Convert.ToString(row["AdSoyad"]);
+                    string gorev = row.Table.Columns.Contains("Gorev") ? Convert.ToString(row["Gorev"]) : "";
+                    row["YetkiliGosterim"] = string.IsNullOrWhiteSpace(gorev)
+                        ? adSoyad
+                        : adSoyad + " - " + gorev;
+                    source.ImportRow(row);
+                }
+
+                cmbYetkili.DisplayMember = "YetkiliGosterim";
+                cmbYetkili.ValueMember = "BayiYetkiliId";
+                cmbYetkili.DataSource = source;
+            }
+            catch
+            {
+                cmbYetkili.DataSource = null;
+                cmbYetkili.Items.Clear();
+                cmbYetkili.Items.Add("Yetkili seçilmedi");
+                cmbYetkili.SelectedIndex = 0;
+            }
+        }
+
+        private void CmbYetkili_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            DataRowView rowView = cmbYetkili.SelectedItem as DataRowView;
+            if (rowView == null || rowView["BayiYetkiliId"] == DBNull.Value)
+                return;
+
+            if (rowView.Row.Table.Columns.Contains("Email") && rowView["Email"] != DBNull.Value)
+                txtCustomerEmail.Text = Convert.ToString(rowView["Email"]);
 
             if (rowView.Row.Table.Columns.Contains("Telefon") && rowView["Telefon"] != DBNull.Value)
                 txtCustomerPhone.Text = Convert.ToString(rowView["Telefon"]);
@@ -558,6 +639,7 @@ namespace eMarketing.AdminPanel.Forms
                 decimal totalPrice = price * quantity;
                 int productId = Convert.ToInt32(cmbProduct.SelectedValue);
                 int magazaId = Convert.ToInt32(cmbMagaza.SelectedValue);
+                int? bayiYetkiliId = GetSelectedYetkiliId();
 
                 customerName = Convert.ToString(magazaRow["MusteriAdi"]);
 
@@ -570,7 +652,8 @@ namespace eMarketing.AdminPanel.Forms
                     totalPrice,
                     magazaId,
                     GetSiparisTipi(),
-                    "AdminPanel");
+                    "AdminPanel",
+                    bayiYetkiliId);
 
                 DialogResult = DialogResult.OK;
                 Close();
@@ -585,6 +668,18 @@ namespace eMarketing.AdminPanel.Forms
         private string GetSiparisTipi()
         {
             return "Bayi";
+        }
+
+        private int? GetSelectedYetkiliId()
+        {
+            if (cmbYetkili.SelectedValue == null || cmbYetkili.SelectedValue == DBNull.Value)
+                return null;
+
+            int id;
+            if (!int.TryParse(Convert.ToString(cmbYetkili.SelectedValue), out id) || id <= 0)
+                return null;
+
+            return id;
         }
 
         private bool IsValidCustomerName(string customerName)

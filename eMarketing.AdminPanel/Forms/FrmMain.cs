@@ -140,8 +140,10 @@ namespace eMarketing.AdminPanel.Forms
             else if (pageKey == "Personnel")
             {
                 page = new PersonelPage();
-                title = "Personel";
-                subtitle = "Kullanıcı, rol ve mağaza yetkilendirmeleri";
+                title = AppSession.AdminMi ? "Personel" : "Bayi Personeli";
+                subtitle = AppSession.AdminMi
+                    ? "Kullanıcı, rol ve mağaza yetkilendirmeleri"
+                    : "Bayinize bağlı personel ve mağaza erişimleri";
             }
             else if (pageKey == "Reports")
             {
@@ -235,12 +237,14 @@ namespace eMarketing.AdminPanel.Forms
                 pageKey == "Stores" ||
                 pageKey == "Products" ||
                 pageKey == "Categories" ||
-                pageKey == "Personnel" ||
                 pageKey == "Reports" ||
                 pageKey == "Settings")
             {
                 return AppSession.AdminMi;
             }
+
+            if (pageKey == "Personnel")
+                return AppSession.AdminMi || AppSession.Rol.Equals("StoreManager", StringComparison.OrdinalIgnoreCase);
 
             return true;
         }

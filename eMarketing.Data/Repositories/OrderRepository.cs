@@ -130,7 +130,8 @@ namespace eMarketing.Data.Repositories
                 totalPrice,
                 null,
                 "Bayi",
-                "AdminPanel");
+                "AdminPanel",
+                null);
         }
 
         public int AddOrder(
@@ -142,7 +143,8 @@ namespace eMarketing.Data.Repositories
             decimal totalPrice,
             int? magazaId,
             string siparisTipi,
-            string siparisKaynagi)
+            string siparisKaynagi,
+            int? bayiYetkiliId = null)
         {
             try
             {
@@ -182,6 +184,9 @@ namespace eMarketing.Data.Repositories
 
                     cmd.Parameters.Add("@OrderSource", SqlDbType.NVarChar, 50)
                         .Value = string.IsNullOrWhiteSpace(siparisKaynagi) ? "AdminPanel" : siparisKaynagi.Trim();
+
+                    cmd.Parameters.Add("@BayiYetkiliId", SqlDbType.Int)
+                        .Value = bayiYetkiliId.HasValue ? (object)bayiYetkiliId.Value : DBNull.Value;
 
                     connection.Open();
 

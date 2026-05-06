@@ -353,6 +353,7 @@ namespace eMarketing.AdminPanel.Pages
             ConfigureOrderGridColumns();
 
             dgvOrders.CellClick += DgvOrders_CellClick;
+            dgvOrders.CellContentClick += DgvOrders_CellContentClick;
             dgvOrders.CellFormatting += DgvOrders_CellFormatting;
             dgvOrders.CellPainting += DgvOrders_CellPainting;
             dgvOrders.CellMouseMove += DgvOrders_CellMouseMove;
@@ -396,6 +397,14 @@ namespace eMarketing.AdminPanel.Pages
                     DataPropertyName = "MusteriAdi",
                     HeaderText = "Bayi",
                     Width = 150
+                });
+
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
+                    Name = "YetkiliAdi",
+                    DataPropertyName = "YetkiliAdi",
+                    HeaderText = "Yetkili",
+                    Width = 130
                 });
 
                 dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
@@ -444,6 +453,21 @@ namespace eMarketing.AdminPanel.Pages
                     Alignment = DataGridViewContentAlignment.MiddleCenter
                 }
             });
+
+            if (!AdminModu)
+            {
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
+                    Name = "BayiStok",
+                    DataPropertyName = "BayiStok",
+                    HeaderText = "Bayide Stok",
+                    Width = 95,
+                    DefaultCellStyle = new DataGridViewCellStyle
+                    {
+                        Alignment = DataGridViewContentAlignment.MiddleCenter
+                    }
+                });
+            }
 
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -728,7 +752,7 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            if (columnName == "MusteriAdi" && e.Value != null)
+            if ((columnName == "MusteriAdi" || columnName == "YetkiliAdi") && e.Value != null)
             {
                 string text = e.Value.ToString();
                 if (text.Length > 18)

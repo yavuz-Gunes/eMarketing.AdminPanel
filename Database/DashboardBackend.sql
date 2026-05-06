@@ -1,4 +1,4 @@
-ALTER PROCEDURE dbo.sp_Dashboard_Ozet_Getir
+CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_Ozet_Getir
     @MagazaId INT = NULL,
     @TumMagazalar BIT = 1
 AS
@@ -34,7 +34,7 @@ BEGIN
 
         (SELECT COUNT(DISTINCT CustomerId) FROM Siparisler WHERE CustomerId IS NOT NULL) AS ToplamMusteri,
         (SELECT COUNT(*) FROM Magazalar WHERE MagazaAktifMi = 1 AND MusteriAktifMi = 1) AS AktifMagaza,
-        (SELECT COUNT(*) FROM Magazalar WHERE NULLIF(LTRIM(RTRIM(SorumluKisi)), N'') IS NOT NULL) AS PersonelSayisi,
+        (SELECT COUNT(*) FROM dbo.Kullanicilar WHERE AktifMi = 1) AS PersonelSayisi,
 
         ISNULL((SELECT SUM(ToplamTutar) FROM Siparisler WHERE IsCancelled = 0), 0) AS ToplamCiro,
         ISNULL((SELECT SUM(ToplamTutar) FROM Siparisler WHERE IsCancelled = 0 AND CAST(SiparisTarihi AS DATE) = CAST(GETDATE() AS DATE)), 0) AS BugunkuCiro,
@@ -42,7 +42,7 @@ BEGIN
 END
 GO
 
-ALTER PROCEDURE dbo.sp_Dashboard_KritikStok_Getir
+CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_KritikStok_Getir
     @MagazaId INT = NULL,
     @TumMagazalar BIT = 1
 AS

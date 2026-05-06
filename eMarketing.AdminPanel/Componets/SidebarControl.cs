@@ -105,6 +105,9 @@ namespace eMarketing.AdminPanel.Componets
             AddMenuButton("Orders", AppSession.AdminMi ? "Siparişler" : "Sipariş Takibi", "≡");
             AddMenuButton("DealerStock", "Bayi Stokları", "▤");
 
+            if (!AppSession.AdminMi && AppSession.Rol.Equals("StoreManager", StringComparison.OrdinalIgnoreCase))
+                AddMenuButton("Personnel", "Bayi Personeli", "○");
+
             if (AppSession.AdminMi)
             {
                 AddMenuButton("Products", "Ürünler", "□");

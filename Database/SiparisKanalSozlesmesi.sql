@@ -7,7 +7,8 @@ CREATE OR ALTER PROCEDURE dbo.sp_Siparis_Ekle_TekUrun
     @TotalPrice DECIMAL(18,2),
     @CustomerStoreId INT = NULL,
     @OrderType NVARCHAR(50) = N'Bayi',
-    @OrderSource NVARCHAR(50) = N'AdminPanel'
+    @OrderSource NVARCHAR(50) = N'AdminPanel',
+    @BayiYetkiliId INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -144,6 +145,24 @@ BEGIN
                             ELSE @TotalPrice
                          END;
 
+        IF @BayiYetkiliId IS NOT NULL
+        BEGIN
+            IF NOT EXISTS
+            (
+                SELECT 1
+                FROM dbo.BayiYetkilileri byk
+                WHERE byk.BayiYetkiliId = @BayiYetkiliId
+                  AND byk.BayiId = @CustomerId
+                  AND byk.AktifMi = 1
+                  AND (byk.MagazaId IS NULL OR byk.MagazaId = @CustomerStoreId)
+            )
+            BEGIN
+                RAISERROR('Seçili bayi yetkilisi bu bayi/mağaza için geçerli değil.', 16, 1);
+                ROLLBACK TRANSACTION;
+                RETURN;
+            END
+        END
+
         INSERT INTO dbo.Orders
         (
             CustomerName,
@@ -164,7 +183,8 @@ BEGIN
             ShippingTotal,
             GrandTotal,
             IsCancelled,
-            IsArchived
+            IsArchived,
+            BayiYetkiliId
         )
         VALUES
         (
@@ -186,7 +206,8 @@ BEGIN
             0,
             @TotalPrice,
             0,
-            0
+            0,
+            @BayiYetkiliId
         );
 
         SET @OrderId = SCOPE_IDENTITY();

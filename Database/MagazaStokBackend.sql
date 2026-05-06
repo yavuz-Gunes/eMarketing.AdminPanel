@@ -75,7 +75,7 @@ SELECT
     cs.City AS Sehir,
     cs.District AS Ilce,
     cs.Phone AS Telefon,
-    cs.ResponsiblePerson AS SorumluKisi,
+    COALESCE(NULLIF(k.AdSoyad, ''), NULLIF(cs.ResponsiblePerson, '')) AS SorumluKisi,
     ms.ProductId AS UrunId,
     p.ProductName AS UrunAdi,
     p.Description AS Aciklama,
@@ -106,6 +106,8 @@ INNER JOIN dbo.Products p
     ON p.ProductId = ms.ProductId
 LEFT JOIN dbo.Categories cat
     ON cat.CategoryId = p.CategoryId
+LEFT JOIN dbo.Kullanicilar k
+    ON k.KullaniciId = cs.SorumluKullaniciId
 OUTER APPLY
 (
     SELECT

@@ -16,6 +16,9 @@ DELETE FROM dbo.OrderItems;
 DELETE FROM dbo.Orders;
 DELETE FROM dbo.KullaniciMagazalari;
 
+IF OBJECT_ID('dbo.BayiYetkilileri', 'U') IS NOT NULL
+    DELETE FROM dbo.BayiYetkilileri;
+
 IF OBJECT_ID('dbo.StoreInventory', 'U') IS NOT NULL
     DELETE FROM dbo.StoreInventory;
 
@@ -31,6 +34,8 @@ DBCC CHECKIDENT ('dbo.StockMovements', RESEED, 0) WITH NO_INFOMSGS;
 DBCC CHECKIDENT ('dbo.OrderItems', RESEED, 0) WITH NO_INFOMSGS;
 DBCC CHECKIDENT ('dbo.Orders', RESEED, 0) WITH NO_INFOMSGS;
 DBCC CHECKIDENT ('dbo.KullaniciMagazalari', RESEED, 0) WITH NO_INFOMSGS;
+IF OBJECT_ID('dbo.BayiYetkilileri', 'U') IS NOT NULL
+    DBCC CHECKIDENT ('dbo.BayiYetkilileri', RESEED, 0) WITH NO_INFOMSGS;
 DBCC CHECKIDENT ('dbo.Products', RESEED, 0) WITH NO_INFOMSGS;
 DBCC CHECKIDENT ('dbo.Categories', RESEED, 0) WITH NO_INFOMSGS;
 DBCC CHECKIDENT ('dbo.CustomerStores', RESEED, 0) WITH NO_INFOMSGS;
@@ -108,13 +113,19 @@ INSERT INTO dbo.Kullanicilar (KullaniciAdi, Sifre, AdSoyad, Rol, AktifMi)
 VALUES
     (N'admin', N'1234', N'Admin', N'Admin', 1),
     (N'emre.kaya', N'1234', N'Emre Kaya', N'StoreManager', 1),
-    (N'selin.demir', N'1234', N'Selin Demir', N'SalesPerson', 1),
-    (N'murat.arslan', N'1234', N'Murat Arslan', N'StoreManager', 1);
+    (N'selin.demir', N'1234', N'Selin Demir', N'StoreManager', 1),
+    (N'murat.arslan', N'1234', N'Murat Arslan', N'StoreManager', 1),
+    (N'aylin.koc', N'1234', N'Aylin Koç', N'SalesPerson', 1),
+    (N'mehmet.demir', N'1234', N'Mehmet Demir', N'SalesPerson', 1),
+    (N'deniz.kara', N'1234', N'Deniz Kara', N'SalesPerson', 1);
 
 DECLARE @Admin INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'admin');
 DECLARE @Emre INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'emre.kaya');
 DECLARE @Selin INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'selin.demir');
 DECLARE @Murat INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'murat.arslan');
+DECLARE @AylinUser INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'aylin.koc');
+DECLARE @MehmetUser INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'mehmet.demir');
+DECLARE @DenizUser INT = (SELECT KullaniciId FROM dbo.Kullanicilar WHERE KullaniciAdi = N'deniz.kara');
 
 INSERT INTO dbo.KullaniciMagazalari (KullaniciId, MagazaId, AktifMi)
 VALUES
@@ -125,7 +136,10 @@ VALUES
     (@Emre, @IstanbulAna, 1),
     (@Emre, @IstanbulAnadolu, 1),
     (@Selin, @AnkaraAna, 1),
-    (@Murat, @IzmirAna, 1);
+    (@Murat, @IzmirAna, 1),
+    (@AylinUser, @IstanbulAnadolu, 1),
+    (@MehmetUser, @AnkaraAna, 1),
+    (@DenizUser, @IzmirAna, 1);
 
 DECLARE @FrenBalata INT = (SELECT ProductId FROM dbo.Products WHERE ProductName = N'Fren Balatası Ön Takım');
 DECLARE @YagFiltre INT = (SELECT ProductId FROM dbo.Products WHERE ProductName = N'Yağ Filtresi');
@@ -133,6 +147,38 @@ DECLARE @HavaFiltre INT = (SELECT ProductId FROM dbo.Products WHERE ProductName 
 DECLARE @Buji INT = (SELECT ProductId FROM dbo.Products WHERE ProductName = N'Buji Takımı');
 DECLARE @Aku INT = (SELECT ProductId FROM dbo.Products WHERE ProductName = N'Akü 60Ah');
 DECLARE @Amortisor INT = (SELECT ProductId FROM dbo.Products WHERE ProductName = N'Amortisör Ön Sağ');
+
+UPDATE dbo.CustomerStores
+SET SorumluKullaniciId = CASE
+    WHEN CustomerStoreId = @IstanbulAna THEN @Emre
+    WHEN CustomerStoreId = @IstanbulAnadolu THEN @AylinUser
+    WHEN CustomerStoreId = @AnkaraAna THEN @Selin
+    WHEN CustomerStoreId = @IzmirAna THEN @Murat
+    ELSE SorumluKullaniciId
+END
+WHERE CustomerStoreId IN (@IstanbulAna, @IstanbulAnadolu, @AnkaraAna, @IzmirAna);
+
+INSERT INTO dbo.BayiYetkilileri
+(
+    BayiId,
+    MagazaId,
+    AdSoyad,
+    Telefon,
+    Email,
+    Gorev,
+    Notlar,
+    AktifMi
+)
+VALUES
+    (@IstanbulBayi, @IstanbulAna, N'Ahmet Yılmaz', N'05321234567', N'ahmet.yilmaz@istanbulyp.local', N'Satın Alma Yetkilisi', N'Ana mağaza siparişlerinden sorumlu.', 1),
+    (@IstanbulBayi, @IstanbulAnadolu, N'Aylin Koç', N'05321234568', N'aylin.koc@istanbulyp.local', N'Şube Yetkilisi', N'Anadolu yakası siparişlerinden sorumlu.', 1),
+    (@AnkaraBayi, @AnkaraAna, N'Mehmet Demir', N'05334445566', N'mehmet.demir@ankaraoto.local', N'Sipariş Sorumlusu', N'Web siparişlerini takip eder.', 1),
+    (@IzmirBayi, @IzmirAna, N'Deniz Kara', N'05326667788', N'deniz.kara@izmirmotor.local', N'Operasyon Yetkilisi', N'Teslimat ve cari takibi yapar.', 1);
+
+DECLARE @AhmetYetkili INT = (SELECT BayiYetkiliId FROM dbo.BayiYetkilileri WHERE Email = N'ahmet.yilmaz@istanbulyp.local');
+DECLARE @AylinYetkili INT = (SELECT BayiYetkiliId FROM dbo.BayiYetkilileri WHERE Email = N'aylin.koc@istanbulyp.local');
+DECLARE @MehmetYetkili INT = (SELECT BayiYetkiliId FROM dbo.BayiYetkilileri WHERE Email = N'mehmet.demir@ankaraoto.local');
+DECLARE @DenizYetkili INT = (SELECT BayiYetkiliId FROM dbo.BayiYetkilileri WHERE Email = N'deniz.kara@izmirmotor.local');
 
 DECLARE @SiparisId INT;
 DECLARE @MagazaStokId INT;
@@ -147,7 +193,8 @@ EXEC dbo.sp_Siparis_Ekle_TekUrun
     @TotalPrice = 5000.00,
     @CustomerStoreId = @IstanbulAna,
     @OrderType = N'Bayi',
-    @OrderSource = N'AdminPanel';
+    @OrderSource = N'AdminPanel',
+    @BayiYetkiliId = @AhmetYetkili;
 SELECT @SiparisId = SiparisId FROM @YeniSiparis;
 EXEC dbo.sp_Siparis_Durum_Guncelle @SiparisId = @SiparisId, @SiparisDurumu = N'Teslim Edildi';
 SELECT @MagazaStokId = MagazaStokId FROM dbo.MagazaStoklari WHERE MagazaId = @IstanbulAna AND ProductId = @FrenBalata;
@@ -162,7 +209,8 @@ EXEC dbo.sp_Siparis_Ekle_TekUrun
     @TotalPrice = 2160.00,
     @CustomerStoreId = @IstanbulAnadolu,
     @OrderType = N'Bayi',
-    @OrderSource = N'AdminPanel';
+    @OrderSource = N'AdminPanel',
+    @BayiYetkiliId = @AylinYetkili;
 SELECT @SiparisId = SiparisId FROM @YeniSiparis;
 EXEC dbo.sp_Siparis_Durum_Guncelle @SiparisId = @SiparisId, @SiparisDurumu = N'Teslim Edildi';
 SELECT @MagazaStokId = MagazaStokId FROM dbo.MagazaStoklari WHERE MagazaId = @IstanbulAnadolu AND ProductId = @YagFiltre;
@@ -177,7 +225,8 @@ EXEC dbo.sp_Siparis_Ekle_TekUrun
     @TotalPrice = 4900.00,
     @CustomerStoreId = @AnkaraAna,
     @OrderType = N'Bayi',
-    @OrderSource = N'AdminPanel';
+    @OrderSource = N'AdminPanel',
+    @BayiYetkiliId = @MehmetYetkili;
 SELECT @SiparisId = SiparisId FROM @YeniSiparis;
 EXEC dbo.sp_Siparis_Durum_Guncelle @SiparisId = @SiparisId, @SiparisDurumu = N'Teslim Edildi';
 SELECT @MagazaStokId = MagazaStokId FROM dbo.MagazaStoklari WHERE MagazaId = @AnkaraAna AND ProductId = @Aku;
@@ -192,7 +241,8 @@ EXEC dbo.sp_Siparis_Ekle_TekUrun
     @TotalPrice = 2880.00,
     @CustomerStoreId = @IzmirAna,
     @OrderType = N'Bayi',
-    @OrderSource = N'AdminPanel';
+    @OrderSource = N'AdminPanel',
+    @BayiYetkiliId = @DenizYetkili;
 SELECT @SiparisId = SiparisId FROM @YeniSiparis;
 EXEC dbo.sp_Siparis_Durum_Guncelle @SiparisId = @SiparisId, @SiparisDurumu = N'Kargoda';
 
@@ -205,7 +255,8 @@ EXEC dbo.sp_Siparis_Ekle_TekUrun
     @TotalPrice = 5250.00,
     @CustomerStoreId = @AnkaraAna,
     @OrderType = N'Bayi',
-    @OrderSource = N'AdminPanel';
+    @OrderSource = N'AdminPanel',
+    @BayiYetkiliId = @MehmetYetkili;
 SELECT @SiparisId = SiparisId FROM @YeniSiparis;
 
 COMMIT TRANSACTION;
@@ -213,6 +264,7 @@ COMMIT TRANSACTION;
 SELECT
     (SELECT COUNT(*) FROM dbo.Customers) AS BayiSayisi,
     (SELECT COUNT(*) FROM dbo.CustomerStores) AS MagazaSayisi,
+    (SELECT COUNT(*) FROM dbo.BayiYetkilileri) AS BayiYetkiliSayisi,
     (SELECT COUNT(*) FROM dbo.Products) AS UrunSayisi,
     (SELECT COUNT(*) FROM dbo.Orders) AS SiparisSayisi,
     (SELECT COUNT(*) FROM dbo.MagazaStoklari) AS BayiStokKarti;

@@ -18,7 +18,7 @@ namespace eMarketing.AdminPanel.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
             Width = 520;
-            Height = 430;
+            Height = 500;
             BackColor = Color.White;
 
             Panel container = new Panel
@@ -58,9 +58,12 @@ namespace eMarketing.AdminPanel.Forms
             body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
             AddRow(body, "Sipariş ID", GetText(row, "SiparisId"));
-            AddRow(body, "Müşteri", GetText(row, "MusteriAdi"));
+            AddRow(body, "Bayi", GetText(row, "MusteriAdi"));
+            AddRow(body, "Mağaza", GetText(row, "MagazaAdi"));
+            AddRow(body, "Yetkili", GetText(row, "YetkiliAdi"));
             AddRow(body, "Parça", GetText(row, "UrunAdi"));
             AddRow(body, "Adet", GetText(row, "Adet"));
+            AddRow(body, "Bayide Stok", GetText(row, "BayiStok"));
             AddRow(body, "Tutar", GetMoneyText(row, "ToplamTutar"));
             AddRow(body, "Durum", GetStatusDisplayText(GetText(row, "SiparisDurumu")));
             AddRow(body, "Tarih", GetDateText(row, "SiparisTarihi"));
