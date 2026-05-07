@@ -172,6 +172,14 @@ namespace eMarketing.AdminPanel.Forms
             LoadPage(pageKey, page, title, subtitle);
         }
 
+        public void NavigateTo(string pageKey)
+        {
+            LoadPage(pageKey);
+
+            if (sidebar != null)
+                sidebar.SetActiveMenu(pageKey);
+        }
+
         private void LoadPage(string pageKey, UserControl page, string title, string subtitle)
         {
             if (contentPanel == null || topbar == null)

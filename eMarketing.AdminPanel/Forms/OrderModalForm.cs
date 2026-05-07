@@ -342,6 +342,16 @@ namespace eMarketing.AdminPanel.Forms
                     AppSession.KullaniciId,
                     AppSession.AdminMi);
 
+                magazalar = AktifMagazaSecimineGoreFiltrele(magazalar);
+
+                if (magazalar.Rows.Count == 0)
+                {
+                    cmbMagaza.DataSource = null;
+                    MessageBox.Show("Aktif bayi/mağaza sipariş oluşturmak için bulunamadı. Lütfen mağaza seçimini kontrol edin.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 if (!magazalar.Columns.Contains("MagazaGosterim"))
                     magazalar.Columns.Add("MagazaGosterim", typeof(string));
 
@@ -359,6 +369,7 @@ namespace eMarketing.AdminPanel.Forms
                 if (AppSession.SeciliMagazaId.HasValue)
                     cmbMagaza.SelectedValue = AppSession.SeciliMagazaId.Value;
 
+                cmbMagaza.Enabled = !SiparisAktifMagazayaKilitli() && magazalar.Rows.Count > 1;
                 MagazaBilgisiniFormaYansit();
             }
             catch (Exception ex)
@@ -366,6 +377,32 @@ namespace eMarketing.AdminPanel.Forms
                 MessageBox.Show("Bayi/mağaza listesi yüklenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private DataTable AktifMagazaSecimineGoreFiltrele(DataTable magazalar)
+        {
+            if (magazalar == null || !SiparisAktifMagazayaKilitli())
+                return magazalar;
+
+            DataTable filtered = magazalar.Clone();
+            int aktifMagazaId = AppSession.SeciliMagazaId.Value;
+
+            foreach (DataRow row in magazalar.Rows)
+            {
+                if (row.Table.Columns.Contains("MagazaId")
+                    && row["MagazaId"] != DBNull.Value
+                    && Convert.ToInt32(row["MagazaId"]) == aktifMagazaId)
+                {
+                    filtered.ImportRow(row);
+                }
+            }
+
+            return filtered;
+        }
+
+        private bool SiparisAktifMagazayaKilitli()
+        {
+            return AppSession.SeciliMagazaId.HasValue && !AppSession.TumMagazalar;
         }
 
         private void CmbMagaza_SelectedIndexChanged(object sender, EventArgs e)

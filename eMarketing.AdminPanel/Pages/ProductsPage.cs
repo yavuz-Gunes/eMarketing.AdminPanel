@@ -44,9 +44,6 @@ namespace eMarketing.AdminPanel.Pages
         private int hoveredRowIndex = -1;
         private int hoveredColumnIndex = -1;
 
-        private Panel imagePreviewPanel;
-        private PictureBox imagePreviewBox;
-
         public ProductsPage()
         {
             Dock = DockStyle.Fill;
@@ -77,7 +74,6 @@ namespace eMarketing.AdminPanel.Pages
             BuildStatsPanel();
             BuildFilterPanel();
             BuildGridPanel();
-            BuildImagePreview();
 
             Controls.Add(gridPanel);
             Controls.Add(filterPanel);
@@ -338,7 +334,8 @@ namespace eMarketing.AdminPanel.Pages
                 AutoGenerateColumns = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ScrollBars = ScrollBars.Vertical
             };
 
             dgvProducts.EnableHeadersVisualStyles = false;
@@ -371,29 +368,6 @@ namespace eMarketing.AdminPanel.Pages
             dgvProducts.MouseLeave += DgvProducts_MouseLeave;
 
             gridPanel.Controls.Add(dgvProducts);
-        }
-
-        private void BuildImagePreview()
-        {
-            imagePreviewPanel = new Panel
-            {
-                Size = new Size(240, 240),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                Visible = false,
-                Padding = new Padding(8)
-            };
-
-            imagePreviewBox = new PictureBox
-            {
-                Dock = DockStyle.Fill,
-                SizeMode = PictureBoxSizeMode.Zoom,
-                BackColor = Color.FromArgb(250, 251, 253)
-            };
-
-            imagePreviewPanel.Controls.Add(imagePreviewBox);
-            gridPanel.Controls.Add(imagePreviewPanel);
-            imagePreviewPanel.BringToFront();
         }
 
         private void ConfigureGridColumns()
@@ -517,6 +491,34 @@ namespace eMarketing.AdminPanel.Pages
                 UseColumnTextForButtonValue = true,
                 Width = 98
             });
+
+            ApplyGridColumnSizing();
+        }
+
+        private void ApplyGridColumnSizing()
+        {
+            SetFill("UrunGorsel", 7, 48);
+            SetFill("UrunAdi", 20, 120);
+            SetFill("Aciklama", 18, 110);
+            SetFill("Fiyat", 9, 78);
+            SetFill("Stok", 6, 55);
+            SetFill("KategoriAdi", 12, 90);
+            SetFill("AktifMi", 8, 72);
+            SetFill("StokDurumu", 9, 82);
+            SetFill("OlusturmaTarihi", 10, 88);
+            SetFill("colEdit", 8, 72);
+            SetFill("colDelete", 8, 72);
+        }
+
+        private void SetFill(string columnName, float fillWeight, int minWidth)
+        {
+            if (!dgvProducts.Columns.Contains(columnName))
+                return;
+
+            DataGridViewColumn column = dgvProducts.Columns[columnName];
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            column.FillWeight = fillWeight;
+            column.MinimumWidth = minWidth;
         }
 
         private void LoadCategoryFilter()
@@ -663,77 +665,6 @@ namespace eMarketing.AdminPanel.Pages
             catch
             {
                 return null;
-            }
-        }
-
-        private void ShowImagePreview(string imagePath)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(imagePath))
-                {
-                    HideImagePreview();
-                    return;
-                }
-
-                string fullPath = imagePath;
-
-                if (!Path.IsPathRooted(fullPath))
-                    fullPath = Path.Combine(GetRuntimeRootPath(), imagePath);
-
-                if (!File.Exists(fullPath))
-                {
-                    HideImagePreview();
-                    return;
-                }
-
-                using (Image temp = Image.FromFile(fullPath))
-                {
-                    if (imagePreviewBox.Image != null)
-                    {
-                        imagePreviewBox.Image.Dispose();
-                        imagePreviewBox.Image = null;
-                    }
-
-                    imagePreviewBox.Image = new Bitmap(temp);
-                }
-
-                Point clientPoint = gridPanel.PointToClient(Cursor.Position);
-
-                int x = clientPoint.X + 22;
-                int y = clientPoint.Y + 22;
-
-                if (x + imagePreviewPanel.Width > gridPanel.Width)
-                    x = clientPoint.X - imagePreviewPanel.Width - 14;
-
-                if (y + imagePreviewPanel.Height > gridPanel.Height)
-                    y = gridPanel.Height - imagePreviewPanel.Height - 12;
-
-                if (x < 10)
-                    x = 10;
-
-                if (y < 10)
-                    y = 10;
-
-                imagePreviewPanel.Location = new Point(x, y);
-                imagePreviewPanel.Visible = true;
-                imagePreviewPanel.BringToFront();
-            }
-            catch
-            {
-                HideImagePreview();
-            }
-        }
-
-        private void HideImagePreview()
-        {
-            if (imagePreviewPanel != null)
-                imagePreviewPanel.Visible = false;
-
-            if (imagePreviewBox != null && imagePreviewBox.Image != null)
-            {
-                imagePreviewBox.Image.Dispose();
-                imagePreviewBox.Image = null;
             }
         }
 
@@ -991,22 +922,6 @@ namespace eMarketing.AdminPanel.Pages
                     dgvProducts.InvalidateCell(hoveredColumnIndex, hoveredRowIndex);
             }
 
-            if (e.RowIndex < 0 || e.ColumnIndex < 0)
-            {
-                HideImagePreview();
-                return;
-            }
-
-            string currentColumnName = dgvProducts.Columns[e.ColumnIndex].Name;
-
-            if (currentColumnName != "UrunGorsel")
-            {
-                HideImagePreview();
-                return;
-            }
-
-            string imagePath = dgvProducts.Rows[e.RowIndex].Cells["GorselUrlHidden"].Value?.ToString();
-            ShowImagePreview(imagePath);
         }
 
         private void DgvProducts_MouseLeave(object sender, EventArgs e)
@@ -1020,7 +935,6 @@ namespace eMarketing.AdminPanel.Pages
             if (oldRow >= 0 && oldCol >= 0)
                 dgvProducts.InvalidateCell(oldCol, oldRow);
 
-            HideImagePreview();
         }
 
         private void DgvProducts_CellDoubleClick(object sender, DataGridViewCellEventArgs e)

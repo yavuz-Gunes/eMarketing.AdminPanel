@@ -136,6 +136,54 @@ namespace eMarketing.Data.Repositories
             }
         }
 
+        public DataTable GetStokHareketleri(
+            int magazaId,
+            int urunId,
+            int kayitSayisi = 25,
+            int? kullaniciId = null,
+            bool adminMi = false)
+        {
+            try
+            {
+                DataTable table = new DataTable();
+
+                using (SqlConnection connection = DbHelper.GetConnection())
+                using (SqlCommand cmd = new SqlCommand("sp_MagazaStok_Hareket_Listele", connection))
+                using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@MagazaId", SqlDbType.Int)
+                        .Value = magazaId;
+
+                    cmd.Parameters.Add("@ProductId", SqlDbType.Int)
+                        .Value = urunId;
+
+                    cmd.Parameters.Add("@KayitSayisi", SqlDbType.Int)
+                        .Value = kayitSayisi <= 0 ? 25 : kayitSayisi;
+
+                    cmd.Parameters.Add("@KullaniciId", SqlDbType.Int)
+                        .Value = kullaniciId.HasValue ? (object)kullaniciId.Value : DBNull.Value;
+
+                    cmd.Parameters.Add("@AdminMi", SqlDbType.Bit)
+                        .Value = adminMi;
+
+                    connection.Open();
+                    adapter.Fill(table);
+                }
+
+                return table;
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Stok hareketleri getirilirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Stok hareketleri getirilirken hata oluÅŸtu: " + ex.Message);
+            }
+        }
+
         public void StokHareketiIsle(
             int magazaId,
             int urunId,

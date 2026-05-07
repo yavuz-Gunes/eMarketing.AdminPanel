@@ -235,7 +235,9 @@ namespace eMarketing.AdminPanel.Pages
                 RowHeadersVisible = false,
                 AutoGenerateColumns = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ScrollBars = ScrollBars.Vertical
             };
 
             dgvCategories.EnableHeadersVisualStyles = false;
@@ -288,7 +290,9 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "AktifMi",
                 DataPropertyName = "AktifMi",
                 HeaderText = "Durum",
-                Width = 120
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                FillWeight = 16,
+                MinimumWidth = 90
             });
 
             dgvCategories.Columns.Add(new DataGridViewTextBoxColumn
@@ -296,7 +300,9 @@ namespace eMarketing.AdminPanel.Pages
                 Name = "OlusturmaTarihi",
                 DataPropertyName = "OlusturmaTarihi",
                 HeaderText = "Oluşturulma",
-                Width = 170,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                FillWeight = 20,
+                MinimumWidth = 120,
                 DefaultCellStyle = new DataGridViewCellStyle
                 {
                     Format = "dd.MM.yyyy HH:mm"
@@ -309,7 +315,9 @@ namespace eMarketing.AdminPanel.Pages
                 HeaderText = "",
                 Text = "Düzenle",
                 UseColumnTextForButtonValue = true,
-                Width = 110
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                FillWeight = 13,
+                MinimumWidth = 86
             });
 
             dgvCategories.Columns.Add(new DataGridViewButtonColumn
@@ -318,7 +326,9 @@ namespace eMarketing.AdminPanel.Pages
                 HeaderText = "",
                 Text = "Sil",
                 UseColumnTextForButtonValue = true,
-                Width = 90
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                FillWeight = 10,
+                MinimumWidth = 70
             });
         }
 

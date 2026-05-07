@@ -327,7 +327,8 @@ namespace eMarketing.AdminPanel.Pages
                 AutoGenerateColumns = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ScrollBars = ScrollBars.Vertical
             };
 
             dgvOrders.EnableHeadersVisualStyles = false;
@@ -505,6 +506,36 @@ namespace eMarketing.AdminPanel.Pages
                 UseColumnTextForButtonValue = true,
                 Width = 88
             });
+
+            ApplyGridColumnSizing();
+        }
+
+        private void ApplyGridColumnSizing()
+        {
+            SetFill("SiparisNo", 7, 52);
+            SetFill("MusteriAdi", 15, 95);
+            SetFill("YetkiliAdi", 12, 88);
+            SetFill("MusteriTelefon", 10, 82);
+            SetFill("MusteriEmail", 14, 90);
+            SetFill("MagazaAdi", 15, 95);
+            SetFill("UrunAdi", 16, 105);
+            SetFill("Adet", 6, 46);
+            SetFill("BayiStok", 8, 62);
+            SetFill("ToplamTutar", 10, 78);
+            SetFill("SiparisDurumu", 11, 82);
+            SetFill("SiparisTarihi", 12, 92);
+            SetFill("colDetail", 8, 64);
+        }
+
+        private void SetFill(string columnName, float fillWeight, int minWidth)
+        {
+            if (!dgvOrders.Columns.Contains(columnName))
+                return;
+
+            DataGridViewColumn column = dgvOrders.Columns[columnName];
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            column.FillWeight = fillWeight;
+            column.MinimumWidth = minWidth;
         }
 
         private void BuildFooterPanel()
@@ -966,6 +997,7 @@ namespace eMarketing.AdminPanel.Pages
 
                 int orderId = int.Parse(txtOrderId.Text);
                 string newStatus = GetSelectedStatusValue(cmbStatus);
+                string currentStatus = GetSelectedOrderStatus();
 
                 if (string.IsNullOrWhiteSpace(newStatus))
                 {
@@ -973,6 +1005,9 @@ namespace eMarketing.AdminPanel.Pages
                         "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
+                if (!CanChangeStatus(currentStatus, newStatus))
+                    return;
 
                 _repo.UpdateOrderStatus(orderId, newStatus);
 
@@ -989,6 +1024,50 @@ namespace eMarketing.AdminPanel.Pages
                 MessageBox.Show("Sipariş durumu güncellenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private bool CanChangeStatus(string currentStatus, string newStatus)
+        {
+            if (string.IsNullOrWhiteSpace(currentStatus) || currentStatus == newStatus)
+                return true;
+
+            if (currentStatus == "Iptal")
+            {
+                MessageBox.Show("İptal edilen sipariş tekrar işleme alınamaz.",
+                    "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (currentStatus == "Kargoda" && newStatus == "Hazirlaniyor")
+            {
+                MessageBox.Show("Kargodaki sipariş hazırlık durumuna geri alınamaz.",
+                    "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (currentStatus == "Teslim Edildi" && newStatus != "Iptal")
+            {
+                MessageBox.Show("Teslim edilen sipariş yalnızca iptal/iade sürecine alınabilir.",
+                    "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (newStatus == "Iptal")
+            {
+                string message = currentStatus == "Teslim Edildi"
+                    ? "Teslim edilmiş sipariş iptal edilecek. Bayi stoğundan düşülüp merkez stoğa iade edilecek. Devam edilsin mi?"
+                    : "Sipariş iptal edilecek ve ayrılan ürün merkez stoğa iade edilecek. Devam edilsin mi?";
+
+                DialogResult result = MessageBox.Show(
+                    message,
+                    "Sipariş İptali",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                return result == DialogResult.Yes;
+            }
+
+            return true;
         }
 
         private void BtnOpenDetail_Click(object sender, EventArgs e)
@@ -1149,6 +1228,22 @@ namespace eMarketing.AdminPanel.Pages
                 return string.Empty;
 
             return selected.Value;
+        }
+
+        private string GetSelectedOrderStatus()
+        {
+            if (dgvOrders == null || dgvOrders.CurrentRow == null)
+                return string.Empty;
+
+            if (!dgvOrders.Columns.Contains("SiparisDurumu"))
+                return string.Empty;
+
+            object value = dgvOrders.CurrentRow.Cells["SiparisDurumu"].Value;
+
+            if (value == null || value == DBNull.Value)
+                return string.Empty;
+
+            return Convert.ToString(value);
         }
 
         private string GetStatusDisplayText(string status)

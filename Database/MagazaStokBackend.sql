@@ -136,6 +136,7 @@ BEGIN
 
     DECLARE @OncekiStok INT;
     DECLARE @SonrakiStok INT;
+    DECLARE @MerkezStok INT;
     DECLARE @Yon INT;
 
     IF @Miktar <= 0
@@ -144,7 +145,7 @@ BEGIN
         RETURN;
     END
 
-    IF @HareketTipi IN (N'BayiSatisCikis', N'ManuelCikis', N'DuzeltmeCikis')
+    IF @HareketTipi IN (N'BayiSatisCikis', N'ManuelCikis', N'DuzeltmeCikis', N'SiparisIptalCikis')
         SET @Yon = -1;
     ELSE
         SET @Yon = 1;
@@ -163,6 +164,28 @@ BEGIN
     END
 
     BEGIN TRANSACTION;
+
+    IF @HareketTipi IN (N'ManuelGiris', N'DuzeltmeGiris')
+    BEGIN
+        SELECT @MerkezStok = Stock
+        FROM dbo.Products WITH (UPDLOCK, HOLDLOCK)
+        WHERE ProductId = @ProductId
+          AND IsActive = 1;
+
+        IF @MerkezStok IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            RAISERROR('Merkez stokta Ã¼rÃ¼n bulunamadÄ± veya aktif deÄŸil.', 16, 1);
+            RETURN;
+        END
+
+        IF @MerkezStok < @Miktar
+        BEGIN
+            ROLLBACK TRANSACTION;
+            RAISERROR('Merkez stok bayi transferi iÃ§in yeterli deÄŸil.', 16, 1);
+            RETURN;
+        END
+    END
 
     IF NOT EXISTS
     (
@@ -212,6 +235,28 @@ BEGIN
         GuncellemeTarihi = SYSDATETIME()
     WHERE MagazaId = @MagazaId
       AND ProductId = @ProductId;
+
+    IF @HareketTipi IN (N'ManuelGiris', N'DuzeltmeGiris')
+    BEGIN
+        UPDATE dbo.Products
+        SET Stock = Stock - @Miktar
+        WHERE ProductId = @ProductId;
+
+        INSERT INTO dbo.StockMovements
+        (
+            ProductId,
+            MovementType,
+            Quantity,
+            Description
+        )
+        VALUES
+        (
+            @ProductId,
+            N'MagazaTransferOut',
+            @Miktar,
+            ISNULL(@Aciklama, N'Merkezden bayi stoÄŸuna transfer')
+        );
+    END
 
     INSERT INTO dbo.MagazaStokHareketleri
     (
@@ -293,6 +338,128 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_Siparis_IptalStokIade_Isle
+    @SiparisId INT,
+    @TeslimEdildiMi BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @MagazaId INT;
+
+    SELECT @MagazaId = CustomerStoreId
+    FROM dbo.Orders
+    WHERE OrderId = @SiparisId;
+
+    IF @TeslimEdildiMi = 1 AND @MagazaId IS NULL
+    BEGIN
+        RAISERROR('Teslim edilmiş sipariş için bayi/mağaza bilgisi bulunamadı.', 16, 1);
+        RETURN;
+    END
+
+    DECLARE @OrderItemId INT;
+    DECLARE @ProductId INT;
+    DECLARE @Quantity INT;
+    DECLARE @OncekiBayiStok INT;
+    DECLARE @SonrakiBayiStok INT;
+
+    DECLARE iade_cursor CURSOR LOCAL FAST_FORWARD FOR
+        SELECT
+            oi.OrderItemId,
+            oi.ProductId,
+            oi.Quantity
+        FROM dbo.OrderItems oi
+        WHERE oi.OrderId = @SiparisId
+          AND oi.Quantity > 0;
+
+    OPEN iade_cursor;
+    FETCH NEXT FROM iade_cursor INTO @OrderItemId, @ProductId, @Quantity;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        IF @TeslimEdildiMi = 1
+        BEGIN
+            SELECT @OncekiBayiStok = StokAdedi
+            FROM dbo.MagazaStoklari WITH (UPDLOCK, HOLDLOCK)
+            WHERE MagazaId = @MagazaId
+              AND ProductId = @ProductId
+              AND AktifMi = 1;
+
+            IF @OncekiBayiStok IS NULL OR @OncekiBayiStok < @Quantity
+            BEGIN
+                CLOSE iade_cursor;
+                DEALLOCATE iade_cursor;
+                RAISERROR('Bayi stoğu sipariş iptali için yeterli değil. Önce bayi stoklarını kontrol edin.', 16, 1);
+                RETURN;
+            END
+
+            SET @SonrakiBayiStok = @OncekiBayiStok - @Quantity;
+
+            UPDATE dbo.MagazaStoklari
+            SET
+                StokAdedi = @SonrakiBayiStok,
+                GuncellemeTarihi = SYSDATETIME()
+            WHERE MagazaId = @MagazaId
+              AND ProductId = @ProductId;
+
+            INSERT INTO dbo.MagazaStokHareketleri
+            (
+                MagazaId,
+                ProductId,
+                HareketTipi,
+                Miktar,
+                OncekiStok,
+                SonrakiStok,
+                KaynakSiparisId,
+                KaynakSiparisKalemId,
+                Aciklama
+            )
+            VALUES
+            (
+                @MagazaId,
+                @ProductId,
+                N'SiparisIptalCikis',
+                @Quantity,
+                @OncekiBayiStok,
+                @SonrakiBayiStok,
+                @SiparisId,
+                @OrderItemId,
+                N'Teslim edilen sipariş iptal edildi, bayi stoğundan merkeze iade edildi.'
+            );
+        END
+
+        UPDATE dbo.Products
+        SET Stock = Stock + @Quantity
+        WHERE ProductId = @ProductId;
+
+        INSERT INTO dbo.StockMovements
+        (
+            ProductId,
+            OrderId,
+            MovementType,
+            Quantity,
+            Description
+        )
+        VALUES
+        (
+            @ProductId,
+            @SiparisId,
+            CASE WHEN @TeslimEdildiMi = 1 THEN N'DeliveredOrderCancelReturn' ELSE N'OrderCancelIn' END,
+            @Quantity,
+            CASE
+                WHEN @TeslimEdildiMi = 1 THEN N'Teslim edilmiş sipariş iptal edildi, ürün merkez stoğa iade edildi.'
+                ELSE N'Sipariş iptal edildi, ayrılan ürün merkez stoğa iade edildi.'
+            END
+        );
+
+        FETCH NEXT FROM iade_cursor INTO @OrderItemId, @ProductId, @Quantity;
+    END
+
+    CLOSE iade_cursor;
+    DEALLOCATE iade_cursor;
+END
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_Siparis_Durum_Guncelle
     @SiparisId INT,
     @SiparisDurumu NVARCHAR(50)
@@ -302,8 +469,12 @@ BEGIN
     SET XACT_ABORT ON;
 
     DECLARE @OncekiDurum NVARCHAR(50);
+    DECLARE @IptalMi BIT;
+    DECLARE @TeslimEdildiMi BIT;
 
-    SELECT @OncekiDurum = OrderStatus
+    SELECT
+        @OncekiDurum = OrderStatus,
+        @IptalMi = ISNULL(IsCancelled, 0)
     FROM dbo.Orders
     WHERE OrderId = @SiparisId;
 
@@ -313,17 +484,94 @@ BEGIN
         RETURN;
     END
 
-    UPDATE dbo.Orders
-    SET
-        OrderStatus = @SiparisDurumu,
-        IsCancelled = CASE WHEN @SiparisDurumu = N'Iptal' THEN 1 ELSE IsCancelled END
-    WHERE OrderId = @SiparisId;
-
-    IF @SiparisDurumu = N'Teslim Edildi'
-       AND ISNULL(@OncekiDurum, '') <> N'Teslim Edildi'
+    IF @SiparisDurumu NOT IN (N'Hazirlaniyor', N'Kargoda', N'Teslim Edildi', N'Iptal')
     BEGIN
-        EXEC dbo.sp_Siparis_BayiStok_TeslimIsle @SiparisId = @SiparisId;
+        RAISERROR('Geçersiz sipariş durumu.', 16, 1);
+        RETURN;
     END
+
+    IF @IptalMi = 1 OR @OncekiDurum = N'Iptal'
+    BEGIN
+        IF @SiparisDurumu = N'Iptal'
+            RETURN;
+
+        RAISERROR('İptal edilen sipariş tekrar işleme alınamaz.', 16, 1);
+        RETURN;
+    END
+
+    IF @OncekiDurum = @SiparisDurumu
+        RETURN;
+
+    IF @OncekiDurum = N'Teslim Edildi' AND @SiparisDurumu <> N'Iptal'
+    BEGIN
+        RAISERROR('Teslim edilen sipariş yalnızca iptal/iade sürecine alınabilir.', 16, 1);
+        RETURN;
+    END
+
+    IF @OncekiDurum = N'Kargoda' AND @SiparisDurumu = N'Hazirlaniyor'
+    BEGIN
+        RAISERROR('Kargodaki sipariş hazırlık durumuna geri alınamaz.', 16, 1);
+        RETURN;
+    END
+
+    SET @TeslimEdildiMi = CASE WHEN @OncekiDurum = N'Teslim Edildi' THEN 1 ELSE 0 END;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        IF @SiparisDurumu = N'Iptal'
+        BEGIN
+            EXEC dbo.sp_Siparis_IptalStokIade_Isle
+                @SiparisId = @SiparisId,
+                @TeslimEdildiMi = @TeslimEdildiMi;
+
+            UPDATE dbo.Orders
+            SET
+                OrderStatus = N'Iptal',
+                IsCancelled = 1
+            WHERE OrderId = @SiparisId;
+        END
+        ELSE
+        BEGIN
+            UPDATE dbo.Orders
+            SET OrderStatus = @SiparisDurumu
+            WHERE OrderId = @SiparisId;
+
+            IF @SiparisDurumu = N'Teslim Edildi'
+            BEGIN
+                EXEC dbo.sp_Siparis_BayiStok_TeslimIsle @SiparisId = @SiparisId;
+            END
+        END
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000);
+        DECLARE @ErrorSeverity INT;
+        DECLARE @ErrorState INT;
+
+        SELECT
+            @ErrorMessage = ERROR_MESSAGE(),
+            @ErrorSeverity = ERROR_SEVERITY(),
+            @ErrorState = ERROR_STATE();
+
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Siparis_IptalEt
+    @SiparisId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    EXEC dbo.sp_Siparis_Durum_Guncelle
+        @SiparisId = @SiparisId,
+        @SiparisDurumu = N'Iptal';
 END
 GO
 
@@ -436,6 +684,72 @@ BEGIN
                 )
             )
         );
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_MagazaStok_Hareket_Listele
+    @MagazaId INT,
+    @ProductId INT,
+    @KayitSayisi INT = 25,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @KayitSayisi <= 0
+        SET @KayitSayisi = 25;
+
+    IF @KayitSayisi > 100
+        SET @KayitSayisi = 100;
+
+    IF @AdminMi = 0
+       AND NOT EXISTS
+       (
+            SELECT 1
+            FROM dbo.KullaniciMagazalari km
+            WHERE km.MagazaId = @MagazaId
+              AND km.KullaniciId = @KullaniciId
+              AND km.AktifMi = 1
+       )
+    BEGIN
+        RAISERROR('Bu bayi stoğu için hareket geçmişini görüntüleme yetkiniz yok.', 16, 1);
+        RETURN;
+    END
+
+    SELECT TOP (@KayitSayisi)
+        msh.MagazaStokHareketId,
+        msh.MagazaId,
+        msh.ProductId AS UrunId,
+        msh.HareketTipi,
+        CASE
+            WHEN msh.HareketTipi IN (N'SiparisTeslimGiris', N'ManuelGiris', N'DuzeltmeGiris') THEN N'Giriş'
+            WHEN msh.HareketTipi IN (N'BayiSatisCikis', N'ManuelCikis', N'DuzeltmeCikis', N'SiparisIptalCikis') THEN N'Çıkış'
+            ELSE N'Hareket'
+        END AS HareketYonu,
+        CASE
+            WHEN msh.HareketTipi = N'SiparisTeslimGiris' THEN N'Sipariş teslim girişi'
+            WHEN msh.HareketTipi = N'ManuelGiris' THEN N'Manuel stok girişi'
+            WHEN msh.HareketTipi = N'ManuelCikis' THEN N'Manuel stok çıkışı'
+            WHEN msh.HareketTipi = N'SiparisIptalCikis' THEN N'Sipariş iptal/iade çıkışı'
+            WHEN msh.HareketTipi = N'BayiSatisCikis' THEN N'Bayi satış çıkışı'
+            WHEN msh.HareketTipi = N'DuzeltmeGiris' THEN N'Düzeltme girişi'
+            WHEN msh.HareketTipi = N'DuzeltmeCikis' THEN N'Düzeltme çıkışı'
+            ELSE msh.HareketTipi
+        END AS HareketAciklama,
+        msh.Miktar,
+        msh.OncekiStok,
+        msh.SonrakiStok,
+        msh.KaynakSiparisId,
+        o.OrderNo AS SiparisNo,
+        msh.Aciklama,
+        msh.OlusturmaTarihi
+    FROM dbo.MagazaStokHareketleri msh
+    LEFT JOIN dbo.Orders o
+        ON o.OrderId = msh.KaynakSiparisId
+    WHERE msh.MagazaId = @MagazaId
+      AND msh.ProductId = @ProductId
+    ORDER BY msh.OlusturmaTarihi DESC, msh.MagazaStokHareketId DESC;
 END
 GO
 

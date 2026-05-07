@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Text;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
@@ -32,6 +33,7 @@ namespace eMarketing.AdminPanel.Pages
         private Label lblCiro;
         private Label lblDurum;
         private Button btnDuzenle;
+        private Button btnDetay;
         private Button btnDurum;
         private Button btnAktifMagaza;
 
@@ -191,14 +193,17 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnDuzenle = CreateButton("Düzenle", true);
+            btnDetay = CreateButton("Detay", false);
             btnDurum = CreateButton("Pasifleştir", false);
             btnAktifMagaza = CreateButton("Aktif Seç", false);
 
             btnDuzenle.Click += BtnDuzenle_Click;
+            btnDetay.Click += BtnDetay_Click;
             btnDurum.Click += BtnDurum_Click;
             btnAktifMagaza.Click += BtnAktifMagaza_Click;
 
             butonlar.Controls.Add(btnDuzenle);
+            butonlar.Controls.Add(btnDetay);
             butonlar.Controls.Add(btnDurum);
             butonlar.Controls.Add(btnAktifMagaza);
 
@@ -291,9 +296,8 @@ namespace eMarketing.AdminPanel.Pages
             Label konum = CreateCardLabel(GetKonumText(row), 8.5F, FontStyle.Regular, AppColors.TextMuted, 22);
             Label ozet = CreateCardLabel(GetInt(row, "SiparisSayisi") + " sipariş  |  " + GetMoney(row, "ToplamCiro"), 9F, FontStyle.Bold, AppColors.Primary, 24);
             Label durum = CreateStatusLabel(GetBool(row, "MagazaAktifMi") ? "Aktif" : "Pasif", GetBool(row, "MagazaAktifMi"));
+            Panel header = CreateCardHeader(row, magaza, bayi);
 
-            magaza.Dock = DockStyle.Top;
-            bayi.Dock = DockStyle.Top;
             konum.Dock = DockStyle.Top;
             ozet.Dock = DockStyle.Top;
             durum.Dock = DockStyle.Bottom;
@@ -301,8 +305,7 @@ namespace eMarketing.AdminPanel.Pages
             card.Controls.Add(durum);
             card.Controls.Add(ozet);
             card.Controls.Add(konum);
-            card.Controls.Add(bayi);
-            card.Controls.Add(magaza);
+            card.Controls.Add(header);
 
             AttachClick(card, () => MagazaSec(row));
             AddHover(card);
@@ -323,6 +326,51 @@ namespace eMarketing.AdminPanel.Pages
             };
             card.Paint += Card_Paint;
             return card;
+        }
+
+        private Panel CreateCardHeader(DataRow row, Label magaza, Label bayi)
+        {
+            Panel header = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 56,
+                BackColor = Color.Transparent
+            };
+
+            Label logo = CreateLogoBadge(row);
+            Panel titleArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10, 1, 0, 0),
+                BackColor = Color.Transparent
+            };
+
+            logo.Dock = DockStyle.Left;
+            magaza.Dock = DockStyle.Top;
+            bayi.Dock = DockStyle.Top;
+
+            titleArea.Controls.Add(bayi);
+            titleArea.Controls.Add(magaza);
+
+            header.Controls.Add(titleArea);
+            header.Controls.Add(logo);
+
+            return header;
+        }
+
+        private Label CreateLogoBadge(DataRow row)
+        {
+            return new Label
+            {
+                Text = GetInitials(GetText(row, "MusteriAdi", GetText(row, "MagazaAdi", "Bayi"))),
+                Width = 44,
+                Height = 44,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = AppColors.Primary,
+                BackColor = AppColors.PrimarySoft,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 2, 8, 6)
+            };
         }
 
         private Panel CreateEmptyCard(string text)
@@ -350,6 +398,7 @@ namespace eMarketing.AdminPanel.Pages
             lblDurum.Text = "Durum: " + (aktif ? "Aktif" : "Pasif");
             btnDurum.Text = aktif ? "Pasifleştir" : "Aktifleştir";
             btnDuzenle.Enabled = true;
+            btnDetay.Enabled = true;
             btnDurum.Enabled = true;
             btnAktifMagaza.Enabled = aktif;
 
@@ -368,6 +417,7 @@ namespace eMarketing.AdminPanel.Pages
             lblCiro.Text = "Ciro: -";
             lblDurum.Text = "Durum: -";
             btnDuzenle.Enabled = false;
+            btnDetay.Enabled = false;
             btnDurum.Enabled = false;
             btnAktifMagaza.Enabled = false;
         }
@@ -421,6 +471,17 @@ namespace eMarketing.AdminPanel.Pages
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
                     MagazalariYukle(false);
+            }
+        }
+
+        private void BtnDetay_Click(object sender, EventArgs e)
+        {
+            if (seciliMagaza == null)
+                return;
+
+            using (BayiDetayForm form = new BayiDetayForm(seciliMagaza))
+            {
+                form.ShowDialog(this);
             }
         }
 
@@ -480,12 +541,12 @@ namespace eMarketing.AdminPanel.Pages
 
         private void AttachClick(Control control, Action action)
         {
+            control.Cursor = Cursors.Hand;
             control.Click += (sender, e) => action();
 
             foreach (Control child in control.Controls)
             {
-                child.Cursor = Cursors.Hand;
-                child.Click += (sender, e) => action();
+                AttachClick(child, action);
             }
         }
 
@@ -667,6 +728,25 @@ namespace eMarketing.AdminPanel.Pages
         {
             decimal value = GetDecimal(row, columnName);
             return value.ToString("N2", new CultureInfo("tr-TR")) + " TL";
+        }
+
+        private string GetInitials(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return "B";
+
+            string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            StringBuilder builder = new StringBuilder();
+
+            foreach (string part in parts)
+            {
+                builder.Append(char.ToUpper(part[0], new CultureInfo("tr-TR")));
+
+                if (builder.Length == 2)
+                    break;
+            }
+
+            return builder.Length == 0 ? "B" : builder.ToString();
         }
 
         private string GetText(DataRow row, string columnName, string defaultValue)

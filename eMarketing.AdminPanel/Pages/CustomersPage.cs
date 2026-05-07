@@ -273,7 +273,8 @@ namespace eMarketing.AdminPanel.Pages
                 AutoGenerateColumns = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ScrollBars = ScrollBars.Vertical
             };
 
             dgvYetkililer.EnableHeadersVisualStyles = false;
@@ -309,6 +310,7 @@ namespace eMarketing.AdminPanel.Pages
             AddColumn("Telefon", "Telefon", 120, true);
             AddColumn("Email", "E-Posta", 170, true);
             AddColumn("Gorev", "Görev", 120, true);
+            AddColumn("ProfilDoluluk", "Profil", 80, true);
             AddColumn("SiparisSayisi", "Sipariş", 75, true);
             AddColumn("SonSiparisTarihi", "Son İşlem", 120, true);
             AddColumn("AktifMi", "Durum", 90, true);
@@ -330,6 +332,35 @@ namespace eMarketing.AdminPanel.Pages
                 UseColumnTextForButtonValue = true,
                 Width = 98
             });
+
+            ApplyGridColumnSizing();
+        }
+
+        private void ApplyGridColumnSizing()
+        {
+            SetFill("AdSoyad", 15, 95);
+            SetFill("BayiAdi", 16, 100);
+            SetFill("MagazaAdi", 15, 95);
+            SetFill("Telefon", 10, 78);
+            SetFill("Email", 15, 95);
+            SetFill("Gorev", 11, 75);
+            SetFill("ProfilDoluluk", 7, 58);
+            SetFill("SiparisSayisi", 7, 58);
+            SetFill("SonSiparisTarihi", 10, 78);
+            SetFill("AktifMi", 8, 62);
+            SetFill("colEdit", 8, 66);
+            SetFill("colStatus", 8, 68);
+        }
+
+        private void SetFill(string columnName, float fillWeight, int minWidth)
+        {
+            if (!dgvYetkililer.Columns.Contains(columnName))
+                return;
+
+            DataGridViewColumn column = dgvYetkililer.Columns[columnName];
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            column.FillWeight = fillWeight;
+            column.MinimumWidth = minWidth;
         }
 
         private void AddColumn(string name, string header, int width, bool visible)
@@ -354,6 +385,7 @@ namespace eMarketing.AdminPanel.Pages
             try
             {
                 yetkiliTable = repo.GetYetkililer(txtArama.Text.Trim(), GetDurum());
+                ProfilDolulukHazirla(yetkiliTable);
                 dgvYetkililer.DataSource = yetkiliTable;
                 lblInfo.Text = yetkiliTable.Rows.Count + " kayıt";
                 UpdateStats();
@@ -404,6 +436,48 @@ namespace eMarketing.AdminPanel.Pages
             cAktif.SetData("□", "Aktif", active.ToString());
             cPasif.SetData("□", "Pasif", passive.ToString());
             cSiparis.SetData("□", "Sipariş Veren", ordered.ToString());
+        }
+
+        private void ProfilDolulukHazirla(DataTable table)
+        {
+            if (table == null)
+                return;
+
+            if (!table.Columns.Contains("ProfilDoluluk"))
+                table.Columns.Add("ProfilDoluluk", typeof(int));
+
+            foreach (DataRow row in table.Rows)
+            {
+                int doluAlan = 0;
+                int toplamAlan = 6;
+
+                if (HasValue(row, "AdSoyad"))
+                    doluAlan++;
+
+                if (HasValue(row, "Telefon"))
+                    doluAlan++;
+
+                if (HasValue(row, "Email"))
+                    doluAlan++;
+
+                if (HasValue(row, "BayiAdi"))
+                    doluAlan++;
+
+                if (HasValue(row, "MagazaAdi"))
+                    doluAlan++;
+
+                if (HasValue(row, "Gorev"))
+                    doluAlan++;
+
+                row["ProfilDoluluk"] = (int)Math.Round((doluAlan * 100D) / toplamAlan);
+            }
+        }
+
+        private bool HasValue(DataRow row, string columnName)
+        {
+            return row.Table.Columns.Contains(columnName)
+                && row[columnName] != DBNull.Value
+                && !string.IsNullOrWhiteSpace(Convert.ToString(row[columnName]));
         }
 
         private void BtnYeni_Click(object sender, EventArgs e)
@@ -489,6 +563,23 @@ namespace eMarketing.AdminPanel.Pages
             if (columnName == "SonSiparisTarihi" && e.Value != null && e.Value != DBNull.Value)
             {
                 e.Value = Convert.ToDateTime(e.Value).ToString("dd.MM.yyyy", new CultureInfo("tr-TR"));
+                e.FormattingApplied = true;
+            }
+
+            if (columnName == "ProfilDoluluk" && e.Value != null && e.Value != DBNull.Value)
+            {
+                int oran = Convert.ToInt32(e.Value);
+                e.Value = "%" + oran;
+                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+
+                if (oran >= 80)
+                    e.CellStyle.ForeColor = AppColors.Success;
+                else if (oran >= 50)
+                    e.CellStyle.ForeColor = AppColors.Warning;
+                else
+                    e.CellStyle.ForeColor = AppColors.Danger;
+
                 e.FormattingApplied = true;
             }
 

@@ -19,6 +19,8 @@ namespace eMarketing.AdminPanel.Componets
 
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgv.MultiSelect = false;
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgv.ScrollBars = ScrollBars.Vertical;
 
             dgv.ColumnHeadersHeight = 44;
             dgv.RowTemplate.Height = 44;
