@@ -6,12 +6,14 @@ using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.Data.Repositories;
 using eMarketing.AdminPanel.Forms;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class CategoriesPage : UserControl
     {
         private readonly CategoryRepository _repo = new CategoryRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private Panel headerPanel;
         private Panel statsPanel;
@@ -336,7 +338,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                DataTable table = _repo.GetCategories(txtSearch.Text.Trim(), GetSelectedStatus());
+                DataTable table = GetCategories(txtSearch.Text.Trim(), GetSelectedStatus());
                 dgvCategories.DataSource = table;
 
                 UpdateStats(table);
@@ -352,7 +354,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                DataTable allTable = _repo.GetCategories("", -1);
+                DataTable allTable = GetCategories("", -1);
 
                 int totalCount = allTable.Rows.Count;
                 int activeCount = 0;
@@ -394,6 +396,19 @@ namespace eMarketing.AdminPanel.Pages
                     return 0;
                 default:
                     return -1;
+            }
+        }
+
+        private DataTable GetCategories(string search, int status)
+        {
+            try
+            {
+                return _apiClient.GetCategories(search, status);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kategori listeleme", ex);
+                return _repo.GetCategories(search, status);
             }
         }
 
@@ -594,7 +609,7 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        _repo.SetCategoryActiveStatus(categoryId, true);
+                        SetCategoryActiveStatus(categoryId, true);
                         LoadCategories();
                     }
                 }
@@ -611,7 +626,7 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        _repo.SetCategoryActiveStatus(categoryId, false);
+                        SetCategoryActiveStatus(categoryId, false);
                         LoadCategories();
                     }
                 }
@@ -625,7 +640,7 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        if (_repo.DeleteCategory(categoryId, out string message))
+                        if (DeleteCategory(categoryId, out string message))
                         {
                             LoadCategories();
                         }
@@ -647,6 +662,35 @@ namespace eMarketing.AdminPanel.Pages
                 {
                     LoadCategories();
                 }
+            }
+        }
+
+        private void SetCategoryActiveStatus(int categoryId, bool isActive)
+        {
+            try
+            {
+                _apiClient.SetCategoryActiveStatus(categoryId, isActive);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kategori durum güncelleme", ex);
+                _repo.SetCategoryActiveStatus(categoryId, isActive);
+            }
+        }
+
+        private bool DeleteCategory(int categoryId, out string message)
+        {
+            message = "";
+
+            try
+            {
+                _apiClient.DeleteCategory(categoryId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kategori silme", ex);
+                return _repo.DeleteCategory(categoryId, out message);
             }
         }
 

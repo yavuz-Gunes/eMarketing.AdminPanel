@@ -8,6 +8,7 @@ namespace eMarketing.AdminPanel.Core
         public static string KullaniciAdi { get; private set; }
         public static string AdSoyad { get; private set; }
         public static string Rol { get; private set; }
+        public static string ApiToken { get; private set; }
 
         public static int? SeciliMusteriId { get; private set; }
         public static int? SeciliMagazaId { get; private set; }
@@ -53,12 +54,14 @@ namespace eMarketing.AdminPanel.Core
             int kullaniciId,
             string kullaniciAdi,
             string adSoyad,
-            string rol)
+            string rol,
+            string apiToken = "")
         {
             KullaniciId = kullaniciId;
             KullaniciAdi = kullaniciAdi ?? "";
             AdSoyad = adSoyad ?? "";
             Rol = rol ?? "";
+            ApiToken = apiToken ?? "";
 
             AdminMi = Rol.Equals("Admin", StringComparison.OrdinalIgnoreCase);
         }
@@ -110,6 +113,7 @@ namespace eMarketing.AdminPanel.Core
             KullaniciAdi = "";
             AdSoyad = "";
             Rol = "";
+            ApiToken = "";
 
             SeciliMusteriId = null;
             SeciliMagazaId = null;

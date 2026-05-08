@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
+using eMarketing.AdminPanel.Services;
 using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Pages
@@ -14,6 +15,7 @@ namespace eMarketing.AdminPanel.Pages
     {
         private readonly ProductRepository _repo = new ProductRepository();
         private readonly CategoryRepository _categoryRepo = new CategoryRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private Panel headerPanel;
         private Panel statsPanel;
@@ -527,7 +529,7 @@ namespace eMarketing.AdminPanel.Pages
             {
                 cmbCategory.SelectedIndexChanged -= CmbCategory_SelectedIndexChanged;
 
-                DataTable categories = _categoryRepo.GetActiveCategories();
+                DataTable categories = GetActiveCategories();
 
                 DataTable source = new DataTable();
                 source.Columns.Add("KategoriId", typeof(int));
@@ -566,7 +568,7 @@ namespace eMarketing.AdminPanel.Pages
                 if (cmbCategory.SelectedValue != null && cmbCategory.SelectedValue is int)
                     categoryId = (int)cmbCategory.SelectedValue;
 
-                DataTable table = _repo.GetProducts(txtSearch.Text.Trim(), GetSelectedStatus(), categoryId);
+                DataTable table = GetProducts(txtSearch.Text.Trim(), GetSelectedStatus(), categoryId);
 
                 PrepareProductTable(table);
 
@@ -672,7 +674,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                DataTable allTable = _repo.GetProducts("", -1, 0);
+                DataTable allTable = GetProducts("", -1, 0);
 
                 int totalCount = allTable.Rows.Count;
                 int activeCount = 0;
@@ -924,6 +926,32 @@ namespace eMarketing.AdminPanel.Pages
 
         }
 
+        private DataTable GetActiveCategories()
+        {
+            try
+            {
+                return _apiClient.GetCategories("", 1);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün kategori filtresi", ex);
+                return _categoryRepo.GetActiveCategories();
+            }
+        }
+
+        private DataTable GetProducts(string search, int status, int categoryId)
+        {
+            try
+            {
+                return _apiClient.GetProducts(search, status, categoryId);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün listeleme", ex);
+                return _repo.GetProducts(search, status, categoryId);
+            }
+        }
+
         private void DgvProducts_MouseLeave(object sender, EventArgs e)
         {
             int oldRow = hoveredRowIndex;
@@ -1129,7 +1157,7 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        _repo.SetProductActiveStatus(productId, true);
+                        SetProductActiveStatus(productId, true);
                         LoadProducts();
                     }
                 }
@@ -1146,7 +1174,7 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        _repo.SetProductActiveStatus(productId, false);
+                        SetProductActiveStatus(productId, false);
                         LoadProducts();
                     }
                 }
@@ -1160,7 +1188,7 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        if (_repo.DeleteProduct(productId, out string message))
+                        if (DeleteProduct(productId, out string message))
                         {
                             LoadProducts();
                         }
@@ -1171,6 +1199,35 @@ namespace eMarketing.AdminPanel.Pages
                         }
                     }
                 }
+            }
+        }
+
+        private void SetProductActiveStatus(int productId, bool isActive)
+        {
+            try
+            {
+                _apiClient.SetProductActiveStatus(productId, isActive);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün durum güncelleme", ex);
+                _repo.SetProductActiveStatus(productId, isActive);
+            }
+        }
+
+        private bool DeleteProduct(int productId, out string message)
+        {
+            message = "";
+
+            try
+            {
+                _apiClient.DeleteProduct(productId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün silme", ex);
+                return _repo.DeleteProduct(productId, out message);
             }
         }
 

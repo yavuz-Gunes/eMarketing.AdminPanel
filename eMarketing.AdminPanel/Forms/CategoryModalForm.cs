@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
+using eMarketing.AdminPanel.Services;
 using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
@@ -10,6 +11,7 @@ namespace eMarketing.AdminPanel.Forms
     public partial class CategoryModalForm : Form
     {
         private readonly CategoryRepository _repo = new CategoryRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
         private readonly int _categoryId;
 
         private Label lblTitle;
@@ -130,7 +132,7 @@ namespace eMarketing.AdminPanel.Forms
 
             try
             {
-                DataRow row = _repo.GetCategoryById(_categoryId);
+                DataRow row = GetCategoryById(_categoryId);
 
                 if (row == null)
                 {
@@ -175,11 +177,11 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (_categoryId > 0)
                 {
-                    _repo.UpdateCategory(_categoryId, categoryName, chkIsActive.Checked);
+                    UpdateCategory(_categoryId, categoryName, chkIsActive.Checked);
                 }
                 else
                 {
-                    _repo.InsertCategory(categoryName);
+                    InsertCategory(categoryName);
                 }
 
                 IsSaved = true;
@@ -216,6 +218,45 @@ namespace eMarketing.AdminPanel.Forms
             }
 
             return true;
+        }
+
+        private DataRow GetCategoryById(int categoryId)
+        {
+            try
+            {
+                return _apiClient.GetCategoryById(categoryId);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kategori detay", ex);
+                return _repo.GetCategoryById(categoryId);
+            }
+        }
+
+        private void InsertCategory(string categoryName)
+        {
+            try
+            {
+                _apiClient.InsertCategory(categoryName);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kategori ekleme", ex);
+                _repo.InsertCategory(categoryName);
+            }
+        }
+
+        private void UpdateCategory(int categoryId, string categoryName, bool isActive)
+        {
+            try
+            {
+                _apiClient.UpdateCategory(categoryId, categoryName, isActive);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kategori güncelleme", ex);
+                _repo.UpdateCategory(categoryId, categoryName, isActive);
+            }
         }
     }
 }

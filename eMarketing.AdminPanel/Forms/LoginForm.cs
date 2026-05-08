@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
+using eMarketing.AdminPanel.Services;
 using eMarketing.Data.Models;
 using eMarketing.Data.Repositories;
 
@@ -10,6 +11,7 @@ namespace eMarketing.AdminPanel.Forms
     public class LoginForm : Form
     {
         private readonly LoginRepository repo = new LoginRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private TextBox txtKullaniciAdi;
         private TextBox txtSifre;
@@ -198,7 +200,8 @@ namespace eMarketing.AdminPanel.Forms
                 btnGiris.Enabled = false;
                 btnGiris.Text = "Kontrol ediliyor...";
 
-                KullaniciGirisModel kullanici = repo.GirisYap(kullaniciAdi, sifre);
+                string apiToken;
+                KullaniciGirisModel kullanici = GirisYap(kullaniciAdi, sifre, out apiToken);
 
                 if (kullanici == null)
                 {
@@ -210,7 +213,8 @@ namespace eMarketing.AdminPanel.Forms
                     kullanici.KullaniciId,
                     kullanici.KullaniciAdi,
                     kullanici.AdSoyad,
-                    kullanici.Rol);
+                    kullanici.Rol,
+                    apiToken);
 
                 DialogResult = DialogResult.OK;
                 Close();
@@ -223,6 +227,21 @@ namespace eMarketing.AdminPanel.Forms
             {
                 btnGiris.Enabled = true;
                 btnGiris.Text = "Giriş Yap";
+            }
+        }
+
+        private KullaniciGirisModel GirisYap(string kullaniciAdi, string sifre, out string apiToken)
+        {
+            apiToken = "";
+
+            try
+            {
+                return apiClient.Login(kullaniciAdi, sifre, out apiToken);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Kullanıcı girişi", ex);
+                return repo.GirisYap(kullaniciAdi, sifre);
             }
         }
     }

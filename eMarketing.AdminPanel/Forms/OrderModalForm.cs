@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
+using eMarketing.AdminPanel.Services;
 using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
@@ -12,6 +13,7 @@ namespace eMarketing.AdminPanel.Forms
     public partial class OrderModalForm : Form
     {
         private readonly OrderRepository _orderRepo = new OrderRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
         private readonly ProductRepository _productRepo = new ProductRepository();
         private readonly MagazaRepository _magazaRepo = new MagazaRepository();
         private readonly BayiYetkiliRepository _yetkiliRepo = new BayiYetkiliRepository();
@@ -680,7 +682,7 @@ namespace eMarketing.AdminPanel.Forms
 
                 customerName = Convert.ToString(magazaRow["MusteriAdi"]);
 
-                _orderRepo.AddOrder(
+                AddOrder(
                     customerName,
                     customerEmail,
                     customerPhone,
@@ -705,6 +707,49 @@ namespace eMarketing.AdminPanel.Forms
         private string GetSiparisTipi()
         {
             return "Bayi";
+        }
+
+        private void AddOrder(
+            string customerName,
+            string customerEmail,
+            string customerPhone,
+            int productId,
+            int quantity,
+            decimal totalPrice,
+            int magazaId,
+            string siparisTipi,
+            string siparisKaynagi,
+            int? bayiYetkiliId)
+        {
+            try
+            {
+                _apiClient.AddOrder(
+                    customerName,
+                    customerEmail,
+                    customerPhone,
+                    productId,
+                    quantity,
+                    totalPrice,
+                    magazaId,
+                    siparisTipi,
+                    siparisKaynagi,
+                    bayiYetkiliId);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Sipariş ekleme", ex);
+                _orderRepo.AddOrder(
+                    customerName,
+                    customerEmail,
+                    customerPhone,
+                    productId,
+                    quantity,
+                    totalPrice,
+                    magazaId,
+                    siparisTipi,
+                    siparisKaynagi,
+                    bayiYetkiliId);
+            }
         }
 
         private int? GetSelectedYetkiliId()

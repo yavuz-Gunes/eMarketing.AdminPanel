@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
+using eMarketing.AdminPanel.Services;
 using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
@@ -13,6 +14,7 @@ namespace eMarketing.AdminPanel.Forms
     {
         private readonly ProductRepository _productRepo = new ProductRepository();
         private readonly CategoryRepository _categoryRepo = new CategoryRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
         private readonly int _productId;
 
         private Panel headerPanel;
@@ -411,7 +413,7 @@ namespace eMarketing.AdminPanel.Forms
         {
             try
             {
-                DataTable categories = _categoryRepo.GetActiveCategories();
+                DataTable categories = GetActiveCategories();
 
                 cmbCategory.DisplayMember = "KategoriAdi";
                 cmbCategory.ValueMember = "KategoriId";
@@ -428,7 +430,7 @@ namespace eMarketing.AdminPanel.Forms
         {
             try
             {
-                DataRow row = _productRepo.GetProductById(_productId);
+                DataRow row = GetProductById(_productId);
 
                 if (row == null)
                 {
@@ -575,7 +577,7 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (_productId > 0)
                 {
-                    _productRepo.UpdateProduct(
+                    UpdateProduct(
                         _productId,
                         productName,
                         description,
@@ -587,7 +589,7 @@ namespace eMarketing.AdminPanel.Forms
                 }
                 else
                 {
-                    _productRepo.InsertProduct(
+                    InsertProduct(
                         productName,
                         description,
                         price,
@@ -708,6 +710,58 @@ namespace eMarketing.AdminPanel.Forms
             }
 
             return true;
+        }
+
+        private DataTable GetActiveCategories()
+        {
+            try
+            {
+                return _apiClient.GetCategories("", 1);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün kategori listesi", ex);
+                return _categoryRepo.GetActiveCategories();
+            }
+        }
+
+        private DataRow GetProductById(int productId)
+        {
+            try
+            {
+                return _apiClient.GetProductById(productId);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün detay", ex);
+                return _productRepo.GetProductById(productId);
+            }
+        }
+
+        private void InsertProduct(string name, string description, decimal price, int stock, string imageUrl, bool isActive, int categoryId)
+        {
+            try
+            {
+                _apiClient.InsertProduct(name, description, price, stock, imageUrl, isActive, categoryId);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün ekleme", ex);
+                _productRepo.InsertProduct(name, description, price, stock, imageUrl, isActive, categoryId);
+            }
+        }
+
+        private void UpdateProduct(int id, string name, string description, decimal price, int stock, string imageUrl, bool isActive, int categoryId)
+        {
+            try
+            {
+                _apiClient.UpdateProduct(id, name, description, price, stock, imageUrl, isActive, categoryId);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Ürün güncelleme", ex);
+                _productRepo.UpdateProduct(id, name, description, price, stock, imageUrl, isActive, categoryId);
+            }
         }
     }
 }

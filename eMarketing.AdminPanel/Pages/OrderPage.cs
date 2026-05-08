@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
+using eMarketing.AdminPanel.Services;
 using eMarketing.Data.Models;
 using eMarketing.Data.Repositories;
 
@@ -14,6 +15,7 @@ namespace eMarketing.AdminPanel.Pages
     public class OrdersPage : UserControl, IThemeable
     {
         private readonly OrderRepository _repo = new OrderRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private Panel headerPanel;
         private Panel statsPanel;
@@ -720,7 +722,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
-                ordersTable = _repo.GetAllOrders(
+                ordersTable = GetOrders(
                     GetCurrentMagazaId(),
                     IsTumMagazalar()
                 );
@@ -845,6 +847,19 @@ namespace eMarketing.AdminPanel.Pages
                 e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 e.CellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
                 e.FormattingApplied = true;
+            }
+        }
+
+        private DataTable GetOrders(int? magazaId, bool tumMagazalar)
+        {
+            try
+            {
+                return _apiClient.GetOrders(magazaId, tumMagazalar);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Sipariş listeleme", ex);
+                return _repo.GetAllOrders(magazaId, tumMagazalar);
             }
         }
 
@@ -1101,7 +1116,7 @@ namespace eMarketing.AdminPanel.Pages
                 if (!CanChangeStatus(currentStatus, newStatus))
                     return;
 
-                _repo.UpdateOrderStatus(orderId, newStatus);
+                UpdateOrderStatus(orderId, newStatus);
 
                 MessageBox.Show("Sipariş durumu güncellendi.",
                     "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1160,6 +1175,19 @@ namespace eMarketing.AdminPanel.Pages
             }
 
             return true;
+        }
+
+        private void UpdateOrderStatus(int orderId, string status)
+        {
+            try
+            {
+                _apiClient.UpdateOrderStatus(orderId, status);
+            }
+            catch (Exception ex)
+            {
+                ApiFallbackReporter.Report("Sipariş durum güncelleme", ex);
+                _repo.UpdateOrderStatus(orderId, status);
+            }
         }
 
         private void BtnOpenDetail_Click(object sender, EventArgs e)
