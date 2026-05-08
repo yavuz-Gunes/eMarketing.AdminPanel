@@ -31,6 +31,7 @@ namespace eMarketing.AdminPanel.Pages
         private Label lblSorumlu;
         private Label lblSiparis;
         private Label lblCiro;
+        private Label lblSonSiparis;
         private Label lblDurum;
         private Button btnDuzenle;
         private Button btnDetay;
@@ -39,6 +40,7 @@ namespace eMarketing.AdminPanel.Pages
 
         private DataTable magazaTable;
         private DataRow seciliMagaza;
+        private bool bayilerYukleniyor;
 
         public MagazalarPage()
         {
@@ -116,6 +118,11 @@ namespace eMarketing.AdminPanel.Pages
             };
             cmbBayi.DisplayMember = "BayiGosterim";
             cmbBayi.ValueMember = "CustomerId";
+            cmbBayi.SelectedIndexChanged += (sender, e) =>
+            {
+                if (!bayilerYukleniyor)
+                    MagazalariYukle(false);
+            };
 
             btnYeniMagaza = CreateButton("Yeni Mağaza", true);
             btnYeniMagaza.Location = new Point(560, 26);
@@ -180,6 +187,7 @@ namespace eMarketing.AdminPanel.Pages
             lblSorumlu = CreateDetailLine("Sorumlu", "-");
             lblSiparis = CreateDetailLine("Sipariş", "-");
             lblCiro = CreateDetailLine("Ciro", "-");
+            lblSonSiparis = CreateDetailLine("Son Sipariş", "-");
             lblDurum = CreateDetailLine("Durum", "-");
 
             FlowLayoutPanel butonlar = new FlowLayoutPanel
@@ -209,6 +217,7 @@ namespace eMarketing.AdminPanel.Pages
 
             detayPanel.Controls.Add(butonlar);
             detayPanel.Controls.Add(lblDurum);
+            detayPanel.Controls.Add(lblSonSiparis);
             detayPanel.Controls.Add(lblCiro);
             detayPanel.Controls.Add(lblSiparis);
             detayPanel.Controls.Add(lblSorumlu);
@@ -230,6 +239,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             try
             {
+                bayilerYukleniyor = true;
                 DataTable table = musteriRepo.GetActiveCustomers();
 
                 if (!table.Columns.Contains("BayiGosterim"))
@@ -238,12 +248,26 @@ namespace eMarketing.AdminPanel.Pages
                 foreach (DataRow row in table.Rows)
                     row["BayiGosterim"] = GetText(row, "CompanyName", GetText(row, "FullName", "Bayi"));
 
+                DataRow allRow = table.NewRow();
+                allRow["CustomerId"] = 0;
+                allRow["FullName"] = "Tüm Bayiler";
+                allRow["CompanyName"] = "Tüm Bayiler";
+                allRow["CustomerType"] = "Toptan";
+                allRow["IsActive"] = true;
+                allRow["BayiGosterim"] = "Tüm Bayiler";
+                table.Rows.InsertAt(allRow, 0);
+
                 cmbBayi.DataSource = table;
+                cmbBayi.SelectedIndex = 0;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Bayiler yüklenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                bayilerYukleniyor = false;
             }
         }
 
@@ -260,17 +284,26 @@ namespace eMarketing.AdminPanel.Pages
                 magazaKartListesi.SuspendLayout();
                 magazaKartListesi.Controls.Clear();
 
+                int seciliBayiId = GetSelectedBayiId();
+                int gosterilenKayit = 0;
+
                 foreach (DataRow row in magazaTable.Rows)
+                {
+                    if (seciliBayiId > 0 && GetInt(row, "MusteriId") != seciliBayiId)
+                        continue;
+
                     magazaKartListesi.Controls.Add(CreateMagazaCard(row));
+                    gosterilenKayit++;
+                }
 
-                if (magazaTable.Rows.Count == 0)
-                    magazaKartListesi.Controls.Add(CreateEmptyCard("Mağaza bulunamadı."));
+                if (gosterilenKayit == 0)
+                    magazaKartListesi.Controls.Add(CreateEmptyCard("Filtreye uygun bayi mağazası bulunamadı."));
 
-                lblOzet.Text = magazaTable.Rows.Count + " mağaza listeleniyor";
+                lblOzet.Text = gosterilenKayit + " mağaza listeleniyor";
                 FitCards();
 
-                if (ilkKaydiSec && magazaTable.Rows.Count > 0)
-                    MagazaSec(magazaTable.Rows[0]);
+                if (ilkKaydiSec && gosterilenKayit > 0)
+                    SelectFirstVisibleCard();
                 else if (seciliMagaza != null)
                     SelectMagazaById(GetInt(seciliMagaza, "MagazaId"));
                 else
@@ -286,24 +319,54 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
+        private int GetSelectedBayiId()
+        {
+            if (cmbBayi == null || cmbBayi.SelectedValue == null)
+                return 0;
+
+            if (cmbBayi.SelectedValue is DataRowView)
+                return 0;
+
+            int value;
+            return int.TryParse(Convert.ToString(cmbBayi.SelectedValue), out value) ? value : 0;
+        }
+
+        private void SelectFirstVisibleCard()
+        {
+            foreach (Control control in magazaKartListesi.Controls)
+            {
+                Panel card = control as Panel;
+                if (card != null && card.Tag is DataRow)
+                {
+                    MagazaSec((DataRow)card.Tag);
+                    return;
+                }
+            }
+
+            DetayiTemizle();
+        }
+
         private Panel CreateMagazaCard(DataRow row)
         {
-            Panel card = CreateBaseCard(154);
+            Panel card = CreateBaseCard(172);
             card.Tag = row;
 
             Label magaza = CreateCardLabel(GetText(row, "MagazaAdi", "Mağaza"), 11F, FontStyle.Bold, AppColors.TextPrimary, 28);
             Label bayi = CreateCardLabel(GetText(row, "MusteriAdi", "Bayi"), 9F, FontStyle.Regular, AppColors.TextSecondary, 22);
             Label konum = CreateCardLabel(GetKonumText(row), 8.5F, FontStyle.Regular, AppColors.TextMuted, 22);
+            Label sorumlu = CreateCardLabel("Sorumlu: " + GetText(row, "SorumluKisi", "-"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 22);
             Label ozet = CreateCardLabel(GetInt(row, "SiparisSayisi") + " sipariş  |  " + GetMoney(row, "ToplamCiro"), 9F, FontStyle.Bold, AppColors.Primary, 24);
             Label durum = CreateStatusLabel(GetBool(row, "MagazaAktifMi") ? "Aktif" : "Pasif", GetBool(row, "MagazaAktifMi"));
             Panel header = CreateCardHeader(row, magaza, bayi);
 
             konum.Dock = DockStyle.Top;
+            sorumlu.Dock = DockStyle.Top;
             ozet.Dock = DockStyle.Top;
             durum.Dock = DockStyle.Bottom;
 
             card.Controls.Add(durum);
             card.Controls.Add(ozet);
+            card.Controls.Add(sorumlu);
             card.Controls.Add(konum);
             card.Controls.Add(header);
 
@@ -393,6 +456,7 @@ namespace eMarketing.AdminPanel.Pages
             lblSorumlu.Text = "Sorumlu: " + GetText(row, "SorumluKisi", "-");
             lblSiparis.Text = "Sipariş: " + GetInt(row, "SiparisSayisi") + " adet";
             lblCiro.Text = "Ciro: " + GetMoney(row, "ToplamCiro");
+            lblSonSiparis.Text = "Son Sipariş: " + GetDate(row, "SonSiparisTarihi");
 
             bool aktif = GetBool(row, "MagazaAktifMi") && GetBool(row, "MusteriAktifMi");
             lblDurum.Text = "Durum: " + (aktif ? "Aktif" : "Pasif");
@@ -415,6 +479,7 @@ namespace eMarketing.AdminPanel.Pages
             lblSorumlu.Text = "Sorumlu: -";
             lblSiparis.Text = "Sipariş: -";
             lblCiro.Text = "Ciro: -";
+            lblSonSiparis.Text = "Son Sipariş: -";
             lblDurum.Text = "Durum: -";
             btnDuzenle.Enabled = false;
             btnDetay.Enabled = false;
@@ -728,6 +793,14 @@ namespace eMarketing.AdminPanel.Pages
         {
             decimal value = GetDecimal(row, columnName);
             return value.ToString("N2", new CultureInfo("tr-TR")) + " TL";
+        }
+
+        private string GetDate(DataRow row, string columnName)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return "-";
+
+            return Convert.ToDateTime(row[columnName]).ToString("dd.MM.yyyy HH:mm", new CultureInfo("tr-TR"));
         }
 
         private string GetInitials(string text)

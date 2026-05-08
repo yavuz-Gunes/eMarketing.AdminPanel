@@ -19,6 +19,7 @@ SELECT
     byk.AdSoyad AS YetkiliAdi,
     byk.Telefon AS YetkiliTelefon,
     byk.Email AS YetkiliEmail,
+    COALESCE(itemStats.FirstImageUrl, p.ImageUrl) AS GorselUrl,
 
     CASE
         WHEN itemStats.ItemCount IS NULL OR itemStats.ItemCount = 0 THEN p.ProductName
@@ -55,7 +56,8 @@ OUTER APPLY
     SELECT
         COUNT(*) AS ItemCount,
         SUM(oi.Quantity) AS TotalQuantity,
-        MIN(pr.ProductName) AS FirstProductName
+        MIN(pr.ProductName) AS FirstProductName,
+        MIN(pr.ImageUrl) AS FirstImageUrl
     FROM dbo.OrderItems oi
     INNER JOIN dbo.Products pr
         ON pr.ProductId = oi.ProductId
@@ -108,6 +110,7 @@ BEGIN
         YetkiliAdi,
         YetkiliTelefon,
         YetkiliEmail,
+        GorselUrl,
         UrunAdi,
         Adet,
         UrunKalemi,

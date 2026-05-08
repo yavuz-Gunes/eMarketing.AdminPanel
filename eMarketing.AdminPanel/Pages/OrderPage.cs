@@ -41,6 +41,10 @@ namespace eMarketing.AdminPanel.Pages
         private DataGridView dgvOrders;
 
         private Label lblSelectedOrder;
+        private Label lblSelectedSummary;
+        private Label lblSelectedBayi;
+        private Label lblSelectedProduct;
+        private Label lblSelectedAmount;
         private TextBox txtOrderId;
         private ComboBox cmbStatus;
         private Button btnUpdateStatus;
@@ -402,26 +406,18 @@ namespace eMarketing.AdminPanel.Pages
 
                 dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
                 {
+                    Name = "MagazaAdi",
+                    DataPropertyName = "MagazaAdi",
+                    HeaderText = "Mağaza",
+                    Width = 150
+                });
+
+                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                {
                     Name = "YetkiliAdi",
                     DataPropertyName = "YetkiliAdi",
                     HeaderText = "Yetkili",
                     Width = 130
-                });
-
-                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    Name = "MusteriTelefon",
-                    DataPropertyName = "MusteriTelefon",
-                    HeaderText = "Telefon",
-                    Width = 120
-                });
-
-                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    Name = "MusteriEmail",
-                    DataPropertyName = "MusteriEmail",
-                    HeaderText = "E-Posta",
-                    Width = 170
                 });
             }
             else
@@ -455,20 +451,17 @@ namespace eMarketing.AdminPanel.Pages
                 }
             });
 
-            if (!AdminModu)
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
             {
-                dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+                Name = "BayiStok",
+                DataPropertyName = "BayiStok",
+                HeaderText = "Bayi Stok",
+                Width = 95,
+                DefaultCellStyle = new DataGridViewCellStyle
                 {
-                    Name = "BayiStok",
-                    DataPropertyName = "BayiStok",
-                    HeaderText = "Bayide Stok",
-                    Width = 95,
-                    DefaultCellStyle = new DataGridViewCellStyle
-                    {
-                        Alignment = DataGridViewContentAlignment.MiddleCenter
-                    }
-                });
-            }
+                    Alignment = DataGridViewContentAlignment.MiddleCenter
+                }
+            });
 
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -488,6 +481,14 @@ namespace eMarketing.AdminPanel.Pages
                 DataPropertyName = "SiparisDurumu",
                 HeaderText = "Durum",
                 Width = 125
+            });
+
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "OrderSource",
+                DataPropertyName = "OrderSource",
+                HeaderText = "Kaynak",
+                Width = 90
             });
 
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn
@@ -513,17 +514,16 @@ namespace eMarketing.AdminPanel.Pages
         private void ApplyGridColumnSizing()
         {
             SetFill("SiparisNo", 7, 52);
-            SetFill("MusteriAdi", 15, 95);
-            SetFill("YetkiliAdi", 12, 88);
-            SetFill("MusteriTelefon", 10, 82);
-            SetFill("MusteriEmail", 14, 90);
-            SetFill("MagazaAdi", 15, 95);
-            SetFill("UrunAdi", 16, 105);
+            SetFill("MusteriAdi", 14, 95);
+            SetFill("MagazaAdi", 13, 95);
+            SetFill("YetkiliAdi", 11, 88);
+            SetFill("UrunAdi", 15, 105);
             SetFill("Adet", 6, 46);
-            SetFill("BayiStok", 8, 62);
-            SetFill("ToplamTutar", 10, 78);
+            SetFill("BayiStok", 7, 62);
+            SetFill("ToplamTutar", 9, 78);
             SetFill("SiparisDurumu", 11, 82);
-            SetFill("SiparisTarihi", 12, 92);
+            SetFill("OrderSource", 8, 68);
+            SetFill("SiparisTarihi", 11, 92);
             SetFill("colDetail", 8, 64);
         }
 
@@ -543,7 +543,7 @@ namespace eMarketing.AdminPanel.Pages
             footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = AdminModu ? 78 : 62,
+                Height = AdminModu ? 104 : 86,
                 BackColor = AppColors.CardBackground,
                 Padding = new Padding(16, 16, 16, 16)
             };
@@ -605,6 +605,21 @@ namespace eMarketing.AdminPanel.Pages
             btnOpenDetail.FlatAppearance.BorderColor = AppColors.Border;
             btnOpenDetail.Click += BtnOpenDetail_Click;
 
+            lblSelectedSummary = new Label
+            {
+                Text = "Seçili sipariş yok",
+                AutoSize = false,
+                Height = 22,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary,
+                Location = new Point(620, 14),
+                Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            lblSelectedBayi = CreateSelectedInfoLabel("Bayi: -", 620, 38);
+            lblSelectedProduct = CreateSelectedInfoLabel("Ürün: -", 620, 60);
+            lblSelectedAmount = CreateSelectedInfoLabel("Tutar: -", 860, 60);
+
             if (AdminModu)
             {
                 footerPanel.Controls.Add(lblSelectedOrder);
@@ -617,9 +632,32 @@ namespace eMarketing.AdminPanel.Pages
                 btnOpenDetail.Location = new Point(16, 14);
                 btnOpenDetail.Text = "Seçili Sipariş Detayı";
                 btnOpenDetail.Width = 160;
+                lblSelectedSummary.Location = new Point(196, 14);
+                lblSelectedBayi.Location = new Point(196, 38);
+                lblSelectedProduct.Location = new Point(196, 60);
+                lblSelectedAmount.Location = new Point(436, 60);
             }
 
+            footerPanel.Controls.Add(lblSelectedSummary);
+            footerPanel.Controls.Add(lblSelectedBayi);
+            footerPanel.Controls.Add(lblSelectedProduct);
+            footerPanel.Controls.Add(lblSelectedAmount);
             footerPanel.Controls.Add(btnOpenDetail);
+        }
+
+        private Label CreateSelectedInfoLabel(string text, int x, int y)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Width = 230,
+                Height = 20,
+                Location = new Point(x, y),
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = AppColors.TextSecondary,
+                AutoEllipsis = true
+            };
         }
 
         private void LoadStatuses()
@@ -773,17 +811,7 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            if (columnName == "MusteriEmail" && e.Value != null)
-            {
-                string text = e.Value.ToString();
-                if (text.Length > 22)
-                {
-                    e.Value = text.Substring(0, 22) + "...";
-                    e.FormattingApplied = true;
-                }
-            }
-
-            if ((columnName == "MusteriAdi" || columnName == "YetkiliAdi") && e.Value != null)
+            if ((columnName == "MusteriAdi" || columnName == "MagazaAdi" || columnName == "YetkiliAdi") && e.Value != null)
             {
                 string text = e.Value.ToString();
                 if (text.Length > 18)
@@ -801,6 +829,22 @@ namespace eMarketing.AdminPanel.Pages
                     e.Value = text.Substring(0, 22) + "...";
                     e.FormattingApplied = true;
                 }
+            }
+
+            if (columnName == "BayiStok" && e.Value != null && e.Value != DBNull.Value)
+            {
+                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                e.CellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                e.CellStyle.ForeColor = AppColors.Primary;
+            }
+
+            if (columnName == "OrderSource" && e.Value != null)
+            {
+                string text = e.Value.ToString();
+                e.Value = text == "AdminPanel" ? "Admin" : text;
+                e.CellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                e.CellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+                e.FormattingApplied = true;
             }
         }
 
@@ -968,6 +1012,54 @@ namespace eMarketing.AdminPanel.Pages
 
             if (!string.IsNullOrWhiteSpace(currentStatus))
                 SelectStatusInCombo(cmbStatus, currentStatus);
+
+            UpdateSelectedOrderSummary(row);
+        }
+
+        private void UpdateSelectedOrderSummary(DataGridViewRow row)
+        {
+            if (row == null)
+            {
+                ClearSelectedOrderSummary();
+                return;
+            }
+
+            string orderId = GetGridCellText(row, "SiparisId", "-");
+            string status = GetStatusDisplayText(GetGridCellText(row, "SiparisDurumu", "-"));
+            string bayi = GetGridCellText(row, "MusteriAdi", "-");
+            string magaza = GetGridCellText(row, "MagazaAdi", "-");
+            string urun = GetGridCellText(row, "UrunAdi", "-");
+            string adet = GetGridCellText(row, "Adet", "0");
+            string tutar = GetMoneyDisplay(GetGridCellText(row, "ToplamTutar", "0"));
+
+            lblSelectedSummary.Text = "Sipariş #" + orderId + " / " + status;
+            lblSelectedBayi.Text = "Bayi: " + bayi + " / " + magaza;
+            lblSelectedProduct.Text = "Ürün: " + urun + " (" + adet + " adet)";
+            lblSelectedAmount.Text = "Tutar: " + tutar;
+        }
+
+        private string GetGridCellText(DataGridViewRow row, string columnName, string defaultValue)
+        {
+            if (row == null || !dgvOrders.Columns.Contains(columnName))
+                return defaultValue;
+
+            object value = row.Cells[columnName].Value;
+
+            if (value == null || value == DBNull.Value)
+                return defaultValue;
+
+            string text = Convert.ToString(value);
+            return string.IsNullOrWhiteSpace(text) ? defaultValue : text;
+        }
+
+        private string GetMoneyDisplay(string value)
+        {
+            decimal amount;
+
+            if (!decimal.TryParse(value, out amount))
+                return value;
+
+            return amount.ToString("N2", new CultureInfo("tr-TR")) + " TL";
         }
 
         private void SelectStatusInCombo(ComboBox comboBox, string value)
@@ -1162,6 +1254,8 @@ namespace eMarketing.AdminPanel.Pages
             string filter = string.Empty;
 
             AddSearchColumnFilter(ref filter, "MusteriAdi", search);
+            AddSearchColumnFilter(ref filter, "MagazaAdi", search);
+            AddSearchColumnFilter(ref filter, "YetkiliAdi", search);
             AddSearchColumnFilter(ref filter, "MusteriEmail", search);
             AddSearchColumnFilter(ref filter, "MusteriTelefon", search);
             AddSearchColumnFilter(ref filter, "UrunAdi", search);
@@ -1263,6 +1357,23 @@ namespace eMarketing.AdminPanel.Pages
 
             if (cmbStatus.Items.Count > 0)
                 cmbStatus.SelectedIndex = 0;
+
+            ClearSelectedOrderSummary();
+        }
+
+        private void ClearSelectedOrderSummary()
+        {
+            if (lblSelectedSummary != null)
+                lblSelectedSummary.Text = "Seçili sipariş yok";
+
+            if (lblSelectedBayi != null)
+                lblSelectedBayi.Text = "Bayi: -";
+
+            if (lblSelectedProduct != null)
+                lblSelectedProduct.Text = "Ürün: -";
+
+            if (lblSelectedAmount != null)
+                lblSelectedAmount.Text = "Tutar: -";
         }
 
         private void TxtSearch_TextChanged(object sender, EventArgs e)
@@ -1340,6 +1451,18 @@ namespace eMarketing.AdminPanel.Pages
 
             if (lblSelectedOrder != null)
                 lblSelectedOrder.ForeColor = AppColors.TextSecondary;
+
+            if (lblSelectedSummary != null)
+                lblSelectedSummary.ForeColor = AppColors.TextPrimary;
+
+            if (lblSelectedBayi != null)
+                lblSelectedBayi.ForeColor = AppColors.TextSecondary;
+
+            if (lblSelectedProduct != null)
+                lblSelectedProduct.ForeColor = AppColors.TextSecondary;
+
+            if (lblSelectedAmount != null)
+                lblSelectedAmount.ForeColor = AppColors.TextSecondary;
 
             if (btnNewOrder != null)
             {

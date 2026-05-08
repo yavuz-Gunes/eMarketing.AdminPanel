@@ -111,8 +111,8 @@ namespace eMarketing.AdminPanel.Componets
             if (AppSession.AdminMi)
             {
                 AddMenuButton("Products", "Ürünler", "□");
-                AddMenuButton("Customers", "Müşteriler", "◇");
-                AddMenuButton("Stores", "Mağazalar", "⌂");
+                AddMenuButton("Customers", "Bayi Yetkilileri", "◇");
+                AddMenuButton("Stores", "Bayiler", "⌂");
                 AddMenuButton("Categories", "Kategoriler", "⌁");
                 AddMenuButton("Personnel", "Personel", "○");
                 AddMenuButton("Reports", "Raporlar", "↗");

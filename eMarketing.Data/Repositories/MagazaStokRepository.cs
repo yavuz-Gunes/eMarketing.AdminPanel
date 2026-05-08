@@ -176,11 +176,11 @@ namespace eMarketing.Data.Repositories
             }
             catch (SqlException ex)
             {
-                throw new Exception("Stok hareketleri getirilirken veritabanÄ± hatasÄ± oluÅŸtu: " + ex.Message);
+                throw new Exception("Stok hareketleri getirilirken veritabanı hatası oluştu: " + ex.Message);
             }
             catch (Exception ex)
             {
-                throw new Exception("Stok hareketleri getirilirken hata oluÅŸtu: " + ex.Message);
+                throw new Exception("Stok hareketleri getirilirken hata oluştu: " + ex.Message);
             }
         }
 

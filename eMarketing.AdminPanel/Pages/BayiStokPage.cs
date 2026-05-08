@@ -260,7 +260,7 @@ namespace eMarketing.AdminPanel.Pages
             txtMinimumStok = CreateAdminTextBox(486, 38, 84);
 
             btnStokGirisi = CreateAdminButton("+ Giriş", AppColors.Success, 594);
-            btnStokCikisi = CreateAdminButton("- Çıkış", AppColors.Warning, 692);
+            btnStokCikisi = CreateAdminButton("- Çıkış", AppColors.Danger, 692);
             btnMinimumGuncelle = CreateAdminButton("Min. Güncelle", AppColors.Primary, 790);
 
             btnStokGirisi.Click += (sender, e) => StokHareketiYap("ManuelGiris");
@@ -497,7 +497,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             dgvHareketler.Columns.Clear();
             AddHareketColumn("OlusturmaTarihi", "Tarih", 14, 110);
-            AddHareketColumn("HareketYonu", "Yön", 9, 70);
+            AddHareketColumn("HareketYonu", "Yön", 10, 78);
             AddHareketColumn("HareketAciklama", "İşlem", 20, 130);
             AddHareketColumn("Miktar", "Miktar", 8, 60);
             AddHareketColumn("OncekiStok", "Önce", 8, 58);
@@ -962,9 +962,17 @@ namespace eMarketing.AdminPanel.Pages
                 e.CellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
 
                 if (text == "Giriş")
+                {
+                    e.Value = "+ Giriş";
                     e.CellStyle.ForeColor = AppColors.Success;
+                    e.FormattingApplied = true;
+                }
                 else if (text == "Çıkış")
-                    e.CellStyle.ForeColor = AppColors.Warning;
+                {
+                    e.Value = "- Çıkış";
+                    e.CellStyle.ForeColor = AppColors.Danger;
+                    e.FormattingApplied = true;
+                }
                 else
                     e.CellStyle.ForeColor = AppColors.TextSecondary;
             }
@@ -1046,7 +1054,7 @@ namespace eMarketing.AdminPanel.Pages
                 btnStokGirisi.BackColor = AppColors.Success;
 
             if (btnStokCikisi != null)
-                btnStokCikisi.BackColor = AppColors.Warning;
+                btnStokCikisi.BackColor = AppColors.Danger;
 
             if (btnMinimumGuncelle != null)
                 btnMinimumGuncelle.BackColor = AppColors.Primary;

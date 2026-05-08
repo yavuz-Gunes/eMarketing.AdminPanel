@@ -175,14 +175,14 @@ BEGIN
         IF @MerkezStok IS NULL
         BEGIN
             ROLLBACK TRANSACTION;
-            RAISERROR('Merkez stokta Ã¼rÃ¼n bulunamadÄ± veya aktif deÄŸil.', 16, 1);
+            RAISERROR('Merkez stokta ürün bulunamadı veya aktif değil.', 16, 1);
             RETURN;
         END
 
         IF @MerkezStok < @Miktar
         BEGIN
             ROLLBACK TRANSACTION;
-            RAISERROR('Merkez stok bayi transferi iÃ§in yeterli deÄŸil.', 16, 1);
+            RAISERROR('Merkez stok bayi transferi için yeterli değil.', 16, 1);
             RETURN;
         END
     END
@@ -254,7 +254,7 @@ BEGIN
             @ProductId,
             N'MagazaTransferOut',
             @Miktar,
-            ISNULL(@Aciklama, N'Merkezden bayi stoÄŸuna transfer')
+            ISNULL(@Aciklama, N'Merkezden bayi stoğuna transfer')
         );
     END
 

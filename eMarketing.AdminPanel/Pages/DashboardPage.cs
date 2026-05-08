@@ -111,7 +111,7 @@ namespace eMarketing.AdminPanel.Pages
             cTotalOrders = CreateCard("🧾 Toplam Sipariş", "0", new Padding(0, 0, 18, 18));
             cActiveStores = CreateCard("⌂ Aktif Mağaza", "0", new Padding(0, 0, 0, 18));
 
-            cTotalCustomers = CreateCard("◇ Müşteri", "0", new Padding(0, 0, 18, 18));
+            cTotalCustomers = CreateCard("◇ Yetkili", "0", new Padding(0, 0, 18, 18));
             cPendingPayments = CreateCard("◷ Bekleyen Ödeme", "0", new Padding(0, 0, 18, 18));
             cLowStock = CreateCard("⚠ Kritik Stok", "0", new Padding(0, 0, 0, 18));
 
@@ -313,7 +313,7 @@ namespace eMarketing.AdminPanel.Pages
                 cTotalOrders.SetData("🧾 Toplam Sipariş", summary.TotalOrders.ToString(), GetScopeText("sipariş adedi"));
                 cActiveStores.SetData("⌂ Aktif Mağaza", summary.ActiveStores.ToString(), IsTumMagazalar() ? "aktif mağaza sayısı" : "seçili mağaza");
 
-                cTotalCustomers.SetData("◇ Müşteri", summary.TotalCustomers.ToString(), GetScopeText("sipariş veren müşteri"));
+                cTotalCustomers.SetData("◇ Yetkili", summary.TotalCustomers.ToString(), GetScopeText("sipariş veren yetkili"));
                 cPendingPayments.SetData("◷ Bekleyen Ödeme", summary.PendingPaymentOrders.ToString(), "ödeme bekleyen siparişler");
                 cLowStock.SetData("⚠ Kritik Stok", summary.LowStockProducts.ToString(), "stok seviyesi düşük ürün");
 
@@ -409,7 +409,7 @@ namespace eMarketing.AdminPanel.Pages
 
         private Panel CreateRecentOrderItem(DataRow row)
         {
-            string customerName = GetText(row, "MusteriAdi", "Müşteri Yok");
+            string customerName = GetText(row, "MusteriAdi", "Bayi Yok");
             string productName = GetText(row, "UrunAdi", "Parça Yok");
             string quantity = GetText(row, "Adet", "0");
             string status = GetText(row, "SiparisDurumu", "-");

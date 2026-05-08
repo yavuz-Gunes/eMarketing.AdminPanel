@@ -128,14 +128,14 @@ namespace eMarketing.AdminPanel.Forms
             else if (pageKey == "Customers")
             {
                 page = new CustomersPage();
-                title = "Müşteriler";
-                subtitle = "Müşteri bilgilerini, mağazalarını ve sipariş ilişkilerini yönet";
+                title = "Bayi Yetkilileri";
+                subtitle = "Bayilere bağlı sipariş veren kişi ve iletişim bilgilerini yönet";
             }
             else if (pageKey == "Stores")
             {
                 page = new MagazalarPage();
-                title = "Mağazalar";
-                subtitle = "Bayileri, mağaza kartlarını ve mağaza operasyonunu yönet";
+                title = "Bayiler ve Mağazalar";
+                subtitle = "Bayi firmalarını, mağaza kartlarını ve operasyon özetini yönet";
             }
             else if (pageKey == "Personnel")
             {

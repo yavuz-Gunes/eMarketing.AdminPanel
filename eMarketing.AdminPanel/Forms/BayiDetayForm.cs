@@ -52,7 +52,7 @@ namespace eMarketing.AdminPanel.Forms
             Panel header = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 96,
+                Height = 146,
                 BackColor = AppColors.CardBackground,
                 Padding = new Padding(26, 18, 26, 12)
             };
@@ -75,6 +75,21 @@ namespace eMarketing.AdminPanel.Forms
                 ForeColor = AppColors.TextSecondary
             };
 
+            FlowLayoutPanel metrics = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 48,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+
+            metrics.Controls.Add(CreateHeaderMetric("Sipariş", GetInt(magazaRow, "SiparisSayisi") + " adet", AppColors.PrimarySoft, AppColors.Primary));
+            metrics.Controls.Add(CreateHeaderMetric("Ciro", GetMoney(magazaRow, "ToplamCiro"), AppColors.SuccessSoft, AppColors.Success));
+            metrics.Controls.Add(CreateHeaderMetric("Durum", GetBool(magazaRow, "MagazaAktifMi") ? "Aktif" : "Pasif", GetBool(magazaRow, "MagazaAktifMi") ? AppColors.SuccessSoft : AppColors.DangerSoft, GetBool(magazaRow, "MagazaAktifMi") ? AppColors.Success : AppColors.Danger));
+
+            header.Controls.Add(metrics);
             header.Controls.Add(subtitle);
             header.Controls.Add(title);
 
@@ -111,6 +126,31 @@ namespace eMarketing.AdminPanel.Forms
             Controls.Add(tabs);
             Controls.Add(footer);
             Controls.Add(header);
+        }
+
+        private Panel CreateHeaderMetric(string title, string value, Color backColor, Color foreColor)
+        {
+            Panel panel = new Panel
+            {
+                Width = 180,
+                Height = 34,
+                Margin = new Padding(0, 0, 12, 0),
+                BackColor = backColor,
+                Padding = new Padding(10, 4, 10, 4)
+            };
+
+            Label text = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = title + ": " + value,
+                Font = new Font("Segoe UI", 8.8F, FontStyle.Bold),
+                ForeColor = foreColor,
+                TextAlign = ContentAlignment.MiddleCenter,
+                AutoEllipsis = true
+            };
+
+            panel.Controls.Add(text);
+            return panel;
         }
 
         private TabPage CreateGeneralTab()
@@ -230,7 +270,8 @@ namespace eMarketing.AdminPanel.Forms
         {
             try
             {
-                dgvYetkililer.DataSource = yetkiliRepo.GetYetkililer("", -1, bayiId, magazaId);
+                DataTable table = yetkiliRepo.GetYetkililer("", -1, bayiId, magazaId);
+                BindGrid(dgvYetkililer, table, "Bu bayiye bağlı yetkili bulunamadı.");
             }
             catch (Exception ex)
             {
@@ -242,7 +283,8 @@ namespace eMarketing.AdminPanel.Forms
         {
             try
             {
-                dgvSiparisler.DataSource = orderRepo.GetAllOrders(magazaId, false);
+                DataTable table = orderRepo.GetAllOrders(magazaId, false);
+                BindGrid(dgvSiparisler, table, "Bu mağaza üzerinden oluşan sipariş bulunamadı.");
             }
             catch (Exception ex)
             {
@@ -254,7 +296,7 @@ namespace eMarketing.AdminPanel.Forms
         {
             try
             {
-                dgvStoklar.DataSource = stokRepo.GetMagazaStoklari(
+                DataTable table = stokRepo.GetMagazaStoklari(
                     magazaId,
                     "",
                     false,
@@ -262,10 +304,49 @@ namespace eMarketing.AdminPanel.Forms
                     true,
                     AppSession.KullaniciId,
                     AppSession.AdminMi);
+
+                BindGrid(dgvStoklar, table, "Bu mağazaya teslim edilmiş stok kartı bulunamadı.");
             }
             catch (Exception ex)
             {
                 ShowError("Stoklar yüklenirken hata: " + ex.Message);
+            }
+        }
+
+        private void BindGrid(DataGridView grid, DataTable table, string emptyMessage)
+        {
+            ClearGridEmptyState(grid);
+            grid.DataSource = table;
+
+            if (table == null || table.Rows.Count == 0)
+                ShowGridEmptyState(grid, emptyMessage);
+        }
+
+        private void ShowGridEmptyState(DataGridView grid, string message)
+        {
+            Label label = new Label
+            {
+                Name = "lblEmptyState",
+                Dock = DockStyle.Fill,
+                Text = message,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = AppColors.TextSecondary,
+                BackColor = AppColors.CardBackground
+            };
+
+            grid.Controls.Add(label);
+            label.BringToFront();
+        }
+
+        private void ClearGridEmptyState(DataGridView grid)
+        {
+            Control old = grid.Controls["lblEmptyState"];
+
+            if (old != null)
+            {
+                grid.Controls.Remove(old);
+                old.Dispose();
             }
         }
 
