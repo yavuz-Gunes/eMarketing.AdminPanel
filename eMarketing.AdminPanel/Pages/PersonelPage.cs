@@ -27,6 +27,7 @@ namespace eMarketing.AdminPanel.Pages
         private TextBox txtKullaniciAdi;
         private TextBox txtSifre;
         private TextBox txtAdSoyad;
+        private ComboBox cmbGorunum;
         private ComboBox cmbRol;
         private CheckBox chkAktif;
         private Button btnYeni;
@@ -104,6 +105,23 @@ namespace eMarketing.AdminPanel.Pages
             txtArama.Margin = new Padding(0, 0, 0, 10);
             txtArama.TextChanged += async (sender, e) => await PersonelleriYukleAsync(false);
 
+            cmbGorunum = new ComboBox
+            {
+                Dock = DockStyle.Top,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Height = 32,
+                Font = new Font("Segoe UI", 9F),
+                BackColor = AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            cmbGorunum.Items.Add("Aktif Mağazadakiler");
+            cmbGorunum.Items.Add("Tüm Personel");
+            cmbGorunum.Items.Add("Rol Bazlı");
+            cmbGorunum.SelectedIndex = 0;
+            cmbGorunum.Enabled = YonetimModu;
+            cmbGorunum.SelectedIndexChanged += async (sender, e) => await PersonelleriYukleAsync(false);
+
             Label lblArama = CreateFieldLabel("Personel Ara");
             lblArama.Dock = DockStyle.Top;
 
@@ -124,6 +142,7 @@ namespace eMarketing.AdminPanel.Pages
                 form.Height = 0;
 
             personelPanel.Controls.Add(personelKartListesi);
+            personelPanel.Controls.Add(cmbGorunum);
             personelPanel.Controls.Add(txtArama);
             personelPanel.Controls.Add(lblArama);
             personelPanel.Controls.Add(subtitle);
@@ -317,6 +336,7 @@ namespace eMarketing.AdminPanel.Pages
             try
             {
                 DataTable table = await GetPersonellerAsync();
+                table = await ApplyPersonelScopeAsync(table);
 
                 personelKartListesi.SuspendLayout();
                 personelKartListesi.Controls.Clear();
@@ -576,6 +596,55 @@ namespace eMarketing.AdminPanel.Pages
                 false,
                 AppSession.KullaniciId,
                 AppSession.AdminMi);
+        }
+
+        private async Task<DataTable> ApplyPersonelScopeAsync(DataTable table)
+        {
+            if (table == null)
+                return new DataTable();
+
+            string scope = cmbGorunum == null || cmbGorunum.SelectedItem == null
+                ? "Aktif Mağazadakiler"
+                : cmbGorunum.SelectedItem.ToString();
+
+            if (scope == "Tüm Personel" && YonetimModu)
+                return table;
+
+            if (scope == "Rol Bazlı")
+            {
+                DataView view = table.DefaultView;
+                if (table.Columns.Contains("Rol") && table.Columns.Contains("AdSoyad"))
+                    view.Sort = "Rol ASC, AdSoyad ASC";
+                return view.ToTable();
+            }
+
+            if (!AppSession.SeciliMagazaId.HasValue)
+                return table;
+
+            DataTable filtered = table.Clone();
+            foreach (DataRow row in table.Rows)
+            {
+                int kullaniciId = GetInt(row, "KullaniciId");
+                if (kullaniciId > 0 && await PersonelHasCurrentStoreAsync(kullaniciId))
+                    filtered.ImportRow(row);
+            }
+
+            return filtered;
+        }
+
+        private async Task<bool> PersonelHasCurrentStoreAsync(int kullaniciId)
+        {
+            if (!AppSession.SeciliMagazaId.HasValue)
+                return true;
+
+            DataTable stores = await GetPersonelMagazalariAsync(kullaniciId);
+            foreach (DataRow store in stores.Rows)
+            {
+                if (GetInt(store, "MagazaId") == AppSession.SeciliMagazaId.Value)
+                    return true;
+            }
+
+            return false;
         }
 
         private Task<DataTable> GetPersonelMagazalariAsync(int kullaniciId)

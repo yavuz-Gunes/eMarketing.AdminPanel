@@ -108,7 +108,7 @@ namespace eMarketing.AdminPanel.Pages
             headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 82,
+                Height = AdminModu ? 58 : 0,
                 BackColor = AppColors.Background
             };
 
@@ -147,9 +147,6 @@ namespace eMarketing.AdminPanel.Pages
             btnNewOrder.FlatAppearance.BorderSize = 0;
             btnNewOrder.Click += BtnNewOrder_Click;
 
-            headerPanel.Controls.Add(lblTitle);
-            headerPanel.Controls.Add(lblSubtitle);
-
             if (AdminModu)
                 headerPanel.Controls.Add(btnNewOrder);
 
@@ -165,8 +162,9 @@ namespace eMarketing.AdminPanel.Pages
             statsPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 124,
-                BackColor = AppColors.Background
+                Height = 142,
+                BackColor = AppColors.Background,
+                Padding = new Padding(0, 0, 0, 18)
             };
 
             TableLayoutPanel grid = new TableLayoutPanel
@@ -332,23 +330,24 @@ namespace eMarketing.AdminPanel.Pages
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = ScrollBars.Both
             };
 
             dgvOrders.EnableHeadersVisualStyles = false;
-            dgvOrders.ColumnHeadersHeight = 42;
-            dgvOrders.RowTemplate.Height = 50;
+            dgvOrders.ColumnHeadersHeight = 44;
+            dgvOrders.RowTemplate.Height = 48;
             dgvOrders.GridColor = AppColors.Border;
             dgvOrders.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             dgvOrders.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
 
-            dgvOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke;
+            dgvOrders.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             dgvOrders.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgvOrders.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            dgvOrders.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.WhiteSmoke;
+            dgvOrders.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(248, 250, 252);
+            dgvOrders.ColumnHeadersDefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
             dgvOrders.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            dgvOrders.DefaultCellStyle.BackColor = Color.White;
+            dgvOrders.DefaultCellStyle.BackColor = AppColors.CardBackground;
             dgvOrders.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgvOrders.DefaultCellStyle.SelectionBackColor = Color.FromArgb(238, 243, 255);
             dgvOrders.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
@@ -363,6 +362,7 @@ namespace eMarketing.AdminPanel.Pages
             dgvOrders.CellPainting += DgvOrders_CellPainting;
             dgvOrders.CellMouseMove += DgvOrders_CellMouseMove;
             dgvOrders.CellDoubleClick += DgvOrders_CellDoubleClick;
+            dgvOrders.DataBindingComplete += (sender, e) => RefreshOrderCountLabel();
             dgvOrders.MouseLeave += DgvOrders_MouseLeave;
 
             gridPanel.Controls.Add(dgvOrders);
@@ -543,9 +543,9 @@ namespace eMarketing.AdminPanel.Pages
             footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = AdminModu ? 104 : 86,
+                Height = AdminModu ? 96 : 82,
                 BackColor = AppColors.CardBackground,
-                Padding = new Padding(16, 16, 16, 16)
+                Padding = new Padding(16, 12, 16, 12)
             };
 
             lblSelectedOrder = new Label
@@ -554,12 +554,12 @@ namespace eMarketing.AdminPanel.Pages
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary,
-                Location = new Point(16, 8)
+                Location = new Point(16, 6)
             };
 
             txtOrderId = new TextBox
             {
-                Location = new Point(16, 30),
+                Location = new Point(16, 28),
                 Width = 100,
                 ReadOnly = true,
                 Font = new Font("Segoe UI", 10F)
@@ -567,7 +567,7 @@ namespace eMarketing.AdminPanel.Pages
 
             cmbStatus = new ComboBox
             {
-                Location = new Point(136, 30),
+                Location = new Point(130, 28),
                 Width = 180,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 10F)
@@ -578,7 +578,7 @@ namespace eMarketing.AdminPanel.Pages
                 Text = "Durum Güncelle",
                 Width = 145,
                 Height = 34,
-                Location = new Point(332, 28),
+                Location = new Point(318, 26),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = AppColors.Primary,
                 ForeColor = Color.White,
@@ -594,7 +594,7 @@ namespace eMarketing.AdminPanel.Pages
                 Text = "Detay Aç",
                 Width = 110,
                 Height = 34,
-                Location = new Point(490, 28),
+                Location = new Point(470, 26),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White,
                 ForeColor = AppColors.TextSecondary,
@@ -612,13 +612,13 @@ namespace eMarketing.AdminPanel.Pages
                 Height = 22,
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary,
-                Location = new Point(620, 14),
+                Location = new Point(600, 12),
                 Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right
             };
 
-            lblSelectedBayi = CreateSelectedInfoLabel("Bayi: -", 620, 38);
-            lblSelectedProduct = CreateSelectedInfoLabel("Ürün: -", 620, 60);
-            lblSelectedAmount = CreateSelectedInfoLabel("Tutar: -", 860, 60);
+            lblSelectedBayi = CreateSelectedInfoLabel("Bayi: -", 600, 36);
+            lblSelectedProduct = CreateSelectedInfoLabel("Ürün: -", 600, 58);
+            lblSelectedAmount = CreateSelectedInfoLabel("Tutar: -", 840, 58);
 
             if (AdminModu)
             {
@@ -643,6 +643,26 @@ namespace eMarketing.AdminPanel.Pages
             footerPanel.Controls.Add(lblSelectedProduct);
             footerPanel.Controls.Add(lblSelectedAmount);
             footerPanel.Controls.Add(btnOpenDetail);
+            footerPanel.Resize += (sender, e) => PlaceFooterSummary();
+            PlaceFooterSummary();
+        }
+
+        private void PlaceFooterSummary()
+        {
+            if (footerPanel == null || lblSelectedSummary == null)
+                return;
+
+            int summaryLeft = AdminModu ? Math.Min(600, footerPanel.Width / 2 + 40) : 196;
+            int usableWidth = Math.Max(260, footerPanel.Width - summaryLeft - 24);
+
+            lblSelectedSummary.Location = new Point(summaryLeft, 12);
+            lblSelectedSummary.Width = usableWidth;
+            lblSelectedBayi.Location = new Point(summaryLeft, 36);
+            lblSelectedBayi.Width = usableWidth;
+            lblSelectedProduct.Location = new Point(summaryLeft, 58);
+            lblSelectedProduct.Width = Math.Max(180, usableWidth - 230);
+            lblSelectedAmount.Location = new Point(summaryLeft + Math.Max(190, usableWidth - 220), 58);
+            lblSelectedAmount.Width = Math.Min(220, usableWidth);
         }
 
         private Label CreateSelectedInfoLabel(string text, int x, int y)
@@ -725,9 +745,8 @@ namespace eMarketing.AdminPanel.Pages
                     IsTumMagazalar()
                 );
 
-                dgvOrders.DataSource = ordersTable;
-
                 ConfigureOrderGridColumns();
+                ApplySearch();
             }
             catch (Exception ex)
             {
@@ -1234,7 +1253,11 @@ namespace eMarketing.AdminPanel.Pages
             try
             {
                 if (ordersTable == null)
+                {
+                    dgvOrders.DataSource = null;
+                    UpdateInfoLabel(0, 0);
                     return;
+                }
 
                 string search = txtSearch.Text.Trim().Replace("'", "''");
                 string selectedStatus = GetSelectedStatusValue(cmbFilterStatus);
@@ -1254,10 +1277,12 @@ namespace eMarketing.AdminPanel.Pages
                     view.RowFilter = string.Empty;
 
                 dgvOrders.DataSource = view;
-                UpdateInfoLabel(view.Count, ordersTable.Rows.Count);
+                RefreshOrderCountLabel();
+                dgvOrders.BeginInvoke(new Action(RefreshOrderCountLabel));
             }
             catch
             {
+                RefreshOrderCountLabel();
             }
         }
 
@@ -1316,6 +1341,32 @@ namespace eMarketing.AdminPanel.Pages
                 return 0;
 
             return view.Count;
+        }
+
+        private int GetVisibleOrderCount()
+        {
+            if (dgvOrders != null)
+            {
+                int rowCount = 0;
+                foreach (DataGridViewRow row in dgvOrders.Rows)
+                {
+                    if (!row.IsNewRow)
+                        rowCount++;
+                }
+
+                if (rowCount > 0)
+                    return rowCount;
+            }
+
+            if (dgvOrders != null && dgvOrders.DataSource != null)
+                return dgvOrders.Rows.Count;
+
+            return GetCurrentRowCount();
+        }
+
+        private void RefreshOrderCountLabel()
+        {
+            UpdateInfoLabel(GetVisibleOrderCount(), ordersTable == null ? GetVisibleOrderCount() : ordersTable.Rows.Count);
         }
 
         private void UpdateInfoLabel(int displayCount, int totalCount)

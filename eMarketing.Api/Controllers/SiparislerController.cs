@@ -18,7 +18,6 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<OrderDto>>> Get(
         [FromQuery] int? magazaId = null,
         [FromQuery] bool tumMagazalar = true,
@@ -28,7 +27,6 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpGet("ozet")]
-    [AllowAnonymous]
     public async Task<ActionResult<Dictionary<string, object>>> GetSummary(
         [FromQuery] int? magazaId = null,
         [FromQuery] bool tumMagazalar = true,

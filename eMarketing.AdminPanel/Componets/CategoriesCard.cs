@@ -47,9 +47,10 @@ namespace eMarketing.AdminPanel.Componets
             {
                 AutoSize = false,
                 Location = new Point(86, 18),
-                Size = new Size(180, 22),
+                Size = new Size(150, 22),
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
                 ForeColor = AppColors.TextSecondary,
+                AutoEllipsis = true,
                 Text = "Başlık"
             };
 
@@ -57,7 +58,7 @@ namespace eMarketing.AdminPanel.Componets
             {
                 AutoSize = false,
                 Location = new Point(86, 40),
-                Size = new Size(180, 38),
+                Size = new Size(150, 36),
                 Font = new Font("Segoe UI", 22F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary,
                 Text = "0"
@@ -66,10 +67,11 @@ namespace eMarketing.AdminPanel.Componets
             lblHint = new Label
             {
                 AutoSize = false,
-                Location = new Point(86, 78),
-                Size = new Size(180, 20),
+                Location = new Point(86, 76),
+                Size = new Size(150, 20),
                 Font = new Font("Segoe UI", 8F, FontStyle.Regular),
                 ForeColor = AppColors.TextMuted,
+                AutoEllipsis = true,
                 Text = "Genel görünüm"
             };
 
@@ -94,8 +96,29 @@ namespace eMarketing.AdminPanel.Componets
             lblTitle.Text = title;
             lblValue.Text = value;
             lblHint.Text = GetHint(title);
+            FitTextWidth();
 
             ApplyIconColor(title);
+        }
+
+        protected override void OnResize(System.EventArgs eventargs)
+        {
+            base.OnResize(eventargs);
+            FitTextWidth();
+        }
+
+        private void FitTextWidth()
+        {
+            if (lblTitle == null || lblValue == null || lblHint == null)
+                return;
+
+            int width = Width - lblTitle.Left - 18;
+            if (width < 90)
+                width = 90;
+
+            lblTitle.Width = width;
+            lblValue.Width = width;
+            lblHint.Width = width;
         }
 
         private string GetHint(string title)
@@ -180,6 +203,12 @@ namespace eMarketing.AdminPanel.Componets
 
                 using (Pen pen = new Pen(isHovered ? AppColors.PrimaryLight : AppColors.Border, isHovered ? 1.4f : 1f))
                     e.Graphics.DrawPath(pen, path);
+
+                using (SolidBrush accentBrush = new SolidBrush(lblIcon.ForeColor))
+                {
+                    Rectangle accent = new Rectangle(0, 16, 4, Height - 32);
+                    e.Graphics.FillRectangle(accentBrush, accent);
+                }
             }
 
             base.OnPaint(e);

@@ -19,7 +19,6 @@ public sealed class BayiYetkilileriController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> Get([FromQuery] string arama = "", [FromQuery] int durum = -1, [FromQuery] int? bayiId = null, [FromQuery] int? magazaId = null, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_BayiYetkili_Listele", new[]
@@ -32,7 +31,6 @@ public sealed class BayiYetkilileriController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> GetById(int id, CancellationToken cancellationToken)
     {
         Dictionary<string, object?>? row = await _dataService.QuerySingleAsync("sp_BayiYetkili_Getir", new[]

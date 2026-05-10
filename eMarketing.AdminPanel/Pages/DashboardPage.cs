@@ -70,12 +70,12 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 430F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 384F));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             cardsGrid.Dock = DockStyle.Fill;
             bodyArea.Dock = DockStyle.Fill;
-            bodyArea.Padding = new Padding(0, 10, 0, 0);
+            bodyArea.Padding = new Padding(0, 8, 0, 0);
 
             mainLayout.Controls.Add(cardsGrid, 0, 0);
             mainLayout.Controls.Add(bodyArea, 0, 1);
@@ -228,12 +228,12 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Dock = DockStyle.Fill,
                 BackColor = AppColors.CardBackground,
-                Padding = new Padding(24, 20, 24, 22),
+                Padding = new Padding(22, 18, 22, 18),
                 Margin = margin,
                 ShadowColor = Color.FromArgb(24, 15, 23, 42),
                 BorderColor = AppColors.Border,
-                CornerRadius = 18,
-                ShadowSize = 6
+                CornerRadius = 14,
+                ShadowSize = 4
             };
         }
 
@@ -407,40 +407,40 @@ namespace eMarketing.AdminPanel.Pages
             string date = GetDateText(row, "SiparisTarihi");
             string total = GetMoneyText(row, "ToplamTutar");
 
-            Panel item = CreateListItemBase(82);
+            Panel item = CreateListItemBase(74);
 
             Label icon = CreateIconBox("🧾", AppColors.PrimarySoft, AppColors.Primary);
-            icon.Location = new Point(12, 16);
+            icon.Location = new Point(12, 15);
 
             Label title = CreateLabel(customerName, 10F, FontStyle.Bold, AppColors.TextPrimary);
             title.Location = new Point(68, 12);
             title.Size = new Size(260, 22);
 
             Label detail = CreateLabel(productName + " • " + quantity + " adet", 8.5F, FontStyle.Regular, AppColors.TextSecondary);
-            detail.Location = new Point(68, 35);
+            detail.Location = new Point(68, 33);
             detail.Size = new Size(270, 20);
 
             Label dateLabel = CreateLabel(date, 8F, FontStyle.Regular, AppColors.TextMuted);
-            dateLabel.Location = new Point(68, 56);
+            dateLabel.Location = new Point(68, 52);
             dateLabel.Size = new Size(180, 18);
 
             Label totalLabel = CreateLabel(total, 9.5F, FontStyle.Bold, AppColors.Primary);
             totalLabel.TextAlign = ContentAlignment.MiddleRight;
             totalLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            totalLabel.Location = new Point(item.Width - 160, 16);
+            totalLabel.Location = new Point(item.Width - 160, 14);
             totalLabel.Size = new Size(135, 22);
 
             Label statusBadge = CreateStatusBadge(status);
             statusBadge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            statusBadge.Location = new Point(item.Width - 138, 48);
+            statusBadge.Location = new Point(item.Width - 138, 43);
 
             item.Resize += (s, e) =>
             {
                 title.Width = item.Width - 240;
                 detail.Width = item.Width - 260;
 
-                totalLabel.Location = new Point(item.Width - 160, 16);
-                statusBadge.Location = new Point(item.Width - 138, 48);
+                totalLabel.Location = new Point(item.Width - 160, 14);
+                statusBadge.Location = new Point(item.Width - 138, 43);
             };
 
             item.MouseEnter += (s, e) => item.BackColor = GetListItemHoverColor();
@@ -465,10 +465,10 @@ namespace eMarketing.AdminPanel.Pages
             string stock = GetText(row, "Stok", "0");
             string price = GetMoneyText(row, "Fiyat");
 
-            Panel item = CreateListItemBase(82);
+            Panel item = CreateListItemBase(74);
 
             Label icon = CreateIconBox("⚠", AppColors.WarningSoft, AppColors.Warning);
-            icon.Location = new Point(12, 16);
+            icon.Location = new Point(12, 15);
 
             Label title = CreateLabel(productName, 10F, FontStyle.Bold, AppColors.TextPrimary);
             title.Location = new Point(68, 12);
@@ -479,18 +479,18 @@ namespace eMarketing.AdminPanel.Pages
             detail.Size = new Size(220, 20);
 
             Label priceLabel = CreateLabel(price, 8.5F, FontStyle.Bold, AppColors.Primary);
-            priceLabel.Location = new Point(68, 56);
+            priceLabel.Location = new Point(68, 52);
             priceLabel.Size = new Size(160, 18);
 
             Label stockBadge = CreateSmallBadge("Stok: " + stock, AppColors.WarningSoft, AppColors.Warning);
             stockBadge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            stockBadge.Location = new Point(item.Width - 128, 28);
+            stockBadge.Location = new Point(item.Width - 128, 24);
 
             item.Resize += (s, e) =>
             {
                 title.Width = item.Width - 220;
                 detail.Width = item.Width - 220;
-                stockBadge.Location = new Point(item.Width - 128, 28);
+                stockBadge.Location = new Point(item.Width - 128, 24);
             };
 
             item.MouseEnter += (s, e) => item.BackColor = GetListItemHoverColor();
@@ -525,7 +525,7 @@ namespace eMarketing.AdminPanel.Pages
                 Width = 300,
                 Height = height,
                 BackColor = AppColors.Surface,
-                Margin = new Padding(0, 0, 0, 12),
+                Margin = new Padding(0, 0, 0, 10),
                 Padding = new Padding(10),
                 BorderColor = AppColors.Border,
                 CornerRadius = 12,

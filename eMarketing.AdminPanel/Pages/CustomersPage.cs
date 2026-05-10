@@ -275,7 +275,7 @@ namespace eMarketing.AdminPanel.Pages
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = ScrollBars.Both
             };
 
             dgvYetkililer.EnableHeadersVisualStyles = false;
@@ -283,8 +283,11 @@ namespace eMarketing.AdminPanel.Pages
             dgvYetkililer.RowTemplate.Height = 50;
             dgvYetkililer.GridColor = AppColors.Border;
             dgvYetkililer.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvYetkililer.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
             dgvYetkililer.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             dgvYetkililer.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
+            dgvYetkililer.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(248, 250, 252);
+            dgvYetkililer.ColumnHeadersDefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
             dgvYetkililer.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
             dgvYetkililer.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgvYetkililer.DefaultCellStyle.SelectionBackColor = Color.FromArgb(238, 243, 255);

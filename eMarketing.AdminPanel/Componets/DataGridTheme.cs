@@ -20,26 +20,32 @@ namespace eMarketing.AdminPanel.Componets
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgv.MultiSelect = false;
             dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgv.ScrollBars = ScrollBars.Vertical;
+            dgv.ScrollBars = ScrollBars.Both;
 
-            dgv.ColumnHeadersHeight = 44;
-            dgv.RowTemplate.Height = 44;
+            dgv.ColumnHeadersHeight = 46;
+            dgv.RowTemplate.Height = 48;
 
             dgv.GridColor = AppColors.Border;
             dgv.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             dgv.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
 
-            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = AppColors.IsDarkMode
+                ? Color.FromArgb(30, 41, 59)
+                : Color.FromArgb(248, 250, 252);
             dgv.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = dgv.ColumnHeadersDefaultCellStyle.BackColor;
+            dgv.ColumnHeadersDefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
-            dgv.DefaultCellStyle.BackColor = Color.White;
+            dgv.DefaultCellStyle.BackColor = AppColors.CardBackground;
             dgv.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgv.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
             dgv.DefaultCellStyle.SelectionBackColor = AppColors.PrimarySoft;
             dgv.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
-            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
+            dgv.AlternatingRowsDefaultCellStyle.BackColor = AppColors.IsDarkMode
+                ? Color.FromArgb(24, 32, 44)
+                : Color.FromArgb(250, 251, 253);
         }
     }
 }

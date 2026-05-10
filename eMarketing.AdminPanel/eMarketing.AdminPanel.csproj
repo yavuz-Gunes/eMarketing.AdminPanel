@@ -54,7 +54,11 @@
     <Compile Include="Componets\CategoriesCard.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Componets\BadgeStyleHelper.cs" />
+    <Compile Include="Componets\ButtonStyleHelper.cs" />
+    <Compile Include="Componets\CardStyleHelper.cs" />
     <Compile Include="Componets\DataGridTheme.cs" />
+    <Compile Include="Componets\DataGridViewStyleHelper.cs" />
     <Compile Include="Componets\PrimaryButton.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -70,6 +74,7 @@
     <Compile Include="Core\AppColors.cs" />
     <Compile Include="Core\AppSession.cs" />
     <Compile Include="Core\IThemeable.cs" />
+    <Compile Include="Models\ReportModels.cs" />
     <Compile Include="Forms\CategoryModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -155,6 +160,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\ApiDataClient.cs" />
     <Compile Include="Services\ApiErrorLogger.cs" />
+    <Compile Include="Services\PdfReportBuilder.cs" />
+    <Compile Include="Services\QrCodeHelper.cs" />
+    <Compile Include="Services\ReportService.cs" />
     <EmbeddedResource Include="Forms\FrmMain.resx">
       <DependentUpon>FrmMain.cs</DependentUpon>
     </EmbeddedResource>

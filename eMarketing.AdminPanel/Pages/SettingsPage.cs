@@ -95,11 +95,11 @@ namespace eMarketing.AdminPanel.Pages
         {
             TableLayoutPanel grid = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
-                Height = 520,
+                Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 3,
-                BackColor = AppColors.Background
+                BackColor = AppColors.Background,
+                Padding = new Padding(0, 8, 0, 0)
             };
 
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
@@ -154,9 +154,9 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0, 0, 16, 16),
-                Padding = new Padding(22, 18, 22, 18),
+                Padding = new Padding(22, 18, 22, 20),
                 CornerRadius = 12,
-                ShadowSize = 4,
+                ShadowSize = 3,
                 BackColor = AppColors.CardBackground,
                 BorderColor = AppColors.Border
             };
@@ -165,8 +165,8 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Text = title,
                 Dock = DockStyle.Top,
-                Height = 30,
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                Height = 28,
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary
             };
 
@@ -174,12 +174,13 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Text = subtitle,
                 Dock = DockStyle.Top,
-                Height = 42,
+                Height = 38,
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
 
             valueLabel.Dock = DockStyle.Fill;
+            valueLabel.Padding = new Padding(0, 8, 0, 0);
 
             panel.Controls.Add(valueLabel);
             panel.Controls.Add(subtitleLabel);
@@ -192,10 +193,10 @@ namespace eMarketing.AdminPanel.Pages
             return new Label
             {
                 Text = text,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary,
-                AutoEllipsis = true,
-                TextAlign = ContentAlignment.MiddleLeft
+                AutoEllipsis = false,
+                TextAlign = ContentAlignment.TopLeft
             };
         }
 

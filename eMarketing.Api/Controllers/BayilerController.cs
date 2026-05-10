@@ -19,7 +19,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> Get([FromQuery] string arama = "", [FromQuery] int durum = -1, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_Musteri_Listele", new[]
@@ -30,7 +29,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> GetById(int id, CancellationToken cancellationToken)
     {
         Dictionary<string, object?>? row = await _dataService.QuerySingleAsync("sp_Musteri_Getir", new[]
@@ -68,7 +66,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpGet("{customerId:int}/magazalar")]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetStores(int customerId, [FromQuery] int durum = -1, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_MusteriMagaza_Listele", new[]
@@ -99,7 +96,6 @@ public sealed class BayiMagazalarController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> GetById(int id, CancellationToken cancellationToken)
     {
         Dictionary<string, object?>? row = await _dataService.QuerySingleAsync("sp_MusteriMagaza_Getir", new[]

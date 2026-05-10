@@ -227,7 +227,7 @@ namespace eMarketing.AdminPanel.Pages
             dgvCategories = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
+                BackgroundColor = AppColors.CardBackground,
                 BorderStyle = BorderStyle.None,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
@@ -238,18 +238,21 @@ namespace eMarketing.AdminPanel.Pages
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = ScrollBars.Both
             };
 
             dgvCategories.EnableHeadersVisualStyles = false;
             dgvCategories.ColumnHeadersHeight = 40;
             dgvCategories.RowTemplate.Height = 48;
-            dgvCategories.GridColor = Color.Gainsboro;
+            dgvCategories.GridColor = AppColors.Border;
             dgvCategories.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             dgvCategories.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-            dgvCategories.DefaultCellStyle.BackColor = Color.White;
+            dgvCategories.DefaultCellStyle.BackColor = AppColors.CardBackground;
 
-            dgvCategories.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke;
+            dgvCategories.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
+            dgvCategories.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
+            dgvCategories.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(248, 250, 252);
+            dgvCategories.ColumnHeadersDefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
             dgvCategories.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             dgvCategories.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
             dgvCategories.DefaultCellStyle.SelectionBackColor = Color.FromArgb(250, 251, 253);

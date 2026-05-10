@@ -19,7 +19,6 @@ public sealed class DashboardController : ControllerBase
     }
 
     [HttpGet("ozet")]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
         Dictionary<string, object?>? row = await _dataService.QuerySingleAsync(
@@ -31,14 +30,12 @@ public sealed class DashboardController : ControllerBase
     }
 
     [HttpGet("son-siparisler")]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetSonSiparisler([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_Dashboard_SonSiparisler_Getir", MagazaParams(magazaId, tumMagazalar), cancellationToken));
     }
 
     [HttpGet("kritik-stok")]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetKritikStok([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_Dashboard_KritikStok_Getir", MagazaParams(magazaId, tumMagazalar), cancellationToken));

@@ -1,11 +1,14 @@
 using System;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
+using eMarketing.AdminPanel.Models;
 using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
@@ -13,12 +16,21 @@ namespace eMarketing.AdminPanel.Pages
     public class ReportsPage : UserControl, IThemeable
     {
         private readonly ApiDataClient _apiClient = new ApiDataClient();
+        private readonly PdfReportBuilder _pdfBuilder = new PdfReportBuilder();
         private readonly CultureInfo _culture = new CultureInfo("tr-TR");
+        private ReportService _reportService;
+        private ReportDto _lastReport;
+        private string _lastPdfPath;
 
         private Label lblTitle;
         private Label lblSubtitle;
         private Label lblInfo;
         private Button btnRefresh;
+        private Button btnCreatePdf;
+        private Button btnPreview;
+        private Button btnSave;
+        private Button btnPrint;
+        private ComboBox cmbReportType;
 
         private CategoriesCard cRevenue;
         private CategoriesCard cOrders;
@@ -33,6 +45,7 @@ namespace eMarketing.AdminPanel.Pages
             Dock = DockStyle.Fill;
             BackColor = AppColors.Background;
             Padding = new Padding(24, 18, 24, 18);
+            _reportService = new ReportService(_apiClient);
 
             BuildLayout();
             Load += ReportsPage_Load;
@@ -63,7 +76,7 @@ namespace eMarketing.AdminPanel.Pages
             Panel header = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 82,
+                Height = 112,
                 BackColor = AppColors.Background
             };
 
@@ -110,17 +123,76 @@ namespace eMarketing.AdminPanel.Pages
             btnRefresh.FlatAppearance.BorderSize = 0;
             btnRefresh.Click += async (sender, e) => await LoadReportAsync();
 
+            cmbReportType = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 250,
+                Height = 34,
+                Font = new Font("Segoe UI", 9F),
+                BackColor = AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary
+            };
+            cmbReportType.Items.Add("Genel Özet Raporu");
+            cmbReportType.Items.Add("Sipariş Raporu");
+            cmbReportType.Items.Add("Stok Raporu");
+            cmbReportType.Items.Add("Mağaza/Personel Bazlı Özet Rapor");
+            cmbReportType.Items.Add("Kritik Stok Raporu");
+            cmbReportType.SelectedIndex = 0;
+
+            btnCreatePdf = CreateActionButton("PDF Oluştur", AppColors.Primary);
+            btnPreview = CreateActionButton("Önizle", AppColors.Info);
+            btnSave = CreateActionButton("Kaydet", AppColors.Success);
+            btnPrint = CreateActionButton("Yazdır", AppColors.Warning);
+
+            btnCreatePdf.Click += async (sender, e) => await CreatePdfWithSaveDialogAsync();
+            btnSave.Click += async (sender, e) => await CreatePdfWithSaveDialogAsync();
+            btnPreview.Click += async (sender, e) => await PreviewPdfAsync();
+            btnPrint.Click += async (sender, e) => await PrintPdfAsync();
+
             header.Controls.Add(lblTitle);
             header.Controls.Add(lblSubtitle);
             header.Controls.Add(lblInfo);
             header.Controls.Add(btnRefresh);
+            header.Controls.Add(cmbReportType);
+            header.Controls.Add(btnCreatePdf);
+            header.Controls.Add(btnPreview);
+            header.Controls.Add(btnSave);
+            header.Controls.Add(btnPrint);
             header.Resize += (sender, e) =>
             {
                 btnRefresh.Location = new Point(header.Width - btnRefresh.Width, 6);
                 lblInfo.Location = new Point(header.Width - btnRefresh.Width - lblInfo.Width - 14, 14);
+                int y = 66;
+                int x = 2;
+                cmbReportType.Location = new Point(x, y);
+                x += cmbReportType.Width + 10;
+                btnCreatePdf.Location = new Point(x, y - 2);
+                x += btnCreatePdf.Width + 8;
+                btnPreview.Location = new Point(x, y - 2);
+                x += btnPreview.Width + 8;
+                btnSave.Location = new Point(x, y - 2);
+                x += btnSave.Width + 8;
+                btnPrint.Location = new Point(x, y - 2);
             };
 
             return header;
+        }
+
+        private Button CreateActionButton(string text, Color color)
+        {
+            Button button = new Button
+            {
+                Text = text,
+                Width = text.Length > 8 ? 118 : 92,
+                Height = 38,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = color,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            button.FlatAppearance.BorderSize = 0;
+            return button;
         }
 
         private Panel BuildSummary()
@@ -144,8 +216,8 @@ namespace eMarketing.AdminPanel.Pages
                 grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
 
             cRevenue = CreateSummaryCard("₺", "Toplam Ciro");
-            cOrders = CreateSummaryCard("🧾", "Toplam");
-            cStores = CreateSummaryCard("🏬", "Aktif");
+            cOrders = CreateSummaryCard("S", "Toplam");
+            cStores = CreateSummaryCard("M", "Aktif");
             cCriticalStock = CreateSummaryCard("!", "Kritik Stok");
 
             grid.Controls.Add(cRevenue, 0, 0);
@@ -244,6 +316,8 @@ namespace eMarketing.AdminPanel.Pages
                 Dock = DockStyle.Fill
             };
             DataGridTheme.Apply(grid);
+            grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            grid.RowTemplate.Height = 42;
             grid.CellFormatting += Grid_CellFormatting;
             return grid;
         }
@@ -263,14 +337,14 @@ namespace eMarketing.AdminPanel.Pages
                 DataTable criticalStock = await _apiClient.GetDashboardCriticalStockAsync(magazaId, tumMagazalar);
 
                 cRevenue.SetData("₺", "Toplam Ciro", summary.TotalRevenue.ToString("N2", _culture));
-                cOrders.SetData("🧾", "Toplam", summary.TotalOrders.ToString());
-                cStores.SetData("🏬", "Aktif", summary.ActiveStores.ToString());
+                cOrders.SetData("S", "Toplam", summary.TotalOrders.ToString());
+                cStores.SetData("M", "Aktif", summary.ActiveStores.ToString());
                 cCriticalStock.SetData("!", "Kritik Stok", summary.LowStockProducts.ToString());
 
                 dgvRecentOrders.DataSource = recentOrders;
                 dgvCriticalStock.DataSource = criticalStock;
-                FitGrid(dgvRecentOrders);
-                FitGrid(dgvCriticalStock);
+                FitGrid(dgvRecentOrders, true);
+                FitGrid(dgvCriticalStock, false);
 
                 lblInfo.Text = "Son güncelleme: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm");
             }
@@ -287,13 +361,150 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void FitGrid(DataGridView grid)
+        private async Task CreatePdfWithSaveDialogAsync()
+        {
+            using (SaveFileDialog dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "PDF dosyası (*.pdf)|*.pdf";
+                dialog.FileName = BuildDefaultPdfFileName();
+
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                await CreatePdfAsync(dialog.FileName);
+                MessageBox.Show("PDF rapor oluşturuldu.", "Rapor", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private async Task PreviewPdfAsync()
+        {
+            string path = await CreateTempPdfAsync();
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+
+        private async Task PrintPdfAsync()
+        {
+            string path = await CreateTempPdfAsync();
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true, Verb = "print" });
+        }
+
+        private async Task<string> CreateTempPdfAsync()
+        {
+            string path = Path.Combine(Path.GetTempPath(), BuildDefaultPdfFileName());
+            await CreatePdfAsync(path);
+            return path;
+        }
+
+        private async Task CreatePdfAsync(string path)
+        {
+            SetReportButtons(false);
+            try
+            {
+                string reportType = cmbReportType == null || cmbReportType.SelectedItem == null
+                    ? "Genel Özet Raporu"
+                    : cmbReportType.SelectedItem.ToString();
+
+                _lastReport = await _reportService.CreateReportAsync(reportType);
+                _pdfBuilder.Save(_lastReport, path);
+                _lastPdfPath = path;
+                lblInfo.Text = "PDF hazır: " + DateTime.Now.ToString("dd.MM.yyyy HH:mm");
+            }
+            finally
+            {
+                SetReportButtons(true);
+            }
+        }
+
+        private void SetReportButtons(bool enabled)
+        {
+            if (btnCreatePdf != null) btnCreatePdf.Enabled = enabled;
+            if (btnPreview != null) btnPreview.Enabled = enabled;
+            if (btnSave != null) btnSave.Enabled = enabled;
+            if (btnPrint != null) btnPrint.Enabled = enabled;
+        }
+
+        private string BuildDefaultPdfFileName()
+        {
+            string type = cmbReportType == null || cmbReportType.SelectedItem == null
+                ? "Genel-Ozet"
+                : cmbReportType.SelectedItem.ToString();
+
+            foreach (char c in Path.GetInvalidFileNameChars())
+                type = type.Replace(c, '-');
+
+            type = type.Replace(' ', '-').Replace('/', '-');
+            return "eMarketing-" + type + "-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".pdf";
+        }
+
+        private void FitGrid(DataGridView grid, bool recentOrders)
         {
             foreach (DataGridViewColumn column in grid.Columns)
             {
                 column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-                column.MinimumWidth = 72;
+                column.MinimumWidth = 76;
+                column.HeaderText = GetFriendlyHeader(column.Name);
+                column.Visible = ShouldShowReportColumn(column.Name, recentOrders);
             }
+
+            SetColumnWeight(grid, "MusteriAdi", 18);
+            SetColumnWeight(grid, "MagazaAdi", 18);
+            SetColumnWeight(grid, "YetkiliAdi", 14);
+            SetColumnWeight(grid, "UrunAdi", 18);
+            SetColumnWeight(grid, "Adet", 7);
+            SetColumnWeight(grid, "ToplamTutar", 12);
+            SetColumnWeight(grid, "SiparisDurumu", 12);
+            SetColumnWeight(grid, "SiparisTarihi", 13);
+            SetColumnWeight(grid, "Stok", 8);
+            SetColumnWeight(grid, "MinimumStok", 10);
+            SetColumnWeight(grid, "KategoriAdi", 14);
+        }
+
+        private string GetFriendlyHeader(string columnName)
+        {
+            switch (columnName)
+            {
+                case "MusteriAdi": return "Bayi";
+                case "MagazaAdi": return "Mağaza";
+                case "YetkiliAdi": return "Yetkili";
+                case "UrunAdi": return "Ürün";
+                case "Adet": return "Adet";
+                case "ToplamTutar": return "Tutar";
+                case "SiparisDurumu": return "Durum";
+                case "SiparisTarihi": return "Tarih";
+                case "KategoriAdi": return "Kategori";
+                case "Stok": return "Stok";
+                case "MinimumStok": return "Min.";
+                case "Durum": return "Durum";
+                default: return columnName;
+            }
+        }
+
+        private bool ShouldShowReportColumn(string columnName, bool recentOrders)
+        {
+            if (recentOrders)
+            {
+                return columnName == "MusteriAdi" ||
+                       columnName == "UrunAdi" ||
+                       columnName == "Adet" ||
+                       columnName == "ToplamTutar" ||
+                       columnName == "SiparisDurumu" ||
+                       columnName == "SiparisTarihi";
+            }
+
+            return columnName == "MagazaAdi" ||
+                   columnName == "UrunAdi" ||
+                   columnName == "KategoriAdi" ||
+                   columnName == "Stok" ||
+                   columnName == "MinimumStok" ||
+                   columnName == "Durum";
+        }
+
+        private void SetColumnWeight(DataGridView grid, string columnName, float fillWeight)
+        {
+            if (!grid.Columns.Contains(columnName))
+                return;
+
+            grid.Columns[columnName].FillWeight = fillWeight;
         }
 
         private void Grid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -367,7 +578,14 @@ namespace eMarketing.AdminPanel.Pages
 
             if (control is Button button)
             {
-                button.BackColor = AppColors.Primary;
+                if (button == btnRefresh || button == btnCreatePdf)
+                    button.BackColor = AppColors.Primary;
+                else if (button == btnPreview)
+                    button.BackColor = AppColors.Info;
+                else if (button == btnSave)
+                    button.BackColor = AppColors.Success;
+                else if (button == btnPrint)
+                    button.BackColor = AppColors.Warning;
                 button.ForeColor = Color.White;
             }
 

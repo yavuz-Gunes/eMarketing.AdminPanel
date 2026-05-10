@@ -15,6 +15,7 @@ namespace eMarketing.AdminPanel.Componets
         private string _title = "";
         private string _value = "0";
         private string _description = "";
+        private bool _hovered;
 
         public string TitleText
         {
@@ -60,7 +61,7 @@ namespace eMarketing.AdminPanel.Componets
             Width = 330;
             Height = 118;
             Margin = new Padding(0, 0, 22, 22);
-            Padding = new Padding(28, 22, 28, 18);
+            Padding = new Padding(28, 16, 28, 14);
 
             SetStyle(ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.UserPaint |
@@ -69,6 +70,9 @@ namespace eMarketing.AdminPanel.Componets
 
             BuildLayout();
             ApplyTheme();
+
+            MouseEnter += CardControl_MouseEnter;
+            MouseLeave += CardControl_MouseLeave;
         }
 
         public CardControl(string title, string value) : this()
@@ -89,9 +93,9 @@ namespace eMarketing.AdminPanel.Componets
             {
                 Text = _title,
                 AutoSize = false,
-                Height = 24,
+                Height = 22,
                 Dock = DockStyle.Top,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent
             };
@@ -100,9 +104,9 @@ namespace eMarketing.AdminPanel.Componets
             {
                 Text = _value,
                 AutoSize = false,
-                Height = 42,
+                Height = 36,
                 Dock = DockStyle.Top,
-                Font = new Font("Segoe UI", 22F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent
             };
@@ -111,9 +115,9 @@ namespace eMarketing.AdminPanel.Componets
             {
                 Text = _description,
                 AutoSize = false,
-                Height = 24,
+                Height = 22,
                 Dock = DockStyle.Top,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = Color.Transparent
             };
@@ -152,6 +156,12 @@ namespace eMarketing.AdminPanel.Componets
                 lblValue.Font = new Font("Segoe UI", GetValueFontSize(_value), FontStyle.Bold);
             }
 
+            if (lblTitle != null)
+                lblTitle.Font = new Font("Segoe UI", 8.5F, FontStyle.Regular);
+
+            if (lblDescription != null)
+                lblDescription.Font = new Font("Segoe UI", 8.5F, FontStyle.Regular);
+
             if (lblDescription != null)
                 lblDescription.Text = _description;
 
@@ -161,15 +171,15 @@ namespace eMarketing.AdminPanel.Componets
         private float GetValueFontSize(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
-                return 22F;
+                return 20F;
 
             if (value.Length > 14)
-                return 17F;
+                return 16F;
 
             if (value.Length > 10)
-                return 19F;
+                return 18F;
 
-            return 22F;
+            return 20F;
         }
 
         private string GetDefaultDescription(string title)
@@ -221,7 +231,7 @@ namespace eMarketing.AdminPanel.Componets
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Rectangle shadowRect = new Rectangle(4, 5, Width - 8, Height - 8);
+            Rectangle shadowRect = new Rectangle(4, _hovered ? 4 : 5, Width - 8, Height - 8);
             Rectangle cardRect = new Rectangle(0, 0, Width - 6, Height - 6);
 
             using (GraphicsPath shadowPath = GetRoundedRectanglePath(shadowRect, 18))
@@ -232,11 +242,45 @@ namespace eMarketing.AdminPanel.Componets
 
             using (GraphicsPath cardPath = GetRoundedRectanglePath(cardRect, 18))
             using (SolidBrush cardBrush = new SolidBrush(GetCardBackColor()))
-            using (Pen borderPen = new Pen(AppColors.Border))
+            using (Pen borderPen = new Pen(_hovered ? AppColors.PrimaryLight : AppColors.Border))
             {
                 e.Graphics.FillPath(cardBrush, cardPath);
                 e.Graphics.DrawPath(borderPen, cardPath);
+
+                using (SolidBrush accentBrush = new SolidBrush(GetAccentColor()))
+                {
+                    Rectangle accent = new Rectangle(cardRect.X, cardRect.Y + 18, 4, cardRect.Height - 36);
+                    e.Graphics.FillRectangle(accentBrush, accent);
+                }
             }
+        }
+
+        private void CardControl_MouseEnter(object sender, EventArgs e)
+        {
+            _hovered = true;
+            Invalidate();
+        }
+
+        private void CardControl_MouseLeave(object sender, EventArgs e)
+        {
+            _hovered = false;
+            Invalidate();
+        }
+
+        private Color GetAccentColor()
+        {
+            if (_title.IndexOf("Teslim", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                _title.IndexOf("Aktif", StringComparison.OrdinalIgnoreCase) >= 0)
+                return AppColors.Success;
+
+            if (_title.IndexOf("Kritik", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                _title.IndexOf("Bekleyen", StringComparison.OrdinalIgnoreCase) >= 0)
+                return AppColors.Warning;
+
+            if (_title.IndexOf("Kargoda", StringComparison.OrdinalIgnoreCase) >= 0)
+                return AppColors.Info;
+
+            return AppColors.Primary;
         }
 
         private Color GetCardBackColor()

@@ -29,10 +29,12 @@ namespace eMarketing.AdminPanel.Pages
         private ComboBox cmbStatus;
         private ComboBox cmbCategory;
         private CheckBox chkLowStockOnly;
+        private Button btnViewMode;
         private Button btnSearch;
         private Button btnClear;
 
         private DataGridView dgvProducts;
+        private FlowLayoutPanel productCardsPanel;
 
         private CategoriesCard cTotal;
         private CategoriesCard cActive;
@@ -43,6 +45,8 @@ namespace eMarketing.AdminPanel.Pages
 
         private int hoveredRowIndex = -1;
         private int hoveredColumnIndex = -1;
+        private bool cardViewActive = true;
+        private DataTable currentDisplayTable;
 
         public ProductsPage()
         {
@@ -88,7 +92,7 @@ namespace eMarketing.AdminPanel.Pages
             headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 82,
+                Height = 58,
                 BackColor = AppColors.Background
             };
 
@@ -125,8 +129,6 @@ namespace eMarketing.AdminPanel.Pages
             btnNewProduct.FlatAppearance.BorderSize = 0;
             btnNewProduct.Click += BtnNewProduct_Click;
 
-            headerPanel.Controls.Add(lblTitle);
-            headerPanel.Controls.Add(lblSubtitle);
             headerPanel.Controls.Add(btnNewProduct);
 
             headerPanel.Resize += (s, e) =>
@@ -224,6 +226,19 @@ namespace eMarketing.AdminPanel.Pages
                 Cursor = Cursors.Hand
             };
 
+            btnViewMode = new Button
+            {
+                Text = "Tablo",
+                Width = 82,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = AppColors.PrimarySoft,
+                ForeColor = AppColors.Primary,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnViewMode.FlatAppearance.BorderSize = 0;
+
             btnSearch = new Button
             {
                 Text = "Ara",
@@ -268,6 +283,7 @@ namespace eMarketing.AdminPanel.Pages
             cmbStatus.SelectedIndexChanged += CmbStatus_SelectedIndexChanged;
             cmbCategory.SelectedIndexChanged += CmbCategory_SelectedIndexChanged;
             chkLowStockOnly.CheckedChanged += ChkLowStockOnly_CheckedChanged;
+            btnViewMode.Click += BtnViewMode_Click;
             btnSearch.Click += BtnSearch_Click;
             btnClear.Click += BtnClear_Click;
 
@@ -275,6 +291,7 @@ namespace eMarketing.AdminPanel.Pages
             filterPanel.Controls.Add(cmbStatus);
             filterPanel.Controls.Add(cmbCategory);
             filterPanel.Controls.Add(chkLowStockOnly);
+            filterPanel.Controls.Add(btnViewMode);
             filterPanel.Controls.Add(btnSearch);
             filterPanel.Controls.Add(btnClear);
             filterPanel.Controls.Add(lblInfo);
@@ -302,6 +319,9 @@ namespace eMarketing.AdminPanel.Pages
 
             chkLowStockOnly.Location = new Point(x, y + 6);
             x += chkLowStockOnly.Width + 14;
+
+            btnViewMode.Location = new Point(x, y - 2);
+            x += btnViewMode.Width + 10;
 
             btnSearch.Location = new Point(x, y - 2);
             x += btnSearch.Width + 10;
@@ -367,7 +387,20 @@ namespace eMarketing.AdminPanel.Pages
             dgvProducts.CellDoubleClick += DgvProducts_CellDoubleClick;
             dgvProducts.MouseLeave += DgvProducts_MouseLeave;
 
+            productCardsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Padding = new Padding(4),
+                BackColor = AppColors.CardBackground
+            };
+            productCardsPanel.Resize += (sender, e) => FitProductCards();
+
             gridPanel.Controls.Add(dgvProducts);
+            gridPanel.Controls.Add(productCardsPanel);
+            ApplyProductViewMode();
         }
 
         private void ConfigureGridColumns()
@@ -394,7 +427,12 @@ namespace eMarketing.AdminPanel.Pages
                 DataPropertyName = "UrunGorsel",
                 HeaderText = "Görsel",
                 Width = 70,
-                ImageLayout = DataGridViewImageCellLayout.Zoom
+                ImageLayout = DataGridViewImageCellLayout.Zoom,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    NullValue = null,
+                    Alignment = DataGridViewContentAlignment.MiddleCenter
+                }
             });
 
             dgvProducts.Columns.Add(new DataGridViewTextBoxColumn
@@ -574,7 +612,9 @@ namespace eMarketing.AdminPanel.Pages
                     ? FilterCriticalStockProducts(table)
                     : table;
 
+                currentDisplayTable = displayTable;
                 dgvProducts.DataSource = displayTable;
+                RenderProductCards(displayTable);
 
                 await UpdateStatsAsync(table);
                 UpdateInfoLabel(displayTable.Rows.Count, table.Rows.Count);
@@ -637,6 +677,239 @@ namespace eMarketing.AdminPanel.Pages
                 lblInfo.Text = displayCount + " kayıt";
         }
 
+        private void BtnViewMode_Click(object sender, EventArgs e)
+        {
+            cardViewActive = !cardViewActive;
+            ApplyProductViewMode();
+        }
+
+        private void ApplyProductViewMode()
+        {
+            if (productCardsPanel != null)
+                productCardsPanel.Visible = cardViewActive;
+
+            if (dgvProducts != null)
+                dgvProducts.Visible = !cardViewActive;
+
+            if (btnViewMode != null)
+                btnViewMode.Text = cardViewActive ? "Tablo" : "Kartlar";
+        }
+
+        private void RenderProductCards(DataTable table)
+        {
+            if (productCardsPanel == null)
+                return;
+
+            productCardsPanel.SuspendLayout();
+            productCardsPanel.Controls.Clear();
+
+            if (table == null || table.Rows.Count == 0)
+            {
+                productCardsPanel.Controls.Add(CreateProductEmptyCard());
+                productCardsPanel.ResumeLayout(true);
+                return;
+            }
+
+            foreach (DataRow row in table.Rows)
+                productCardsPanel.Controls.Add(CreateProductCard(row));
+
+            FitProductCards();
+            productCardsPanel.ResumeLayout(true);
+        }
+
+        private Panel CreateProductCard(DataRow row)
+        {
+            Panel card = new Panel
+            {
+                Width = 280,
+                Height = 188,
+                Margin = new Padding(0, 0, 16, 16),
+                Padding = new Padding(14),
+                BackColor = Color.White,
+                Cursor = Cursors.Hand,
+                Tag = row
+            };
+            card.Paint += ProductCard_Paint;
+
+            PictureBox image = new PictureBox
+            {
+                Width = 70,
+                Height = 70,
+                Location = new Point(14, 16),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Image = row.Table.Columns.Contains("UrunGorsel") ? row["UrunGorsel"] as Image : null,
+                BackColor = Color.FromArgb(248, 250, 252)
+            };
+
+            Label id = CreateProductCardLabel("ID: " + GetText(row, "UrunId", "-"), 8F, FontStyle.Bold, AppColors.Primary, 18);
+            id.Location = new Point(98, 12);
+            id.Width = card.Width - 116;
+
+            Label name = CreateProductCardLabel(GetText(row, "UrunAdi", "Ürün"), 10.5F, FontStyle.Bold, AppColors.TextPrimary, 22);
+            name.Location = new Point(98, 32);
+            name.Width = card.Width - 116;
+
+            Label category = CreateProductCardLabel(GetText(row, "KategoriAdi", "-"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 20);
+            category.Location = new Point(98, 58);
+            category.Width = card.Width - 116;
+
+            Label price = CreateProductCardLabel(GetMoneyText(row, "Fiyat"), 11F, FontStyle.Bold, AppColors.Primary, 24);
+            price.Location = new Point(98, 80);
+            price.Width = card.Width - 116;
+
+            Label desc = CreateProductCardLabel(GetText(row, "Aciklama", ""), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 38);
+            desc.Location = new Point(14, 98);
+            desc.Width = card.Width - 28;
+
+            Label stock = CreateProductBadge("Stok: " + GetText(row, "Stok", "0"), AppColors.PrimarySoft, AppColors.Primary);
+            stock.Location = new Point(14, 148);
+
+            Label status = CreateProductBadge(GetText(row, "StokDurumu", "Yeterli"), GetStockBadgeBack(GetText(row, "StokDurumu", "")), GetStockBadgeFore(GetText(row, "StokDurumu", "")));
+            status.Location = new Point(108, 148);
+
+            card.Controls.Add(image);
+            card.Controls.Add(id);
+            card.Controls.Add(name);
+            card.Controls.Add(category);
+            card.Controls.Add(price);
+            card.Controls.Add(desc);
+            card.Controls.Add(stock);
+            card.Controls.Add(status);
+
+            AttachProductCardClick(card, row);
+            AddProductCardHover(card);
+
+            return card;
+        }
+
+        private Panel CreateProductEmptyCard()
+        {
+            Panel card = new Panel
+            {
+                Width = 320,
+                Height = 90,
+                Margin = new Padding(0, 0, 16, 16),
+                BackColor = Color.White
+            };
+            card.Paint += ProductCard_Paint;
+            Label label = CreateProductCardLabel("Ürün bulunamadı.", 10F, FontStyle.Bold, AppColors.TextSecondary, 80);
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleCenter;
+            card.Controls.Add(label);
+            return card;
+        }
+
+        private Label CreateProductCardLabel(string text, float size, FontStyle style, Color color, int height)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Height = height,
+                Font = new Font("Segoe UI", size, style),
+                ForeColor = color,
+                BackColor = Color.Transparent,
+                AutoEllipsis = true
+            };
+        }
+
+        private Label CreateProductBadge(string text, Color backColor, Color foreColor)
+        {
+            return new Label
+            {
+                Text = text,
+                Width = 86,
+                Height = 26,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                BackColor = backColor,
+                ForeColor = foreColor
+            };
+        }
+
+        private void AttachProductCardClick(Control control, DataRow row)
+        {
+            control.Click += (sender, e) => OpenProductEditForm(Convert.ToInt32(row["UrunId"]));
+            foreach (Control child in control.Controls)
+            {
+                child.Cursor = Cursors.Hand;
+                child.Click += (sender, e) => OpenProductEditForm(Convert.ToInt32(row["UrunId"]));
+            }
+        }
+
+        private void AddProductCardHover(Panel card)
+        {
+            EventHandler enter = (sender, e) => { card.BackColor = Color.FromArgb(239, 246, 255); card.Invalidate(); };
+            EventHandler leave = (sender, e) => { card.BackColor = Color.White; card.Invalidate(); };
+            card.MouseEnter += enter;
+            card.MouseLeave += leave;
+            foreach (Control child in card.Controls)
+            {
+                child.MouseEnter += enter;
+                child.MouseLeave += leave;
+            }
+        }
+
+        private void ProductCard_Paint(object sender, PaintEventArgs e)
+        {
+            Control card = sender as Control;
+            if (card == null)
+                return;
+
+            using (Pen border = new Pen(AppColors.Border))
+                e.Graphics.DrawRectangle(border, 0, 0, card.Width - 1, card.Height - 1);
+        }
+
+        private void FitProductCards()
+        {
+            if (productCardsPanel == null)
+                return;
+
+            int available = productCardsPanel.ClientSize.Width - 36;
+            int columns = Math.Max(1, available / 300);
+            int width = Math.Max(250, (available / columns) - 16);
+
+            foreach (Control control in productCardsPanel.Controls)
+                control.Width = width;
+        }
+
+        private string GetText(DataRow row, string columnName, string defaultValue)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return defaultValue;
+
+            string value = Convert.ToString(row[columnName]);
+            return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+        }
+
+        private string GetMoneyText(DataRow row, string columnName)
+        {
+            decimal value;
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value ||
+                !decimal.TryParse(Convert.ToString(row[columnName]), out value))
+                return "0,00 TL";
+
+            return value.ToString("N2", new System.Globalization.CultureInfo("tr-TR")) + " TL";
+        }
+
+        private Color GetStockBadgeBack(string status)
+        {
+            if (status == "Kritik")
+                return AppColors.WarningSoft;
+            if (status == "Tükendi")
+                return AppColors.DangerSoft;
+            return AppColors.SuccessSoft;
+        }
+
+        private Color GetStockBadgeFore(string status)
+        {
+            if (status == "Kritik")
+                return AppColors.Warning;
+            if (status == "Tükendi")
+                return AppColors.Danger;
+            return AppColors.Success;
+        }
+
         private string GetRuntimeRootPath()
         {
             return AppDomain.CurrentDomain.BaseDirectory;
@@ -647,7 +920,7 @@ namespace eMarketing.AdminPanel.Pages
             try
             {
                 if (string.IsNullOrWhiteSpace(imagePath))
-                    return null;
+                    return CreateProductPlaceholderImage();
 
                 string fullPath = imagePath;
 
@@ -655,7 +928,7 @@ namespace eMarketing.AdminPanel.Pages
                     fullPath = Path.Combine(GetRuntimeRootPath(), imagePath);
 
                 if (!File.Exists(fullPath))
-                    return null;
+                    return CreateProductPlaceholderImage();
 
                 using (Image tempImage = Image.FromFile(fullPath))
                 {
@@ -664,8 +937,32 @@ namespace eMarketing.AdminPanel.Pages
             }
             catch
             {
-                return null;
+                return CreateProductPlaceholderImage();
             }
+        }
+
+        private Image CreateProductPlaceholderImage()
+        {
+            Bitmap bitmap = new Bitmap(40, 40);
+
+            using (Graphics g = Graphics.FromImage(bitmap))
+            using (SolidBrush backgroundBrush = new SolidBrush(AppColors.PrimarySoft))
+            using (Pen borderPen = new Pen(AppColors.Primary, 1.5F))
+            using (SolidBrush textBrush = new SolidBrush(AppColors.Primary))
+            using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
+            using (StringFormat format = new StringFormat())
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+                g.FillEllipse(backgroundBrush, 3, 3, 34, 34);
+                g.DrawEllipse(borderPen, 3, 3, 34, 34);
+
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+                g.DrawString("P", font, textBrush, new RectangleF(0, 0, 40, 40), format);
+            }
+
+            return bitmap;
         }
 
         private async Task UpdateStatsAsync(DataTable currentTable)
@@ -898,11 +1195,11 @@ namespace eMarketing.AdminPanel.Pages
 
             if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
             {
+                newRow = e.RowIndex;
                 string columnName = dgvProducts.Columns[e.ColumnIndex].Name;
 
                 if (columnName == "colEdit" || columnName == "colDelete")
                 {
-                    newRow = e.RowIndex;
                     newCol = e.ColumnIndex;
                 }
             }
@@ -915,11 +1212,14 @@ namespace eMarketing.AdminPanel.Pages
                 hoveredRowIndex = newRow;
                 hoveredColumnIndex = newCol;
 
-                if (oldRow >= 0 && oldCol >= 0)
-                    dgvProducts.InvalidateCell(oldCol, oldRow);
+                ApplyProductRowHover(oldRow, false);
+                ApplyProductRowHover(hoveredRowIndex, true);
 
-                if (hoveredRowIndex >= 0 && hoveredColumnIndex >= 0)
-                    dgvProducts.InvalidateCell(hoveredColumnIndex, hoveredRowIndex);
+                if (oldRow >= 0)
+                    dgvProducts.InvalidateRow(oldRow);
+
+                if (hoveredRowIndex >= 0)
+                    dgvProducts.InvalidateRow(hoveredRowIndex);
             }
 
         }
@@ -942,9 +1242,28 @@ namespace eMarketing.AdminPanel.Pages
             hoveredRowIndex = -1;
             hoveredColumnIndex = -1;
 
-            if (oldRow >= 0 && oldCol >= 0)
-                dgvProducts.InvalidateCell(oldCol, oldRow);
+            ApplyProductRowHover(oldRow, false);
+            dgvProducts.Cursor = Cursors.Default;
 
+            if (oldRow >= 0)
+                dgvProducts.InvalidateRow(oldRow);
+
+        }
+
+        private void ApplyProductRowHover(int rowIndex, bool hovered)
+        {
+            if (dgvProducts == null || rowIndex < 0 || rowIndex >= dgvProducts.Rows.Count)
+                return;
+
+            DataGridViewRow row = dgvProducts.Rows[rowIndex];
+            row.DefaultCellStyle.BackColor = hovered
+                ? Color.FromArgb(239, 246, 255)
+                : (rowIndex % 2 == 0 ? AppColors.CardBackground : Color.FromArgb(250, 251, 253));
+            row.DefaultCellStyle.SelectionBackColor = hovered
+                ? Color.FromArgb(219, 234, 254)
+                : Color.FromArgb(238, 243, 255);
+
+            dgvProducts.Cursor = hovered ? Cursors.Hand : Cursors.Default;
         }
 
         private void DgvProducts_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
@@ -1239,6 +1558,15 @@ namespace eMarketing.AdminPanel.Pages
                 btnClear.ForeColor = AppColors.TextSecondary;
                 btnClear.FlatAppearance.BorderColor = AppColors.Border;
             }
+
+            if (btnViewMode != null)
+            {
+                btnViewMode.BackColor = AppColors.PrimarySoft;
+                btnViewMode.ForeColor = AppColors.Primary;
+            }
+
+            if (productCardsPanel != null)
+                productCardsPanel.BackColor = AppColors.CardBackground;
 
             if (dgvProducts != null)
             {

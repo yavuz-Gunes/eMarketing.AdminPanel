@@ -19,7 +19,6 @@ public sealed class PersonelController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> Get([FromQuery] string arama = "", [FromQuery] bool sadeceAktif = false, [FromQuery] int? goruntuleyenKullaniciId = null, [FromQuery] bool adminMi = true, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_Kullanici_Listele", new[]
@@ -48,7 +47,6 @@ public sealed class PersonelController : ControllerBase
     }
 
     [HttpGet("{kullaniciId:int}/magazalar")]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetMagazalar(int kullaniciId, [FromQuery] int? goruntuleyenKullaniciId = null, [FromQuery] bool adminMi = true, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_KullaniciMagaza_Listele", new[]
@@ -60,7 +58,6 @@ public sealed class PersonelController : ControllerBase
     }
 
     [HttpGet("{kullaniciId:int}/atanabilir-magazalar")]
-    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetAtanabilirMagazalar(int kullaniciId, [FromQuery] string arama = "", [FromQuery] int? goruntuleyenKullaniciId = null, [FromQuery] bool adminMi = true, CancellationToken cancellationToken = default)
     {
         return Ok(await _dataService.QueryAsync("sp_KullaniciMagaza_AtanmamisMagaza_Listele", new[]
