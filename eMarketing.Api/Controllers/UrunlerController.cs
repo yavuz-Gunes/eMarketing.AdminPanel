@@ -40,7 +40,6 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> Create([FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateProduct(request);
@@ -52,7 +51,6 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> Update(int id, [FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateProduct(request);
@@ -64,7 +62,6 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
-    [AllowAnonymous]
     public async Task<IActionResult> SetStatus(int id, [FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
     {
         await _productService.SetProductStatusAsync(id, request.AktifMi, cancellationToken);
@@ -72,7 +69,6 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _productService.DeleteProductAsync(id, cancellationToken);

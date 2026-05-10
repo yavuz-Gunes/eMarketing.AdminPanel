@@ -36,7 +36,6 @@ public sealed class KategorilerController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> Create([FromBody] CategorySaveRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.KategoriAdi))
@@ -47,7 +46,6 @@ public sealed class KategorilerController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> Update(int id, [FromBody] CategorySaveRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.KategoriAdi))
@@ -58,7 +56,6 @@ public sealed class KategorilerController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
-    [AllowAnonymous]
     public async Task<IActionResult> SetStatus(int id, [FromBody] CategorySaveRequest request, CancellationToken cancellationToken)
     {
         await _categoryService.SetCategoryStatusAsync(id, request.AktifMi, cancellationToken);
@@ -66,7 +63,6 @@ public sealed class KategorilerController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _categoryService.DeleteCategoryAsync(id, cancellationToken);

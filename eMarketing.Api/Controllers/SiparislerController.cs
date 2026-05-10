@@ -38,7 +38,6 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> Create([FromBody] OrderCreateRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateCreateRequest(request);
@@ -50,7 +49,6 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
-    [AllowAnonymous]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] OrderStatusUpdateRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.SiparisDurumu))
@@ -61,7 +59,6 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPost("{id:int}/iptal")]
-    [AllowAnonymous]
     public async Task<IActionResult> Cancel(int id, CancellationToken cancellationToken)
     {
         await _orderService.CancelOrderAsync(id, cancellationToken);

@@ -147,17 +147,13 @@ namespace eMarketing.AdminPanel.Forms
             }
             else if (pageKey == "Reports")
             {
-                page = new PlaceholderPage(
-                    "Raporlar",
-                    "Raporlar ekranı hazırlanıyor. Satış, ciro, stok ve mağaza performans raporları burada toplanacak.");
+                page = new ReportsPage();
                 title = "Raporlar";
                 subtitle = "Satış, stok ve mağaza performans analizleri";
             }
             else if (pageKey == "Settings")
             {
-                page = new PlaceholderPage(
-                    "Ayarlar",
-                    "Ayarlar ekranı hazırlanıyor. Sistem tercihleri ve uygulama davranışları bu modülde yönetilecek.");
+                page = new SettingsPage();
                 title = "Ayarlar";
                 subtitle = "Sistem tercihleri ve yönetim ayarları";
             }

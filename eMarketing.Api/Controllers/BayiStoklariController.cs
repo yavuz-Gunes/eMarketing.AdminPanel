@@ -72,7 +72,6 @@ public sealed class BayiStoklariController : ControllerBase
     }
 
     [HttpPatch("{magazaStokId:int}/minimum")]
-    [AllowAnonymous]
     public async Task<IActionResult> MinimumGuncelle(int magazaStokId, [FromBody] MinimumStokRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_MagazaStok_MinimumGuncelle", new[]
@@ -85,7 +84,6 @@ public sealed class BayiStoklariController : ControllerBase
     }
 
     [HttpPost("hareket")]
-    [AllowAnonymous]
     public async Task<IActionResult> HareketIsle([FromBody] StokHareketRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_MagazaStok_Hareket_Isle", new[]

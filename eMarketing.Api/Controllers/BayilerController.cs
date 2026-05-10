@@ -42,7 +42,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> Create([FromBody] BayiSaveRequest request, CancellationToken cancellationToken)
     {
         int id = await _dataService.ExecuteScalarIntAsync("sp_Musteri_Ekle", request.ToInsertParameters(), cancellationToken);
@@ -50,7 +49,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> Update(int id, [FromBody] BayiSaveRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_Musteri_Guncelle", request.ToUpdateParameters(id), cancellationToken);
@@ -58,7 +56,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
-    [AllowAnonymous]
     public async Task<IActionResult> SetStatus(int id, [FromBody] StatusRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_Musteri_DurumGuncelle", new[]
@@ -82,7 +79,6 @@ public sealed class BayilerController : ControllerBase
     }
 
     [HttpPost("{customerId:int}/magazalar")]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> CreateStore(int customerId, [FromBody] BayiMagazaSaveRequest request, CancellationToken cancellationToken)
     {
         int id = await _dataService.ExecuteScalarIntAsync("sp_MusteriMagaza_Ekle", request.ToInsertParameters(customerId), cancellationToken);
@@ -115,7 +111,6 @@ public sealed class BayiMagazalarController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> Update(int id, [FromBody] BayiMagazaSaveRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_MusteriMagaza_Guncelle", request.ToUpdateParameters(id), cancellationToken);
@@ -123,7 +118,6 @@ public sealed class BayiMagazalarController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
-    [AllowAnonymous]
     public async Task<IActionResult> SetStatus(int id, [FromBody] StatusRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_MusteriMagaza_DurumGuncelle", new[]

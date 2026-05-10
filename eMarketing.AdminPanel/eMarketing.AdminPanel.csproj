@@ -145,6 +145,12 @@
     <Compile Include="Pages\ProductsPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Pages\ReportsPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Pages\SettingsPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\ApiDataClient.cs" />

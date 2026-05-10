@@ -32,7 +32,6 @@ public sealed class PersonelController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> Save([FromBody] PersonelSaveRequest request, CancellationToken cancellationToken)
     {
         int id = await _dataService.ExecuteScalarIntAsync("sp_Kullanici_Kaydet", new[]
@@ -74,7 +73,6 @@ public sealed class PersonelController : ControllerBase
     }
 
     [HttpPost("{kullaniciId:int}/magazalar/{magazaId:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> MagazaAta(int kullaniciId, int magazaId, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_KullaniciMagaza_Ata", new[]
@@ -87,7 +85,6 @@ public sealed class PersonelController : ControllerBase
     }
 
     [HttpDelete("magaza-yetkileri/{kullaniciMagazaId:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> MagazaKaldir(int kullaniciMagazaId, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_KullaniciMagaza_Kaldir", new[]

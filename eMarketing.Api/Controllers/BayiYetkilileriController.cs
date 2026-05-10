@@ -44,7 +44,6 @@ public sealed class BayiYetkilileriController : ControllerBase
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<ActionResult<object>> Save([FromBody] BayiYetkiliSaveRequest request, CancellationToken cancellationToken)
     {
         int id = await _dataService.ExecuteScalarIntAsync("sp_BayiYetkili_Kaydet", request.ToParameters(), cancellationToken);
@@ -52,7 +51,6 @@ public sealed class BayiYetkilileriController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
-    [AllowAnonymous]
     public async Task<IActionResult> SetStatus(int id, [FromBody] BayiYetkiliStatusRequest request, CancellationToken cancellationToken)
     {
         await _dataService.ExecuteAsync("sp_BayiYetkili_DurumGuncelle", new[]
