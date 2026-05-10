@@ -1,8 +1,7 @@
+using eMarketing.Service.Dtos;
 using eMarketing.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using System.Data;
 
 namespace eMarketing.Api.Controllers;
 
@@ -11,84 +10,68 @@ namespace eMarketing.Api.Controllers;
 [Authorize]
 public sealed class PersonelController : ControllerBase
 {
-    private readonly ISqlDataService _dataService;
+    private readonly IPersonnelService _personnelService;
 
-    public PersonelController(ISqlDataService dataService)
+    public PersonelController(IPersonnelService personnelService)
     {
-        _dataService = dataService;
+        _personnelService = personnelService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> Get([FromQuery] string arama = "", [FromQuery] bool sadeceAktif = false, [FromQuery] int? goruntuleyenKullaniciId = null, [FromQuery] bool adminMi = true, CancellationToken cancellationToken = default)
+    [Authorize(Policy = "CanViewPersonnel")]
+    public async Task<ActionResult<IReadOnlyList<PersonnelDto>>> Get([FromQuery] string arama = "", [FromQuery] bool sadeceAktif = false, CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_Kullanici_Listele", new[]
+        return Ok(await _personnelService.GetPersonnelAsync(new PersonnelFilterRequest
         {
-            SqlDataService.TextParam("@Arama", 200, arama),
-            SqlDataService.Param("@SadeceAktif", SqlDbType.Bit, sadeceAktif),
-            SqlDataService.Param("@GoruntuleyenKullaniciId", SqlDbType.Int, goruntuleyenKullaniciId),
-            SqlDataService.Param("@AdminMi", SqlDbType.Bit, adminMi)
+            Arama = arama,
+            SadeceAktif = sadeceAktif
         }, cancellationToken));
     }
 
     [HttpPost]
+    [Authorize(Policy = "CanViewPersonnel")]
     public async Task<ActionResult<object>> Save([FromBody] PersonelSaveRequest request, CancellationToken cancellationToken)
     {
-        int id = await _dataService.ExecuteScalarIntAsync("sp_Kullanici_Kaydet", new[]
+        int id = await _personnelService.SavePersonnelAsync(new CreatePersonnelRequest
         {
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, request.KullaniciId),
-            SqlDataService.NullableTextParam("@KullaniciAdi", 100, request.KullaniciAdi),
-            SqlDataService.NullableTextParam("@Sifre", 100, request.Sifre),
-            SqlDataService.NullableTextParam("@AdSoyad", 150, request.AdSoyad),
-            SqlDataService.NullableTextParam("@Rol", 50, request.Rol),
-            SqlDataService.Param("@AktifMi", SqlDbType.Bit, request.AktifMi)
+            KullaniciId = request.KullaniciId,
+            KullaniciAdi = request.KullaniciAdi,
+            Sifre = request.Sifre,
+            AdSoyad = request.AdSoyad,
+            Rol = request.Rol,
+            AktifMi = request.AktifMi
         }, cancellationToken);
 
         return Ok(new { KullaniciId = id });
     }
 
     [HttpGet("{kullaniciId:int}/magazalar")]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetMagazalar(int kullaniciId, [FromQuery] int? goruntuleyenKullaniciId = null, [FromQuery] bool adminMi = true, CancellationToken cancellationToken = default)
+    [Authorize(Policy = "CanViewPersonnel")]
+    public async Task<ActionResult<IReadOnlyList<PersonnelStorePermissionDto>>> GetMagazalar(int kullaniciId, CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_KullaniciMagaza_Listele", new[]
-        {
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, kullaniciId),
-            SqlDataService.Param("@GoruntuleyenKullaniciId", SqlDbType.Int, goruntuleyenKullaniciId),
-            SqlDataService.Param("@AdminMi", SqlDbType.Bit, adminMi)
-        }, cancellationToken));
+        return Ok(await _personnelService.GetStoresAsync(kullaniciId, cancellationToken));
     }
 
     [HttpGet("{kullaniciId:int}/atanabilir-magazalar")]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetAtanabilirMagazalar(int kullaniciId, [FromQuery] string arama = "", [FromQuery] int? goruntuleyenKullaniciId = null, [FromQuery] bool adminMi = true, CancellationToken cancellationToken = default)
+    [Authorize(Policy = "CanManagePersonnel")]
+    public async Task<ActionResult<IReadOnlyList<PersonnelStorePermissionDto>>> GetAtanabilirMagazalar(int kullaniciId, [FromQuery] string arama = "", CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_KullaniciMagaza_AtanmamisMagaza_Listele", new[]
-        {
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, kullaniciId),
-            SqlDataService.TextParam("@Arama", 200, arama),
-            SqlDataService.Param("@GoruntuleyenKullaniciId", SqlDbType.Int, goruntuleyenKullaniciId),
-            SqlDataService.Param("@AdminMi", SqlDbType.Bit, adminMi)
-        }, cancellationToken));
+        return Ok(await _personnelService.GetAssignableStoresAsync(kullaniciId, arama, cancellationToken));
     }
 
     [HttpPost("{kullaniciId:int}/magazalar/{magazaId:int}")]
+    [Authorize(Policy = "CanManagePersonnel")]
     public async Task<IActionResult> MagazaAta(int kullaniciId, int magazaId, CancellationToken cancellationToken)
     {
-        await _dataService.ExecuteAsync("sp_KullaniciMagaza_Ata", new[]
-        {
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, kullaniciId),
-            SqlDataService.Param("@MagazaId", SqlDbType.Int, magazaId)
-        }, cancellationToken);
-
+        await _personnelService.AssignStoreAsync(kullaniciId, magazaId, cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("magaza-yetkileri/{kullaniciMagazaId:int}")]
+    [Authorize(Policy = "CanManagePersonnel")]
     public async Task<IActionResult> MagazaKaldir(int kullaniciMagazaId, CancellationToken cancellationToken)
     {
-        await _dataService.ExecuteAsync("sp_KullaniciMagaza_Kaldir", new[]
-        {
-            SqlDataService.Param("@KullaniciMagazaId", SqlDbType.Int, kullaniciMagazaId)
-        }, cancellationToken);
-
+        await _personnelService.RemoveStoreAsync(kullaniciMagazaId, cancellationToken);
         return NoContent();
     }
 }

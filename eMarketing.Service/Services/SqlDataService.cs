@@ -14,24 +14,16 @@ public interface ISqlDataService
 
 public sealed class SqlDataService : ISqlDataService
 {
-    private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly ISqlExecutor _sqlExecutor;
 
-    public SqlDataService(ISqlConnectionFactory connectionFactory)
+    public SqlDataService(ISqlExecutor sqlExecutor)
     {
-        _connectionFactory = connectionFactory;
+        _sqlExecutor = sqlExecutor;
     }
 
     public async Task<IReadOnlyList<Dictionary<string, object?>>> QueryAsync(string procedureName, IEnumerable<SqlParameter> parameters, CancellationToken cancellationToken = default)
     {
-        var rows = new List<Dictionary<string, object?>>();
-
-        await using SqlConnection connection = _connectionFactory.CreateConnection();
-        await using SqlCommand command = CreateCommand(procedureName, parameters, connection);
-
-        await connection.OpenAsync(cancellationToken);
-
-        await using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        return await _sqlExecutor.QueryAsync(procedureName, parameters, reader =>
         {
             var row = new Dictionary<string, object?>();
 
@@ -41,10 +33,8 @@ public sealed class SqlDataService : ISqlDataService
                 row[reader.GetName(i)] = value;
             }
 
-            rows.Add(row);
-        }
-
-        return rows;
+            return row;
+        }, cancellationToken);
     }
 
     public async Task<Dictionary<string, object?>?> QuerySingleAsync(string procedureName, IEnumerable<SqlParameter> parameters, CancellationToken cancellationToken = default)
@@ -55,59 +45,26 @@ public sealed class SqlDataService : ISqlDataService
 
     public async Task<int> ExecuteAsync(string procedureName, IEnumerable<SqlParameter> parameters, CancellationToken cancellationToken = default)
     {
-        await using SqlConnection connection = _connectionFactory.CreateConnection();
-        await using SqlCommand command = CreateCommand(procedureName, parameters, connection);
-
-        await connection.OpenAsync(cancellationToken);
-        return await command.ExecuteNonQueryAsync(cancellationToken);
+        return await _sqlExecutor.ExecuteAsync(procedureName, parameters, cancellationToken);
     }
 
     public async Task<int> ExecuteScalarIntAsync(string procedureName, IEnumerable<SqlParameter> parameters, CancellationToken cancellationToken = default)
     {
-        await using SqlConnection connection = _connectionFactory.CreateConnection();
-        await using SqlCommand command = CreateCommand(procedureName, parameters, connection);
-
-        await connection.OpenAsync(cancellationToken);
-        object? result = await command.ExecuteScalarAsync(cancellationToken);
-        return result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
-    }
-
-    private static SqlCommand CreateCommand(string procedureName, IEnumerable<SqlParameter> parameters, SqlConnection connection)
-    {
-        var command = new SqlCommand(procedureName, connection)
-        {
-            CommandType = CommandType.StoredProcedure
-        };
-
-        foreach (SqlParameter parameter in parameters)
-        {
-            command.Parameters.Add(parameter);
-        }
-
-        return command;
+        return await _sqlExecutor.ExecuteScalarIntAsync(procedureName, parameters, cancellationToken);
     }
 
     public static SqlParameter Param(string name, SqlDbType type, object? value)
     {
-        return new SqlParameter(name, type)
-        {
-            Value = value ?? DBNull.Value
-        };
+        return SqlParameterFactory.Param(name, type, value);
     }
 
     public static SqlParameter TextParam(string name, int size, string? value)
     {
-        return new SqlParameter(name, SqlDbType.NVarChar, size)
-        {
-            Value = string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim()
-        };
+        return SqlParameterFactory.TextParam(name, size, value);
     }
 
     public static SqlParameter NullableTextParam(string name, int size, string? value)
     {
-        return new SqlParameter(name, SqlDbType.NVarChar, size)
-        {
-            Value = string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim()
-        };
+        return SqlParameterFactory.NullableTextParam(name, size, value);
     }
 }

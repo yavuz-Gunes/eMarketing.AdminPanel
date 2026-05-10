@@ -2,7 +2,7 @@ using Microsoft.Data.SqlClient;
 
 namespace eMarketing.Service.Services;
 
-internal static class SqlReaderExtensions
+public static class SqlReaderExtensions
 {
     public static int GetInt(this SqlDataReader reader, string columnName)
     {
@@ -38,5 +38,16 @@ internal static class SqlReaderExtensions
     {
         int ordinal = reader.GetOrdinal(columnName);
         return reader.IsDBNull(ordinal) ? null : Convert.ToDateTime(reader.GetValue(ordinal));
+    }
+
+    public static bool HasColumn(this SqlDataReader reader, string columnName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (string.Equals(reader.GetName(i), columnName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 }

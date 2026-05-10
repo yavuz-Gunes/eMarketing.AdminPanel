@@ -27,13 +27,16 @@ public sealed class JwtTokenService : IJwtTokenService
             : 480;
 
         DateTime expiresAt = DateTime.UtcNow.AddMinutes(expireMinutes);
-        var claims = new[]
+        string normalizedRole = NormalizeRole(kullanici.Rol);
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, kullanici.KullaniciId.ToString()),
             new Claim(ClaimTypes.NameIdentifier, kullanici.KullaniciId.ToString()),
             new Claim(ClaimTypes.Name, kullanici.KullaniciAdi),
             new Claim(ClaimTypes.GivenName, kullanici.AdSoyad),
-            new Claim(ClaimTypes.Role, kullanici.Rol)
+            new Claim(ClaimTypes.Role, kullanici.Rol),
+            new Claim(ClaimTypes.Role, normalizedRole),
+            new Claim("role", normalizedRole)
         };
 
         string key = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key ayarı bulunamadı.");
@@ -52,6 +55,16 @@ public sealed class JwtTokenService : IJwtTokenService
             Token = new JwtSecurityTokenHandler().WriteToken(token),
             ExpiresAt = expiresAt,
             Kullanici = kullanici
+        };
+    }
+
+    private static string NormalizeRole(string role)
+    {
+        return role switch
+        {
+            "StoreManager" => "Yonetici",
+            "SalesPerson" => "MagazaYetkilisi",
+            _ => role
         };
     }
 }

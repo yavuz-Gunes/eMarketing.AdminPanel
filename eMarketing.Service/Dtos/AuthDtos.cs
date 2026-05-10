@@ -20,3 +20,12 @@ public sealed class LoginResponse
     public DateTime ExpiresAt { get; set; }
     public KullaniciDto Kullanici { get; set; } = new();
 }
+
+public sealed class CurrentUserDto
+{
+    public int? KullaniciId { get; set; }
+    public string KullaniciAdi { get; set; } = string.Empty;
+    public string Rol { get; set; } = string.Empty;
+    public bool AdminMi { get; set; }
+    public bool TumMagazalariGorebilir { get; set; }
+}

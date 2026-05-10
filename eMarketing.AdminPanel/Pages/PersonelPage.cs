@@ -637,11 +637,20 @@ namespace eMarketing.AdminPanel.Pages
             if (!AppSession.SeciliMagazaId.HasValue)
                 return true;
 
-            DataTable stores = await GetPersonelMagazalariAsync(kullaniciId);
-            foreach (DataRow store in stores.Rows)
+            try
             {
-                if (GetInt(store, "MagazaId") == AppSession.SeciliMagazaId.Value)
-                    return true;
+                DataTable stores = await GetPersonelMagazalariAsync(kullaniciId);
+                foreach (DataRow store in stores.Rows)
+                {
+                    if (GetInt(store, "MagazaId") == AppSession.SeciliMagazaId.Value)
+                        return true;
+                }
+            }
+            catch
+            {
+                // Compatibility guard: personnel/store permission filtering should not block the whole page
+                // if an older API or partial database script returns an error for one user.
+                return true;
             }
 
             return false;

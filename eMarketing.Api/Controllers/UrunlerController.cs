@@ -18,7 +18,7 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpGet]
-    [AllowAnonymous]
+    [Authorize(Policy = "CanViewProducts")]
     public async Task<ActionResult<IReadOnlyList<ProductDto>>> Get(
         [FromQuery] string? arama = "",
         [FromQuery] int durum = 1,
@@ -29,7 +29,7 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
+    [Authorize(Policy = "CanViewProducts")]
     public async Task<ActionResult<ProductDto>> GetById(int id, CancellationToken cancellationToken)
     {
         ProductDto? product = await _productService.GetProductByIdAsync(id, cancellationToken);
@@ -40,6 +40,7 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "CanManageProducts")]
     public async Task<ActionResult<object>> Create([FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateProduct(request);
@@ -51,6 +52,7 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = "CanManageProducts")]
     public async Task<IActionResult> Update(int id, [FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateProduct(request);
@@ -62,6 +64,7 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
+    [Authorize(Policy = "CanManageProducts")]
     public async Task<IActionResult> SetStatus(int id, [FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
     {
         await _productService.SetProductStatusAsync(id, request.AktifMi, cancellationToken);
@@ -69,6 +72,7 @@ public sealed class UrunlerController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "CanManageProducts")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _productService.DeleteProductAsync(id, cancellationToken);

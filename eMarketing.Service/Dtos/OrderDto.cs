@@ -1,6 +1,8 @@
 namespace eMarketing.Service.Dtos;
 
-public sealed class OrderDto
+using System.ComponentModel.DataAnnotations;
+
+public class OrderDto
 {
     public int SiparisId { get; set; }
     public string OrderNo { get; set; } = string.Empty;
@@ -31,21 +33,53 @@ public sealed class OrderDto
     public bool IsArchived { get; set; }
 }
 
-public sealed class OrderCreateRequest
+public class OrderCreateRequest
 {
+    [Required, StringLength(300)]
     public string CustomerName { get; set; } = string.Empty;
+
     public string CustomerEmail { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
+
+    [Range(1, int.MaxValue)]
     public int ProductId { get; set; }
+
+    [Range(1, int.MaxValue)]
     public int Quantity { get; set; }
+
+    [Range(0, double.MaxValue)]
     public decimal TotalPrice { get; set; }
+
+    [Range(1, int.MaxValue)]
     public int? CustomerStoreId { get; set; }
+
     public string OrderType { get; set; } = "Bayi";
     public string OrderSource { get; set; } = "AdminPanel";
     public int? BayiYetkiliId { get; set; }
 }
 
-public sealed class OrderStatusUpdateRequest
+public class OrderStatusUpdateRequest
 {
+    [Required, StringLength(50)]
     public string SiparisDurumu { get; set; } = string.Empty;
+}
+
+public sealed class OrderListItemDto : OrderDto;
+public sealed class OrderDetailDto : OrderDto;
+public sealed class CreateOrderRequest : OrderCreateRequest;
+public sealed class UpdateOrderStatusRequest : OrderStatusUpdateRequest;
+
+public sealed class OrderFilterRequest
+{
+    public int? MagazaId { get; set; }
+    public bool TumMagazalar { get; set; } = true;
+}
+
+public sealed class OrderSummaryDto
+{
+    public int ToplamSiparis { get; set; }
+    public int HazirlaniyorSayisi { get; set; }
+    public int KargodaSayisi { get; set; }
+    public int TeslimEdildiSayisi { get; set; }
+    public int IptalSayisi { get; set; }
 }

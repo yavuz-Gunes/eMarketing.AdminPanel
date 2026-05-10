@@ -18,6 +18,7 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "CanManageOrders")]
     public async Task<ActionResult<IReadOnlyList<OrderDto>>> Get(
         [FromQuery] int? magazaId = null,
         [FromQuery] bool tumMagazalar = true,
@@ -27,6 +28,7 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpGet("ozet")]
+    [Authorize(Policy = "CanManageOrders")]
     public async Task<ActionResult<Dictionary<string, object>>> GetSummary(
         [FromQuery] int? magazaId = null,
         [FromQuery] bool tumMagazalar = true,
@@ -36,6 +38,7 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "CanManageOrders")]
     public async Task<ActionResult<object>> Create([FromBody] OrderCreateRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateCreateRequest(request);
@@ -47,6 +50,7 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPatch("{id:int}/durum")]
+    [Authorize(Policy = "CanManageOrders")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] OrderStatusUpdateRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.SiparisDurumu))
@@ -57,6 +61,7 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPost("{id:int}/iptal")]
+    [Authorize(Policy = "CanManageOrders")]
     public async Task<IActionResult> Cancel(int id, CancellationToken cancellationToken)
     {
         await _orderService.CancelOrderAsync(id, cancellationToken);

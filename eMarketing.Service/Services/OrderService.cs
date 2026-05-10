@@ -2,6 +2,7 @@ using System.Data;
 using eMarketing.Service.Connection;
 using eMarketing.Service.Dtos;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace eMarketing.Service.Services;
 
@@ -17,10 +18,12 @@ public interface IOrderService
 public sealed class OrderService : IOrderService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(ISqlConnectionFactory connectionFactory)
+    public OrderService(ISqlConnectionFactory connectionFactory, ILogger<OrderService> logger)
     {
         _connectionFactory = connectionFactory;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<OrderDto>> GetOrdersAsync(int? magazaId, bool tumMagazalar, CancellationToken cancellationToken = default)
@@ -120,7 +123,9 @@ public sealed class OrderService : IOrderService
 
         await connection.OpenAsync(cancellationToken);
         object? result = await command.ExecuteScalarAsync(cancellationToken);
-        return result == null ? 0 : Convert.ToInt32(result);
+        int orderId = result == null ? 0 : Convert.ToInt32(result);
+        _logger.LogInformation("Order created. OrderId: {OrderId}, StoreId: {StoreId}, ProductId: {ProductId}, Quantity: {Quantity}", orderId, request.CustomerStoreId, request.ProductId, request.Quantity);
+        return orderId;
     }
 
     public async Task UpdateOrderStatusAsync(int orderId, string status, CancellationToken cancellationToken = default)
@@ -133,6 +138,7 @@ public sealed class OrderService : IOrderService
 
         await connection.OpenAsync(cancellationToken);
         await command.ExecuteNonQueryAsync(cancellationToken);
+        _logger.LogInformation("Order status updated. OrderId: {OrderId}, Status: {Status}", orderId, status);
     }
 
     public async Task CancelOrderAsync(int orderId, CancellationToken cancellationToken = default)
@@ -144,6 +150,7 @@ public sealed class OrderService : IOrderService
 
         await connection.OpenAsync(cancellationToken);
         await command.ExecuteNonQueryAsync(cancellationToken);
+        _logger.LogInformation("Order cancelled. OrderId: {OrderId}", orderId);
     }
 
     private static object GetNullableText(string value)

@@ -1,8 +1,7 @@
+using eMarketing.Service.Dtos;
 using eMarketing.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using System.Data;
 
 namespace eMarketing.Api.Controllers;
 
@@ -11,88 +10,67 @@ namespace eMarketing.Api.Controllers;
 [Authorize]
 public sealed class BayiStoklariController : ControllerBase
 {
-    private readonly ISqlDataService _dataService;
+    private readonly IStockService _stockService;
 
-    public BayiStoklariController(ISqlDataService dataService)
+    public BayiStoklariController(IStockService stockService)
     {
-        _dataService = dataService;
+        _stockService = stockService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> Get(
+    [Authorize(Policy = "CanViewStocks")]
+    public async Task<ActionResult<IReadOnlyList<StockItemDto>>> Get(
         [FromQuery] int? magazaId = null,
         [FromQuery] string arama = "",
         [FromQuery] bool sadeceStokta = false,
         [FromQuery] bool sadeceKritik = false,
         [FromQuery] bool sadeceAktif = true,
-        [FromQuery] int? kullaniciId = null,
-        [FromQuery] bool adminMi = false,
         CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_MagazaStok_Listele", new[]
+        return Ok(await _stockService.GetStocksAsync(new StockFilterRequest
         {
-            SqlDataService.Param("@MagazaId", SqlDbType.Int, magazaId),
-            SqlDataService.TextParam("@Arama", 200, arama),
-            SqlDataService.Param("@SadeceStokta", SqlDbType.Bit, sadeceStokta),
-            SqlDataService.Param("@SadeceKritik", SqlDbType.Bit, sadeceKritik),
-            SqlDataService.Param("@SadeceAktif", SqlDbType.Bit, sadeceAktif),
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, kullaniciId),
-            SqlDataService.Param("@AdminMi", SqlDbType.Bit, adminMi)
+            MagazaId = magazaId,
+            Arama = arama,
+            SadeceStokta = sadeceStokta,
+            SadeceKritik = sadeceKritik,
+            SadeceAktif = sadeceAktif
         }, cancellationToken));
     }
 
     [HttpGet("ozet")]
-    public async Task<ActionResult<object>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, [FromQuery] int? kullaniciId = null, [FromQuery] bool adminMi = false, CancellationToken cancellationToken = default)
+    [Authorize(Policy = "CanViewStocks")]
+    public async Task<ActionResult<StockSummaryDto>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
-        Dictionary<string, object?>? row = await _dataService.QuerySingleAsync("sp_MagazaStok_Ozet_Getir", new[]
-        {
-            SqlDataService.Param("@MagazaId", SqlDbType.Int, magazaId),
-            SqlDataService.Param("@TumMagazalar", SqlDbType.Bit, tumMagazalar),
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, kullaniciId),
-            SqlDataService.Param("@AdminMi", SqlDbType.Bit, adminMi)
-        }, cancellationToken);
-
-        return Ok(row ?? new Dictionary<string, object?>());
+        return Ok(await _stockService.GetSummaryAsync(magazaId, tumMagazalar, cancellationToken));
     }
 
     [HttpGet("hareketler")]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetHareketler([FromQuery] int magazaId, [FromQuery] int urunId, [FromQuery] int kayitSayisi = 25, [FromQuery] int? kullaniciId = null, [FromQuery] bool adminMi = false, CancellationToken cancellationToken = default)
+    [Authorize(Policy = "CanViewStocks")]
+    public async Task<ActionResult<IReadOnlyList<StockMovementDto>>> GetHareketler([FromQuery] int magazaId, [FromQuery] int urunId, [FromQuery] int kayitSayisi = 25, CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_MagazaStok_Hareket_Listele", new[]
-        {
-            SqlDataService.Param("@MagazaId", SqlDbType.Int, magazaId),
-            SqlDataService.Param("@ProductId", SqlDbType.Int, urunId),
-            SqlDataService.Param("@KayitSayisi", SqlDbType.Int, kayitSayisi <= 0 ? 25 : kayitSayisi),
-            SqlDataService.Param("@KullaniciId", SqlDbType.Int, kullaniciId),
-            SqlDataService.Param("@AdminMi", SqlDbType.Bit, adminMi)
-        }, cancellationToken));
+        return Ok(await _stockService.GetMovementsAsync(magazaId, urunId, kayitSayisi, cancellationToken));
     }
 
     [HttpPatch("{magazaStokId:int}/minimum")]
+    [Authorize(Policy = "CanManageStock")]
     public async Task<IActionResult> MinimumGuncelle(int magazaStokId, [FromBody] MinimumStokRequest request, CancellationToken cancellationToken)
     {
-        await _dataService.ExecuteAsync("sp_MagazaStok_MinimumGuncelle", new[]
-        {
-            SqlDataService.Param("@MagazaStokId", SqlDbType.Int, magazaStokId),
-            SqlDataService.Param("@MinimumStok", SqlDbType.Int, request.MinimumStok)
-        }, cancellationToken);
-
+        await _stockService.UpdateMinimumAsync(magazaStokId, request.MinimumStok, cancellationToken);
         return NoContent();
     }
 
     [HttpPost("hareket")]
+    [Authorize(Policy = "CanManageStock")]
     public async Task<IActionResult> HareketIsle([FromBody] StokHareketRequest request, CancellationToken cancellationToken)
     {
-        await _dataService.ExecuteAsync("sp_MagazaStok_Hareket_Isle", new[]
+        await _stockService.ProcessMovementAsync(new StockOperationRequest
         {
-            SqlDataService.Param("@MagazaId", SqlDbType.Int, request.MagazaId),
-            SqlDataService.Param("@ProductId", SqlDbType.Int, request.UrunId),
-            SqlDataService.NullableTextParam("@HareketTipi", 50, request.HareketTipi),
-            SqlDataService.Param("@Miktar", SqlDbType.Int, request.Miktar),
-            SqlDataService.Param("@KaynakSiparisId", SqlDbType.Int, null),
-            SqlDataService.Param("@KaynakSiparisKalemId", SqlDbType.Int, null),
-            SqlDataService.NullableTextParam("@Aciklama", 500, request.Aciklama),
-            SqlDataService.Param("@MinimumStok", SqlDbType.Int, request.MinimumStok)
+            MagazaId = request.MagazaId,
+            UrunId = request.UrunId,
+            HareketTipi = request.HareketTipi,
+            Miktar = request.Miktar,
+            Aciklama = request.Aciklama,
+            MinimumStok = request.MinimumStok
         }, cancellationToken);
 
         return NoContent();
