@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -196,6 +197,7 @@ namespace eMarketing.AdminPanel.Forms
                 ForeColor = AppColors.TextPrimary,
                 BorderStyle = BorderStyle.FixedSingle
             };
+            ButtonStyleHelper.ApplyInput(txtDescription);
 
             lblPrice = CreateLabel("Fiyat", 20, 204);
             txtPrice = CreateTextBox(20, 228, 120);
@@ -212,6 +214,7 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 10F),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
+            ButtonStyleHelper.ApplyDropdown(cmbCategory);
 
             chkIsActive = new CheckBox
             {
@@ -305,6 +308,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnBrowseImage.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnBrowseImage);
             btnBrowseImage.Click += BtnBrowseImage_Click;
 
             btnClearImage = new Button
@@ -321,6 +325,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnClearImage.FlatAppearance.BorderColor = AppColors.Border;
+            ButtonStyleHelper.ApplyOutline(btnClearImage);
             btnClearImage.Click += BtnClearImage_Click;
 
             rightPanel.Controls.Add(lblImageTitle);
@@ -354,6 +359,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnCancel.FlatAppearance.BorderColor = AppColors.Border;
+            ButtonStyleHelper.ApplyOutline(btnCancel);
             btnCancel.Click += (s, e) => Close();
 
             btnSave = new Button
@@ -369,6 +375,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnSave.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnSave);
             btnSave.Click += BtnSave_Click;
 
             footerPanel.Controls.Add(btnCancel);
@@ -396,7 +403,7 @@ namespace eMarketing.AdminPanel.Forms
 
         private TextBox CreateTextBox(int x, int y, int width)
         {
-            return new TextBox
+            TextBox textBox = new TextBox
             {
                 Location = new Point(x, y),
                 Width = width,
@@ -405,6 +412,8 @@ namespace eMarketing.AdminPanel.Forms
                 ForeColor = AppColors.TextPrimary,
                 BorderStyle = BorderStyle.FixedSingle
             };
+            ButtonStyleHelper.ApplyInput(textBox);
+            return textBox;
         }
 
         private async Task LoadCategoriesAsync()

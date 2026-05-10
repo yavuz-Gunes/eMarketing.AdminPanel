@@ -145,6 +145,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnNewOrder.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnNewOrder);
             btnNewOrder.Click += BtnNewOrder_Click;
 
             if (AdminModu)
@@ -242,6 +243,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnSearch.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnSearch);
 
             btnClear = new Button
             {
@@ -256,6 +258,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnClear.FlatAppearance.BorderColor = AppColors.Border;
+            ButtonStyleHelper.ApplyOutline(btnClear);
 
             lblInfo = new Label
             {
@@ -267,6 +270,7 @@ namespace eMarketing.AdminPanel.Pages
                 ForeColor = AppColors.TextSecondary,
                 BackColor = Color.Transparent
             };
+            DataGridViewStyleHelper.UpdateCountLabel(lblInfo, 0, 0);
 
             txtSearch.TextChanged += TxtSearch_TextChanged;
             txtSearch.KeyDown += TxtSearch_KeyDown;
@@ -353,6 +357,7 @@ namespace eMarketing.AdminPanel.Pages
             dgvOrders.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
             dgvOrders.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
+            DataGridViewStyleHelper.ApplyModernGrid(dgvOrders);
 
             ConfigureOrderGridColumns();
 
@@ -587,6 +592,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnUpdateStatus.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnUpdateStatus);
             btnUpdateStatus.Click += BtnUpdateStatus_Click;
 
             btnOpenDetail = new Button
@@ -603,6 +609,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnOpenDetail.FlatAppearance.BorderColor = AppColors.Border;
+            ButtonStyleHelper.ApplyOutline(btnOpenDetail);
             btnOpenDetail.Click += BtnOpenDetail_Click;
 
             lblSelectedSummary = new Label
@@ -1374,10 +1381,7 @@ namespace eMarketing.AdminPanel.Pages
             if (lblInfo == null)
                 return;
 
-            if (displayCount == totalCount)
-                lblInfo.Text = displayCount + " kayıt";
-            else
-                lblInfo.Text = displayCount + " / " + totalCount + " kayıt";
+            DataGridViewStyleHelper.UpdateCountLabel(lblInfo, displayCount, totalCount);
         }
 
         private string GetSelectedStatusValue(ComboBox comboBox)

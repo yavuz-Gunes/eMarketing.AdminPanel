@@ -85,7 +85,7 @@ namespace eMarketing.AdminPanel.Componets
             rightPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
-                Width = 760,
+                Width = 820,
                 Height = 52,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
@@ -249,6 +249,9 @@ namespace eMarketing.AdminPanel.Componets
             btnTheme.BackColor = AppColors.PrimarySoft;
             btnTheme.ForeColor = AppColors.Primary;
             btnTheme.Text = AppColors.IsDarkMode ? "☀️" : "🌙";
+
+            if (btnStore != null)
+                btnStore.FlatAppearance.BorderColor = AppColors.Border;
 
             Invalidate(true);
         }

@@ -121,6 +121,7 @@ namespace eMarketing.AdminPanel.Pages
                 Cursor = Cursors.Hand
             };
             btnRefresh.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnRefresh);
             btnRefresh.Click += async (sender, e) => await LoadReportAsync();
 
             cmbReportType = new ComboBox
@@ -192,6 +193,14 @@ namespace eMarketing.AdminPanel.Pages
                 Cursor = Cursors.Hand
             };
             button.FlatAppearance.BorderSize = 0;
+            if (color == AppColors.Primary)
+                ButtonStyleHelper.ApplyPrimary(button);
+            else if (color == AppColors.Success)
+                ButtonStyleHelper.ApplySuccess(button);
+            else if (color == AppColors.Warning)
+                ButtonStyleHelper.ApplySoft(button);
+            else
+                ButtonStyleHelper.ApplyOutline(button);
             return button;
         }
 
@@ -315,7 +324,7 @@ namespace eMarketing.AdminPanel.Pages
                 ReadOnly = true,
                 Dock = DockStyle.Fill
             };
-            DataGridTheme.Apply(grid);
+            DataGridViewStyleHelper.ApplyModernGrid(grid);
             grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             grid.RowTemplate.Height = 42;
             grid.CellFormatting += Grid_CellFormatting;

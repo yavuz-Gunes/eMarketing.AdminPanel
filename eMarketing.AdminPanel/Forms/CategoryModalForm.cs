@@ -3,6 +3,7 @@ using System.Data;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -42,7 +43,7 @@ namespace eMarketing.AdminPanel.Forms
             ShowInTaskbar = false;
             Width = 460;
             Height = 270;
-            BackColor = Color.White;
+            BackColor = AppColors.Background;
 
             lblTitle = new Label
             {
@@ -70,6 +71,7 @@ namespace eMarketing.AdminPanel.Forms
                 Width = 390,
                 Font = new Font("Segoe UI", 10F),
             };
+            ButtonStyleHelper.ApplyInput(txtCategoryName);
 
             chkIsActive = new CheckBox
             {
@@ -84,7 +86,7 @@ namespace eMarketing.AdminPanel.Forms
             {
                 Dock = DockStyle.Bottom,
                 Height = 64,
-                BackColor = Color.White
+                BackColor = AppColors.CardBackground
             };
 
             btnCancel = new Button
@@ -96,6 +98,7 @@ namespace eMarketing.AdminPanel.Forms
                 FlatStyle = FlatStyle.Flat
             };
             btnCancel.FlatAppearance.BorderColor = Color.Gainsboro;
+            ButtonStyleHelper.ApplyOutline(btnCancel);
             btnCancel.Click += (s, e) => Close();
 
             btnSave = new Button
@@ -109,6 +112,7 @@ namespace eMarketing.AdminPanel.Forms
                 ForeColor = Color.White
             };
             btnSave.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnSave);
             btnSave.Click += BtnSave_Click;
 
             footerPanel.Controls.Add(btnCancel);

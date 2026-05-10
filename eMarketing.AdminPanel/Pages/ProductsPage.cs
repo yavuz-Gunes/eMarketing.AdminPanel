@@ -127,6 +127,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnNewProduct.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnNewProduct);
             btnNewProduct.Click += BtnNewProduct_Click;
 
             headerPanel.Controls.Add(btnNewProduct);
@@ -252,6 +253,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnSearch.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnSearch);
 
             btnClear = new Button
             {
@@ -266,6 +268,7 @@ namespace eMarketing.AdminPanel.Pages
             };
 
             btnClear.FlatAppearance.BorderColor = AppColors.Border;
+            ButtonStyleHelper.ApplyOutline(btnClear);
 
             lblInfo = new Label
             {
@@ -277,6 +280,7 @@ namespace eMarketing.AdminPanel.Pages
                 ForeColor = AppColors.TextSecondary,
                 BackColor = Color.Transparent
             };
+            DataGridViewStyleHelper.UpdateCountLabel(lblInfo, 0, 0);
 
             txtSearch.KeyDown += TxtSearch_KeyDown;
             txtSearch.TextChanged += TxtSearch_TextChanged;
@@ -377,6 +381,7 @@ namespace eMarketing.AdminPanel.Pages
             dgvProducts.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
             dgvProducts.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
+            DataGridViewStyleHelper.ApplyModernGrid(dgvProducts);
 
             ConfigureGridColumns();
 
@@ -671,10 +676,7 @@ namespace eMarketing.AdminPanel.Pages
             if (lblInfo == null)
                 return;
 
-            if (chkLowStockOnly.Checked)
-                lblInfo.Text = displayCount + " kritik kayıt";
-            else
-                lblInfo.Text = displayCount + " kayıt";
+            DataGridViewStyleHelper.UpdateCountLabel(lblInfo, displayCount, totalCount);
         }
 
         private void BtnViewMode_Click(object sender, EventArgs e)

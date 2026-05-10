@@ -32,6 +32,7 @@ namespace eMarketing.AdminPanel.Forms
             BackColor = AppColors.Background;
             WindowState = FormWindowState.Maximized;
             FormBorderStyle = FormBorderStyle.Sizable;
+            MinimumSize = new System.Drawing.Size(1280, 760);
 
             Controls.Clear();
 
@@ -66,7 +67,7 @@ namespace eMarketing.AdminPanel.Forms
             sidebar = new SidebarControl
             {
                 Dock = DockStyle.Left,
-                Width = 250,
+                Width = 264,
                 Margin = Padding.Empty
             };
 

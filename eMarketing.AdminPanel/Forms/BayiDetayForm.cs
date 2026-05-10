@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -115,6 +116,7 @@ namespace eMarketing.AdminPanel.Forms
 
             Button btnClose = CreateButton("Kapat", true);
             btnClose.Width = 110;
+            ButtonStyleHelper.ApplyPrimary(btnClose);
             btnClose.Click += (sender, e) => Close();
             footer.Controls.Add(btnClose);
             footer.Resize += (sender, e) =>
@@ -436,19 +438,7 @@ namespace eMarketing.AdminPanel.Forms
                 ScrollBars = ScrollBars.Vertical
             };
 
-            grid.EnableHeadersVisualStyles = false;
-            grid.ColumnHeadersHeight = 40;
-            grid.RowTemplate.Height = 42;
-            grid.GridColor = AppColors.Border;
-            grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            grid.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke;
-            grid.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
-            grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            grid.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            grid.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
-            grid.DefaultCellStyle.SelectionBackColor = AppColors.PrimarySoft;
-            grid.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
-            grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 251, 253);
+            DataGridViewStyleHelper.ApplyModernGrid(grid);
             return grid;
         }
 

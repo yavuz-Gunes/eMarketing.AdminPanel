@@ -34,14 +34,18 @@ namespace eMarketing.AdminPanel.Componets
                 : Color.FromArgb(248, 250, 252);
             dgv.ColumnHeadersDefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            dgv.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dgv.ColumnHeadersDefaultCellStyle.Padding = new Padding(10, 0, 10, 0);
             dgv.ColumnHeadersDefaultCellStyle.SelectionBackColor = dgv.ColumnHeadersDefaultCellStyle.BackColor;
             dgv.ColumnHeadersDefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
 
             dgv.DefaultCellStyle.BackColor = AppColors.CardBackground;
             dgv.DefaultCellStyle.ForeColor = AppColors.TextPrimary;
             dgv.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
+            dgv.DefaultCellStyle.Padding = new Padding(8, 2, 8, 2);
             dgv.DefaultCellStyle.SelectionBackColor = AppColors.PrimarySoft;
             dgv.DefaultCellStyle.SelectionForeColor = AppColors.TextPrimary;
+            dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
 
             dgv.AlternatingRowsDefaultCellStyle.BackColor = AppColors.IsDarkMode
                 ? Color.FromArgb(24, 32, 44)

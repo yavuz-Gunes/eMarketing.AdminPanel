@@ -48,6 +48,8 @@ namespace eMarketing.AdminPanel.Pages
         private DataTable stokTable;
         private bool cardViewActive = true;
         private int? selectedStockId;
+        private Label lblStokEmptyState;
+        private Label lblHareketEmptyState;
 
         public BayiStokPage()
         {
@@ -81,7 +83,7 @@ namespace eMarketing.AdminPanel.Pages
             headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 0,
+                Height = 64,
                 BackColor = AppColors.Background
             };
 
@@ -102,7 +104,8 @@ namespace eMarketing.AdminPanel.Pages
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = AppColors.TextSecondary
             };
-
+            headerPanel.Controls.Add(lblSubtitle);
+            headerPanel.Controls.Add(lblTitle);
         }
 
         private void BuildStats()
@@ -131,10 +134,10 @@ namespace eMarketing.AdminPanel.Pages
             cKritik = new CategoriesCard { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 16, 0) };
             cTukendi = new CategoriesCard { Dock = DockStyle.Fill, Margin = Padding.Empty };
 
-            cToplamKart.SetData("SK", "Stok Kartı", "0");
-            cStokluUrun.SetData("SU", "Stoklu Ürün", "0");
-            cKritik.SetData("!", "Kritik", "0");
-            cTukendi.SetData("0", "Tükendi", "0");
+            cToplamKart.SetData("🗂", "Stok Kartı", "0");
+            cStokluUrun.SetData("📦", "Stoklu Ürün", "0");
+            cKritik.SetData("⚠", "Kritik", "0");
+            cTukendi.SetData("⛔", "Tükendi", "0");
 
             grid.Controls.Add(cToplamKart, 0, 0);
             grid.Controls.Add(cStokluUrun, 1, 0);
@@ -164,6 +167,7 @@ namespace eMarketing.AdminPanel.Pages
                 ForeColor = AppColors.TextPrimary
             };
             txtArama.TextChanged += TxtArama_TextChanged;
+            ButtonStyleHelper.ApplyInput(txtArama);
 
             chkStokta = CreateCheckBox("Sadece stokta", 314);
             chkKritik = CreateCheckBox("Kritik / tükendi", 452);
@@ -181,6 +185,7 @@ namespace eMarketing.AdminPanel.Pages
                 Cursor = Cursors.Hand
             };
             btnViewMode.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplySoft(btnViewMode);
             btnViewMode.Click += BtnViewMode_Click;
 
             btnTemizle = new Button
@@ -196,6 +201,7 @@ namespace eMarketing.AdminPanel.Pages
                 Cursor = Cursors.Hand
             };
             btnTemizle.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyOutline(btnTemizle);
             btnTemizle.Click += BtnTemizle_Click;
 
             lblInfo = new Label
@@ -208,6 +214,7 @@ namespace eMarketing.AdminPanel.Pages
                 ForeColor = AppColors.TextSecondary,
                 BackColor = Color.Transparent
             };
+            DataGridViewStyleHelper.UpdateCountLabel(lblInfo, 0, 0);
 
             filterPanel.Controls.Add(txtArama);
             filterPanel.Controls.Add(chkStokta);
@@ -216,11 +223,8 @@ namespace eMarketing.AdminPanel.Pages
             filterPanel.Controls.Add(btnTemizle);
             filterPanel.Controls.Add(lblInfo);
 
-            filterPanel.Resize += (sender, e) =>
-            {
-                lblInfo.Location = new Point(filterPanel.Width - lblInfo.Width - 16, 14);
-                lblInfo.Visible = lblInfo.Left > btnTemizle.Right + 20;
-            };
+            filterPanel.Resize += (sender, e) => UpdateFilterLayout();
+            UpdateFilterLayout();
         }
 
         private CheckBox CreateCheckBox(string text, int x)
@@ -285,6 +289,10 @@ namespace eMarketing.AdminPanel.Pages
             btnStokCikisi.Click += (sender, e) => StokHareketiYap("ManuelCikis");
             btnMinimumGuncelle.Click += BtnMinimumGuncelle_Click;
 
+            ButtonStyleHelper.ApplySuccess(btnStokGirisi);
+            ButtonStyleHelper.ApplyDanger(btnStokCikisi);
+            ButtonStyleHelper.ApplyPrimary(btnMinimumGuncelle);
+
             adminPanel.Controls.Add(title);
             adminPanel.Controls.Add(lblSeciliStok);
             adminPanel.Controls.Add(lblMiktar);
@@ -294,6 +302,8 @@ namespace eMarketing.AdminPanel.Pages
             adminPanel.Controls.Add(btnStokGirisi);
             adminPanel.Controls.Add(btnStokCikisi);
             adminPanel.Controls.Add(btnMinimumGuncelle);
+            adminPanel.Resize += (sender, e) => UpdateAdminPanelLayout();
+            UpdateAdminPanelLayout();
         }
 
         private Label CreateSmallLabel(string text, int x, int y)
@@ -367,8 +377,9 @@ namespace eMarketing.AdminPanel.Pages
                 ScrollBars = ScrollBars.Both
             };
 
-            DataGridTheme.Apply(dgvStoklar);
+            DataGridViewStyleHelper.ApplyModernGrid(dgvStoklar);
             dgvStoklar.CellFormatting += DgvStoklar_CellFormatting;
+            dgvStoklar.CellPainting += DgvStoklar_CellPainting;
             dgvStoklar.SelectionChanged += DgvStoklar_SelectionChanged;
 
             stockCardsPanel = new FlowLayoutPanel
@@ -463,10 +474,11 @@ namespace eMarketing.AdminPanel.Pages
                 ScrollBars = ScrollBars.Both
             };
 
-            DataGridTheme.Apply(dgvHareketler);
+            DataGridViewStyleHelper.ApplyModernGrid(dgvHareketler);
             dgvHareketler.ColumnHeadersHeight = 36;
             dgvHareketler.RowTemplate.Height = 38;
             dgvHareketler.CellFormatting += DgvHareketler_CellFormatting;
+            dgvHareketler.CellPainting += DgvHareketler_CellPainting;
 
             ConfigureHareketColumns();
 
@@ -573,7 +585,8 @@ namespace eMarketing.AdminPanel.Pages
                 dgvStoklar.DataSource = stokTable;
                 RenderStockCards(stokTable);
                 UpdateAdminSelection();
-                lblInfo.Text = stokTable.Rows.Count + " kayıt";
+                DataGridViewStyleHelper.UpdateCountLabel(lblInfo, stokTable.Rows.Count, stokTable.Rows.Count);
+                ToggleGridEmptyState(dgvStoklar, ref lblStokEmptyState, "Stok listesinde gösterilecek kayıt bulunamadı.");
                 await OzetleriYukleAsync();
             }
             catch (Exception ex)
@@ -588,17 +601,17 @@ namespace eMarketing.AdminPanel.Pages
 
             if (row == null)
             {
-                cToplamKart.SetData("SK", "Stok Kartı", "0");
-                cStokluUrun.SetData("SU", "Stoklu Ürün", "0");
-                cKritik.SetData("!", "Kritik", "0");
-                cTukendi.SetData("0", "Tükendi", "0");
+                cToplamKart.SetData("🗂", "Stok Kartı", "0");
+                cStokluUrun.SetData("📦", "Stoklu Ürün", "0");
+                cKritik.SetData("⚠", "Kritik", "0");
+                cTukendi.SetData("⛔", "Tükendi", "0");
                 return;
             }
 
-            cToplamKart.SetData("SK", "Stok Kartı", GetInt(row, "ToplamStokKarti").ToString());
-            cStokluUrun.SetData("SU", "Stoklu Ürün", GetInt(row, "StokluUrunSayisi").ToString());
-            cKritik.SetData("!", "Kritik", GetInt(row, "KritikStokKarti").ToString());
-            cTukendi.SetData("0", "Tükendi", GetInt(row, "TukenmisStokKarti").ToString());
+            cToplamKart.SetData("🗂", "Stok Kartı", GetInt(row, "ToplamStokKarti").ToString());
+            cStokluUrun.SetData("📦", "Stoklu Ürün", GetInt(row, "StokluUrunSayisi").ToString());
+            cKritik.SetData("⚠", "Kritik", GetInt(row, "KritikStokKarti").ToString());
+            cTukendi.SetData("⛔", "Tükendi", GetInt(row, "TukenmisStokKarti").ToString());
         }
 
         private void PrepareStokTable(DataTable table)
@@ -1080,6 +1093,7 @@ namespace eMarketing.AdminPanel.Pages
                 DataTable hareketler = await GetStokHareketleriAsync(magazaId, urunId);
 
                 dgvHareketler.DataSource = hareketler;
+                ToggleGridEmptyState(dgvHareketler, ref lblHareketEmptyState, "Seçili stok için hareket kaydı bulunamadı.");
 
                 if (hareketler.Rows.Count == 0)
                     lblHareketInfo.Text = bayi + " / " + urun + " için henüz stok hareketi yok.";
@@ -1096,6 +1110,8 @@ namespace eMarketing.AdminPanel.Pages
         {
             if (dgvHareketler != null)
                 dgvHareketler.DataSource = null;
+
+            ToggleGridEmptyState(dgvHareketler, ref lblHareketEmptyState, message);
 
             if (lblHareketInfo != null)
                 lblHareketInfo.Text = message;
@@ -1325,6 +1341,128 @@ namespace eMarketing.AdminPanel.Pages
                 else
                     e.CellStyle.ForeColor = AppColors.TextSecondary;
             }
+        }
+
+        private void DgvStoklar_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            if (dgvStoklar.Columns[e.ColumnIndex].Name != "StokDurumu")
+                return;
+
+            e.PaintBackground(e.CellBounds, true);
+            e.Handled = true;
+
+            string text = NormalizeStockStatus(Convert.ToString(e.FormattedValue));
+            BadgeStyleHelper.GetStatusColors(text, out Color backColor, out Color foreColor);
+
+            Rectangle badgeRect = new Rectangle(
+                e.CellBounds.X + (e.CellBounds.Width - 84) / 2,
+                e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
+                84,
+                24);
+
+            using (SolidBrush brush = new SolidBrush(backColor))
+            using (SolidBrush textBrush = new SolidBrush(foreColor))
+            using (StringFormat sf = new StringFormat())
+            using (Font font = new Font("Segoe UI", 8.5F, FontStyle.Bold))
+            {
+                sf.Alignment = StringAlignment.Center;
+                sf.LineAlignment = StringAlignment.Center;
+                e.Graphics.FillRectangle(brush, badgeRect);
+                e.Graphics.DrawString(text, font, textBrush, badgeRect, sf);
+            }
+        }
+
+        private void DgvHareketler_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            if (dgvHareketler.Columns[e.ColumnIndex].Name != "HareketYonu")
+                return;
+
+            e.PaintBackground(e.CellBounds, true);
+            e.Handled = true;
+
+            string direction = Convert.ToString(e.FormattedValue);
+            string text = direction == "Çıkış" ? "- Çıkış" : "+ Giriş";
+            Color backColor = direction == "Çıkış" ? AppColors.DangerSoft : AppColors.SuccessSoft;
+            Color foreColor = direction == "Çıkış" ? AppColors.Danger : AppColors.Success;
+
+            Rectangle badgeRect = new Rectangle(
+                e.CellBounds.X + (e.CellBounds.Width - 84) / 2,
+                e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
+                84,
+                24);
+
+            using (SolidBrush brush = new SolidBrush(backColor))
+            using (SolidBrush textBrush = new SolidBrush(foreColor))
+            using (StringFormat sf = new StringFormat())
+            using (Font font = new Font("Segoe UI", 8.4F, FontStyle.Bold))
+            {
+                sf.Alignment = StringAlignment.Center;
+                sf.LineAlignment = StringAlignment.Center;
+                e.Graphics.FillRectangle(brush, badgeRect);
+                e.Graphics.DrawString(text, font, textBrush, badgeRect, sf);
+            }
+        }
+
+        private void UpdateFilterLayout()
+        {
+            if (filterPanel == null)
+                return;
+
+            lblInfo.Location = new Point(filterPanel.Width - lblInfo.Width - 16, 14);
+            lblInfo.Visible = lblInfo.Left > btnTemizle.Right + 20;
+        }
+
+        private void UpdateAdminPanelLayout()
+        {
+            if (adminPanel == null)
+                return;
+
+            int right = adminPanel.Width - 18;
+            btnMinimumGuncelle.Location = new Point(right - btnMinimumGuncelle.Width, 34);
+            right = btnMinimumGuncelle.Left - 10;
+            btnStokCikisi.Location = new Point(right - btnStokCikisi.Width, 34);
+            right = btnStokCikisi.Left - 10;
+            btnStokGirisi.Location = new Point(right - btnStokGirisi.Width, 34);
+
+            txtMinimumStok.Location = new Point(btnStokGirisi.Left - 190, 48);
+            txtHareketMiktar.Location = new Point(btnStokGirisi.Left - 280, 48);
+        }
+
+        private void ToggleGridEmptyState(DataGridView grid, ref Label label, string message)
+        {
+            if (grid == null)
+                return;
+
+            bool hasRows = grid.Rows.Count > 0;
+            if (hasRows)
+            {
+                if (label != null)
+                    label.Visible = false;
+                return;
+            }
+
+            if (label == null)
+            {
+                label = new Label
+                {
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                    ForeColor = AppColors.TextSecondary,
+                    BackColor = AppColors.CardBackground
+                };
+                grid.Controls.Add(label);
+                label.BringToFront();
+            }
+
+            label.Text = message;
+            label.Visible = true;
         }
 
         private int GetInt(DataRow row, string columnName)

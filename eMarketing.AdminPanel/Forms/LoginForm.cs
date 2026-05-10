@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -131,6 +132,7 @@ namespace eMarketing.AdminPanel.Forms
                 Cursor = Cursors.Hand
             };
             btnGiris.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnGiris);
             btnGiris.Click += BtnGiris_Click;
 
             formPanel.Controls.Add(btnGiris);
@@ -166,7 +168,7 @@ namespace eMarketing.AdminPanel.Forms
 
         private TextBox CreateTextBox(int left, int top)
         {
-            return new TextBox
+            TextBox textBox = new TextBox
             {
                 Left = left,
                 Top = top,
@@ -177,6 +179,8 @@ namespace eMarketing.AdminPanel.Forms
                 BackColor = AppColors.InputBackground,
                 ForeColor = AppColors.TextPrimary
             };
+            ButtonStyleHelper.ApplyInput(textBox);
+            return textBox;
         }
 
         private async void BtnGiris_Click(object sender, EventArgs e)

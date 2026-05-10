@@ -17,6 +17,11 @@ namespace eMarketing.AdminPanel.Componets
             label.Text = visibleCount == totalCount
                 ? visibleCount + " kayıt"
                 : visibleCount + " / " + totalCount + " kayıt";
+            label.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
+            label.ForeColor = Core.AppColors.TextSecondary;
+            label.BackColor = Core.AppColors.PrimarySoft;
+            label.Padding = new Padding(10, 0, 10, 0);
+            label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
         }
     }
 }

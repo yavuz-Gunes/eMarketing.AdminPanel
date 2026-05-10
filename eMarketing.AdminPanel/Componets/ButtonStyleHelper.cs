@@ -22,6 +22,37 @@ namespace eMarketing.AdminPanel.Componets
             button.FlatAppearance.BorderColor = AppColors.Border;
         }
 
+        public static void ApplySuccess(Button button)
+        {
+            Apply(button, AppColors.Success, Color.White, 0);
+        }
+
+        public static void ApplyDanger(Button button)
+        {
+            Apply(button, AppColors.Danger, Color.White, 0);
+        }
+
+        public static void ApplyInput(TextBox textBox)
+        {
+            if (textBox == null)
+                return;
+
+            textBox.BackColor = AppColors.InputBackground;
+            textBox.ForeColor = AppColors.TextPrimary;
+            textBox.BorderStyle = BorderStyle.FixedSingle;
+            textBox.Font = new Font("Segoe UI", 10F);
+        }
+
+        public static void ApplyDropdown(ComboBox comboBox)
+        {
+            if (comboBox == null)
+                return;
+
+            comboBox.BackColor = AppColors.InputBackground;
+            comboBox.ForeColor = AppColors.TextPrimary;
+            comboBox.Font = new Font("Segoe UI", 10F);
+        }
+
         private static void Apply(Button button, Color backColor, Color foreColor, int borderSize)
         {
             if (button == null)

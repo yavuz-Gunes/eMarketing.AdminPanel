@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -28,9 +29,10 @@ namespace eMarketing.AdminPanel.Forms
             Text = "Mağaza Seçimi";
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
+            MaximizeBox = true;
             MinimizeBox = false;
-            ClientSize = new Size(860, 620);
+            MinimumSize = new Size(980, 700);
+            ClientSize = new Size(1180, 760);
             BackColor = AppColors.Background;
 
             BuildUi();
@@ -77,6 +79,7 @@ namespace eMarketing.AdminPanel.Forms
                 BorderStyle = BorderStyle.FixedSingle
             };
             txtArama.TextChanged += TxtArama_TextChanged;
+            ButtonStyleHelper.ApplyInput(txtArama);
 
             header.Controls.Add(txtArama);
             header.Controls.Add(lblAciklama);
@@ -91,6 +94,7 @@ namespace eMarketing.AdminPanel.Forms
                 Padding = new Padding(24, 22, 24, 12),
                 BackColor = AppColors.Background
             };
+            kartListesi.SizeChanged += (sender, e) => RefreshCardWidths();
 
             lblBosDurum = new Label
             {
@@ -181,6 +185,7 @@ namespace eMarketing.AdminPanel.Forms
                 {
                     kartListesi.Controls.Add(CreateMagazaCard(row));
                 }
+                RefreshCardWidths();
             }
             catch (Exception ex)
             {
@@ -196,7 +201,7 @@ namespace eMarketing.AdminPanel.Forms
         {
             Panel card = new Panel
             {
-                Width = 250,
+                Width = 310,
                 Height = 158,
                 Margin = new Padding(0, 0, 16, 16),
                 Padding = new Padding(16),
@@ -333,10 +338,10 @@ namespace eMarketing.AdminPanel.Forms
 
         private void StyleButton(Button button, bool primary)
         {
-            button.FlatAppearance.BorderSize = 0;
-            button.BackColor = primary ? AppColors.Primary : AppColors.PrimarySoft;
-            button.ForeColor = primary ? Color.White : AppColors.Primary;
-            button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            if (primary)
+                ButtonStyleHelper.ApplyPrimary(button);
+            else
+                ButtonStyleHelper.ApplyOutline(button);
         }
 
         private void Card_Paint(object sender, PaintEventArgs e)
@@ -348,6 +353,22 @@ namespace eMarketing.AdminPanel.Forms
             using (Pen pen = new Pen(AppColors.Border))
             {
                 e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+            }
+        }
+
+        private void RefreshCardWidths()
+        {
+            if (kartListesi == null || kartListesi.Controls.Count == 0)
+                return;
+
+            int available = kartListesi.ClientSize.Width - 24;
+            int columnCount = Math.Max(1, available / 330);
+            int cardWidth = Math.Max(280, (available / columnCount) - 16);
+
+            foreach (Control control in kartListesi.Controls)
+            {
+                if (control is Panel)
+                    control.Width = cardWidth;
             }
         }
     }

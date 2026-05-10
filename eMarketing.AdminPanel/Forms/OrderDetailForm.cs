@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 
 namespace eMarketing.AdminPanel.Forms
@@ -259,6 +260,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnClose.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnClose);
             btnClose.Click += (s, e) => Close();
 
             footer.Resize += (s, e) =>

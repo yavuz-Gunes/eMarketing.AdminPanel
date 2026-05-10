@@ -14,7 +14,7 @@ namespace eMarketing.AdminPanel.Componets
 
         private readonly Color sidebarBack = Color.FromArgb(20, 27, 38);
         private readonly Color sidebarSecond = Color.FromArgb(28, 36, 50);
-        private readonly Color activeBack = Color.FromArgb(59, 130, 246);
+        private readonly Color activeBack = Color.FromArgb(37, 99, 235);
         private readonly Color hoverBack = Color.FromArgb(36, 47, 66);
         private readonly Color textColor = Color.FromArgb(230, 236, 245);
         private readonly Color mutedTextColor = Color.FromArgb(140, 150, 165);
@@ -28,7 +28,7 @@ namespace eMarketing.AdminPanel.Componets
 
         public SidebarControl()
         {
-            Width = 240;
+            Width = 264;
             Dock = DockStyle.Left;
             BackColor = sidebarBack;
 
@@ -182,7 +182,7 @@ namespace eMarketing.AdminPanel.Componets
             {
                 Name = "btn" + key,
                 Text = FormatMenuText(icon, text),
-                Width = 216,
+                Width = 236,
                 Height = 44,
                 Margin = new Padding(0, 0, 0, 8),
                 FlatStyle = FlatStyle.Flat,

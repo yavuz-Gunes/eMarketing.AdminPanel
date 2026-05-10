@@ -18,20 +18,20 @@ namespace eMarketing.AdminPanel.Core
 
         // Ana renk
         public static Color Primary =>
-            IsDarkMode ? Color.FromArgb(96, 165, 250) : Color.FromArgb(59, 130, 246);
+            IsDarkMode ? Color.FromArgb(96, 165, 250) : Color.FromArgb(37, 99, 235);
 
         public static Color PrimaryDark =>
-            IsDarkMode ? Color.FromArgb(59, 130, 246) : Color.FromArgb(37, 99, 235);
+            IsDarkMode ? Color.FromArgb(37, 99, 235) : Color.FromArgb(30, 64, 175);
 
         public static Color PrimaryLight =>
-            IsDarkMode ? Color.FromArgb(30, 64, 175) : Color.FromArgb(219, 234, 254);
+            IsDarkMode ? Color.FromArgb(59, 130, 246) : Color.FromArgb(191, 219, 254);
 
         public static Color PrimarySoft =>
-            IsDarkMode ? Color.FromArgb(30, 41, 59) : Color.FromArgb(239, 246, 255);
+            IsDarkMode ? Color.FromArgb(30, 41, 59) : Color.FromArgb(235, 245, 255);
 
         // Arka planlar
         public static Color Background =>
-            IsDarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(244, 247, 251);
+            IsDarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(242, 246, 250);
 
         public static Color Surface =>
             IsDarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
@@ -74,10 +74,10 @@ namespace eMarketing.AdminPanel.Core
             IsDarkMode ? Color.FromArgb(20, 83, 45) : Color.FromArgb(220, 252, 231);
 
         public static Color Warning =>
-            IsDarkMode ? Color.FromArgb(251, 191, 36) : Color.FromArgb(245, 158, 11);
+            IsDarkMode ? Color.FromArgb(251, 191, 36) : Color.FromArgb(234, 88, 12);
 
         public static Color WarningSoft =>
-            IsDarkMode ? Color.FromArgb(120, 53, 15) : Color.FromArgb(255, 247, 237);
+            IsDarkMode ? Color.FromArgb(120, 53, 15) : Color.FromArgb(255, 237, 213);
 
         public static Color Danger =>
             IsDarkMode ? Color.FromArgb(248, 113, 113) : Color.FromArgb(239, 68, 68);
@@ -99,7 +99,7 @@ namespace eMarketing.AdminPanel.Core
             Primary;
 
         public static Color MenuActiveBackground =>
-            IsDarkMode ? Color.FromArgb(30, 41, 59) : Color.FromArgb(224, 231, 255);
+            IsDarkMode ? Color.FromArgb(30, 41, 59) : Color.FromArgb(219, 234, 254);
 
         public static Color MenuHoverBackground =>
             IsDarkMode ? Color.FromArgb(30, 41, 59) : Color.FromArgb(248, 250, 252);

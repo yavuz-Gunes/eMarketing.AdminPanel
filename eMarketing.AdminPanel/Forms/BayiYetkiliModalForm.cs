@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -346,7 +347,7 @@ namespace eMarketing.AdminPanel.Forms
 
         private TextBox CreateTextBox(int x, int y, int width)
         {
-            return new TextBox
+            TextBox textBox = new TextBox
             {
                 Location = new Point(x, y),
                 Width = width,
@@ -355,11 +356,13 @@ namespace eMarketing.AdminPanel.Forms
                 BackColor = AppColors.InputBackground,
                 ForeColor = AppColors.TextPrimary
             };
+            ButtonStyleHelper.ApplyInput(textBox);
+            return textBox;
         }
 
         private ComboBox CreateComboBox(int x, int y, int width)
         {
-            return new ComboBox
+            ComboBox comboBox = new ComboBox
             {
                 Location = new Point(x, y),
                 Width = width,
@@ -368,6 +371,8 @@ namespace eMarketing.AdminPanel.Forms
                 BackColor = AppColors.InputBackground,
                 ForeColor = AppColors.TextPrimary
             };
+            ButtonStyleHelper.ApplyDropdown(comboBox);
+            return comboBox;
         }
 
         private Button CreateButton(string text, bool primary)
@@ -383,9 +388,10 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-
-            button.FlatAppearance.BorderColor = AppColors.Border;
-            button.FlatAppearance.BorderSize = primary ? 0 : 1;
+            if (primary)
+                ButtonStyleHelper.ApplyPrimary(button);
+            else
+                ButtonStyleHelper.ApplyOutline(button);
             return button;
         }
 

@@ -107,17 +107,17 @@ namespace eMarketing.AdminPanel.Pages
             cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
             cardsGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 33.34F));
 
-            cTotalRevenue = CreateCard("₺ Toplam Ciro", "0,00 TL", new Padding(0, 0, 18, 18));
+            cTotalRevenue = CreateCard("💰 Toplam Ciro", "0,00 TL", new Padding(0, 0, 18, 18));
             cTotalOrders = CreateCard("🧾 Toplam Sipariş", "0", new Padding(0, 0, 18, 18));
-            cActiveStores = CreateCard("⌂ Aktif Mağaza", "0", new Padding(0, 0, 0, 18));
+            cActiveStores = CreateCard("🏪 Aktif Mağaza", "0", new Padding(0, 0, 0, 18));
 
-            cTotalCustomers = CreateCard("◇ Yetkili", "0", new Padding(0, 0, 18, 18));
-            cPendingPayments = CreateCard("◷ Bekleyen Ödeme", "0", new Padding(0, 0, 18, 18));
+            cTotalCustomers = CreateCard("👤 Yetkili", "0", new Padding(0, 0, 18, 18));
+            cPendingPayments = CreateCard("🕒 Bekleyen Ödeme", "0", new Padding(0, 0, 18, 18));
             cLowStock = CreateCard("⚠ Kritik Stok", "0", new Padding(0, 0, 0, 18));
 
-            cPreparingOrders = CreateCard("◔ Hazırlanıyor", "0", new Padding(0, 0, 18, 0));
-            cShippedOrders = CreateCard("⇢ Kargoda", "0", new Padding(0, 0, 18, 0));
-            cDeliveredOrders = CreateCard("✓ Teslim Edildi", "0", Padding.Empty);
+            cPreparingOrders = CreateCard("📦 Hazırlanıyor", "0", new Padding(0, 0, 18, 0));
+            cShippedOrders = CreateCard("🚚 Kargoda", "0", new Padding(0, 0, 18, 0));
+            cDeliveredOrders = CreateCard("✅ Teslim Edildi", "0", Padding.Empty);
 
             EnableCardNavigation(cTotalRevenue, "Reports");
             EnableCardNavigation(cTotalOrders, "Orders");
@@ -306,17 +306,17 @@ namespace eMarketing.AdminPanel.Pages
             {
                 DashboardSummaryView summary = await GetSummaryAsync();
 
-                cTotalRevenue.SetData("₺ Toplam Ciro", FormatMoney(summary.TotalRevenue), GetScopeText("seçili mağaza cirosu"));
+                cTotalRevenue.SetData("💰 Toplam Ciro", FormatMoney(summary.TotalRevenue), GetScopeText("seçili mağaza cirosu"));
                 cTotalOrders.SetData("🧾 Toplam Sipariş", summary.TotalOrders.ToString(), GetScopeText("sipariş adedi"));
-                cActiveStores.SetData("⌂ Aktif Mağaza", summary.ActiveStores.ToString(), IsTumMagazalar() ? "aktif mağaza sayısı" : "seçili mağaza");
+                cActiveStores.SetData("🏪 Aktif Mağaza", summary.ActiveStores.ToString(), IsTumMagazalar() ? "aktif mağaza sayısı" : "seçili mağaza");
 
-                cTotalCustomers.SetData("◇ Yetkili", summary.TotalCustomers.ToString(), GetScopeText("sipariş veren yetkili"));
-                cPendingPayments.SetData("◷ Bekleyen Ödeme", summary.PendingPaymentOrders.ToString(), "ödeme bekleyen siparişler");
+                cTotalCustomers.SetData("👤 Yetkili", summary.TotalCustomers.ToString(), GetScopeText("sipariş veren yetkili"));
+                cPendingPayments.SetData("🕒 Bekleyen Ödeme", summary.PendingPaymentOrders.ToString(), "ödeme bekleyen siparişler");
                 cLowStock.SetData("⚠ Kritik Stok", summary.LowStockProducts.ToString(), "stok seviyesi düşük ürün");
 
-                cPreparingOrders.SetData("◔ Hazırlanıyor", summary.PreparingOrders.ToString(), "operasyonda bekleyen sipariş");
-                cShippedOrders.SetData("⇢ Kargoda", summary.ShippedOrders.ToString(), "sevkiyatta olan sipariş");
-                cDeliveredOrders.SetData("✓ Teslim Edildi", summary.DeliveredOrders.ToString(), "tamamlanan sipariş");
+                cPreparingOrders.SetData("📦 Hazırlanıyor", summary.PreparingOrders.ToString(), "operasyonda bekleyen sipariş");
+                cShippedOrders.SetData("🚚 Kargoda", summary.ShippedOrders.ToString(), "sevkiyatta olan sipariş");
+                cDeliveredOrders.SetData("✅ Teslim Edildi", summary.DeliveredOrders.ToString(), "tamamlanan sipariş");
             }
             catch (Exception ex)
             {

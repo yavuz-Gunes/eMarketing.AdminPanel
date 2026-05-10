@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
 
@@ -100,6 +101,7 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 10F)
             };
             cmbMagaza.SelectedIndexChanged += CmbMagaza_SelectedIndexChanged;
+            ButtonStyleHelper.ApplyDropdown(cmbMagaza);
 
             lblSatisKanali = new Label
             {
@@ -119,6 +121,7 @@ namespace eMarketing.AdminPanel.Forms
             };
             cmbSatisKanali.Items.Add("Bayi Satışı");
             cmbSatisKanali.SelectedIndex = 0;
+            ButtonStyleHelper.ApplyDropdown(cmbSatisKanali);
 
             lblCustomerName = new Label
             {
@@ -155,6 +158,7 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 10F)
             };
             cmbYetkili.SelectedIndexChanged += CmbYetkili_SelectedIndexChanged;
+            ButtonStyleHelper.ApplyDropdown(cmbYetkili);
 
             lblCustomerEmail = new Label
             {
@@ -211,6 +215,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             cmbProduct.SelectedIndexChanged += CmbProduct_SelectedIndexChanged;
+            ButtonStyleHelper.ApplyDropdown(cmbProduct);
 
             lblQuantity = new Label
             {
@@ -249,6 +254,11 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 10F),
                 ReadOnly = true
             };
+            ButtonStyleHelper.ApplyInput(txtCustomerName);
+            ButtonStyleHelper.ApplyInput(txtCustomerEmail);
+            ButtonStyleHelper.ApplyInput(txtCustomerPhone);
+            ButtonStyleHelper.ApplyInput(txtQuantity);
+            ButtonStyleHelper.ApplyInput(txtTotalPrice);
 
             footerPanel = new Panel
             {
@@ -267,6 +277,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnCancel.FlatAppearance.BorderColor = Color.Gainsboro;
+            ButtonStyleHelper.ApplyOutline(btnCancel);
             btnCancel.Click += (s, e) => Close();
 
             btnSave = new Button
@@ -281,6 +292,7 @@ namespace eMarketing.AdminPanel.Forms
             };
 
             btnSave.FlatAppearance.BorderSize = 0;
+            ButtonStyleHelper.ApplyPrimary(btnSave);
             btnSave.Click += BtnSave_Click;
 
             footerPanel.Controls.Add(btnCancel);

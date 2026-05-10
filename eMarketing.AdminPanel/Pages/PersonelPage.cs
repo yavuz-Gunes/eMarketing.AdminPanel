@@ -33,6 +33,7 @@ namespace eMarketing.AdminPanel.Pages
         private Button btnYeni;
         private Button btnKaydet;
         private Label lblSeciliPersonel;
+        private Label lblAktifMagazaBaglami;
         private Label lblYetkiliMagazaBaslik;
         private Label lblAtanabilirMagazaBaslik;
 
@@ -122,6 +123,18 @@ namespace eMarketing.AdminPanel.Pages
             cmbGorunum.Enabled = YonetimModu;
             cmbGorunum.SelectedIndexChanged += async (sender, e) => await PersonelleriYukleAsync(false);
 
+            lblAktifMagazaBaglami = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 30,
+                Text = "Aktif mağaza: " + AppSession.MagazaGorunumAdi,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = AppColors.Primary,
+                BackColor = AppColors.PrimarySoft,
+                Padding = new Padding(10, 0, 10, 0),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
             Label lblArama = CreateFieldLabel("Personel Ara");
             lblArama.Dock = DockStyle.Top;
 
@@ -144,6 +157,7 @@ namespace eMarketing.AdminPanel.Pages
             personelPanel.Controls.Add(personelKartListesi);
             personelPanel.Controls.Add(cmbGorunum);
             personelPanel.Controls.Add(txtArama);
+            personelPanel.Controls.Add(lblAktifMagazaBaglami);
             personelPanel.Controls.Add(lblArama);
             personelPanel.Controls.Add(subtitle);
             personelPanel.Controls.Add(title);
@@ -964,7 +978,10 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = primary ? AppColors.Primary : AppColors.PrimarySoft,
                 ForeColor = primary ? Color.White : AppColors.Primary
             };
-            button.FlatAppearance.BorderSize = 0;
+            if (primary)
+                ButtonStyleHelper.ApplyPrimary(button);
+            else
+                ButtonStyleHelper.ApplySoft(button);
             return button;
         }
 
