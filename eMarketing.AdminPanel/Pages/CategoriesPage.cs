@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Data;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
 using eMarketing.AdminPanel.Forms;
 using eMarketing.AdminPanel.Services;
 
@@ -12,7 +12,6 @@ namespace eMarketing.AdminPanel.Pages
 {
     public class CategoriesPage : UserControl
     {
-        private readonly CategoryRepository _repo = new CategoryRepository();
         private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private Panel headerPanel;
@@ -53,9 +52,9 @@ namespace eMarketing.AdminPanel.Pages
             Load += CategoriesPage_Load;
         }
 
-        private void CategoriesPage_Load(object sender, EventArgs e)
+        private async void CategoriesPage_Load(object sender, EventArgs e)
         {
-            LoadCategories();
+            await LoadCategoriesAsync();
         }
 
         private void BuildLayout()
@@ -334,27 +333,27 @@ namespace eMarketing.AdminPanel.Pages
             });
         }
 
-        private void LoadCategories()
+        private async Task LoadCategoriesAsync()
         {
             try
             {
-                DataTable table = GetCategories(txtSearch.Text.Trim(), GetSelectedStatus());
+                DataTable table = await GetCategoriesAsync(txtSearch.Text.Trim(), GetSelectedStatus());
                 dgvCategories.DataSource = table;
 
-                UpdateStats(table);
+                await UpdateStatsAsync(table);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Kategoriler yüklenirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void UpdateStats(DataTable currentTable)
+        private async Task UpdateStatsAsync(DataTable currentTable)
         {
             try
             {
-                DataTable allTable = GetCategories("", -1);
+                DataTable allTable = await GetCategoriesAsync("", -1);
 
                 int totalCount = allTable.Rows.Count;
                 int activeCount = 0;
@@ -399,17 +398,9 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private DataTable GetCategories(string search, int status)
+        private Task<DataTable> GetCategoriesAsync(string search, int status)
         {
-            try
-            {
-                return _apiClient.GetCategories(search, status);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Kategori listeleme", ex);
-                return _repo.GetCategories(search, status);
-            }
+            return _apiClient.GetCategoriesAsync(search, status);
         }
 
         private void DgvCategories_CellMouseEnter(object sender, DataGridViewCellEventArgs e)
@@ -563,7 +554,7 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void DgvCategories_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private async void DgvCategories_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
                 return;
@@ -595,7 +586,7 @@ namespace eMarketing.AdminPanel.Pages
                     {
                         if (frm.ShowDialog() == DialogResult.OK)
                         {
-                            LoadCategories();
+                            await LoadCategoriesAsync();
                         }
                     }
                 }
@@ -609,8 +600,8 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        SetCategoryActiveStatus(categoryId, true);
-                        LoadCategories();
+                        await SetCategoryActiveStatusAsync(categoryId, true);
+                        await LoadCategoriesAsync();
                     }
                 }
             }
@@ -626,8 +617,8 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        SetCategoryActiveStatus(categoryId, false);
-                        LoadCategories();
+                        await SetCategoryActiveStatusAsync(categoryId, false);
+                        await LoadCategoriesAsync();
                     }
                 }
                 else
@@ -640,71 +631,48 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        if (DeleteCategory(categoryId, out string message))
+                        if (await DeleteCategoryAsync(categoryId))
                         {
-                            LoadCategories();
-                        }
-                        else
-                        {
-                            MessageBox.Show(message,
-                                "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            await LoadCategoriesAsync();
                         }
                     }
                 }
             }
         }
 
-        private void BtnNewCategory_Click(object sender, EventArgs e)
+        private async void BtnNewCategory_Click(object sender, EventArgs e)
         {
             using (var frm = new CategoryModalForm())
             {
                 if (frm.ShowDialog() == DialogResult.OK)
                 {
-                    LoadCategories();
+                    await LoadCategoriesAsync();
                 }
             }
         }
 
-        private void SetCategoryActiveStatus(int categoryId, bool isActive)
+        private Task SetCategoryActiveStatusAsync(int categoryId, bool isActive)
         {
-            try
-            {
-                _apiClient.SetCategoryActiveStatus(categoryId, isActive);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Kategori durum güncelleme", ex);
-                _repo.SetCategoryActiveStatus(categoryId, isActive);
-            }
+            return _apiClient.SetCategoryActiveStatusAsync(categoryId, isActive);
         }
 
-        private bool DeleteCategory(int categoryId, out string message)
+        private async Task<bool> DeleteCategoryAsync(int categoryId)
         {
-            message = "";
-
-            try
-            {
-                _apiClient.DeleteCategory(categoryId);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Kategori silme", ex);
-                return _repo.DeleteCategory(categoryId, out message);
-            }
+            await _apiClient.DeleteCategoryAsync(categoryId);
+            return true;
         }
 
-        private void BtnSearch_Click(object sender, EventArgs e)
+        private async void BtnSearch_Click(object sender, EventArgs e)
         {
-            LoadCategories();
+            await LoadCategoriesAsync();
         }
 
-        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
+        private async void TxtSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
                 searchTimer.Stop();
-                LoadCategories();
+                await LoadCategoriesAsync();
                 e.SuppressKeyPress = true;
             }
         }
@@ -715,15 +683,15 @@ namespace eMarketing.AdminPanel.Pages
             searchTimer.Start();
         }
 
-        private void SearchTimer_Tick(object sender, EventArgs e)
+        private async void SearchTimer_Tick(object sender, EventArgs e)
         {
             searchTimer.Stop();
-            LoadCategories();
+            await LoadCategoriesAsync();
         }
 
-        private void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadCategories();
+            await LoadCategoriesAsync();
         }
     }
 }

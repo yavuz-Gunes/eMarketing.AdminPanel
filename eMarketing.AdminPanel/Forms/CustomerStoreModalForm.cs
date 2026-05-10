@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Data;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public class CustomerStoreModalForm : Form
     {
-        private readonly CustomerRepository _repo = new CustomerRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private readonly int _customerId;
         private readonly int _customerStoreId;
@@ -56,10 +57,10 @@ namespace eMarketing.AdminPanel.Forms
             Load += CustomerStoreModalForm_Load;
         }
 
-        private void CustomerStoreModalForm_Load(object sender, EventArgs e)
+        private async void CustomerStoreModalForm_Load(object sender, EventArgs e)
         {
             if (_customerStoreId > 0)
-                LoadCustomerStore();
+                await LoadCustomerStoreAsync();
         }
 
         private void BuildLayout()
@@ -271,11 +272,11 @@ namespace eMarketing.AdminPanel.Forms
             };
         }
 
-        private void LoadCustomerStore()
+        private async Task LoadCustomerStoreAsync()
         {
             try
             {
-                DataRow row = _repo.GetCustomerStoreById(_customerStoreId);
+                DataRow row = await GetCustomerStoreByIdAsync(_customerStoreId);
 
                 if (row == null)
                 {
@@ -313,7 +314,7 @@ namespace eMarketing.AdminPanel.Forms
             return row[columnName]?.ToString() ?? "";
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private async void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
@@ -329,27 +330,11 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (_customerStoreId > 0)
                 {
-                    _repo.UpdateCustomerStore(
-                        _customerStoreId,
-                        storeName,
-                        city,
-                        district,
-                        address,
-                        phone,
-                        responsiblePerson,
-                        chkIsActive.Checked);
+                    await UpdateCustomerStoreAsync(storeName, city, district, address, phone, responsiblePerson);
                 }
                 else
                 {
-                    _repo.InsertCustomerStore(
-                        _customerId,
-                        storeName,
-                        city,
-                        district,
-                        address,
-                        phone,
-                        responsiblePerson,
-                        chkIsActive.Checked);
+                    await InsertCustomerStoreAsync(storeName, city, district, address, phone, responsiblePerson);
                 }
 
                 IsSaved = true;
@@ -426,6 +411,21 @@ namespace eMarketing.AdminPanel.Forms
             }
 
             return true;
+        }
+
+        private Task<DataRow> GetCustomerStoreByIdAsync(int customerStoreId)
+        {
+            return _apiClient.GetBayiMagazaByIdAsync(customerStoreId);
+        }
+
+        private Task InsertCustomerStoreAsync(string storeName, string city, string district, string address, string phone, string responsiblePerson)
+        {
+            return _apiClient.InsertBayiMagazaAsync(_customerId, storeName, city, district, address, phone, responsiblePerson, chkIsActive.Checked);
+        }
+
+        private Task UpdateCustomerStoreAsync(string storeName, string city, string district, string address, string phone, string responsiblePerson)
+        {
+            return _apiClient.UpdateBayiMagazaAsync(_customerStoreId, storeName, city, district, address, phone, responsiblePerson, chkIsActive.Checked);
         }
 
         private bool IsValidText(string value)

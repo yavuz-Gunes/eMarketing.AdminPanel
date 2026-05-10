@@ -148,7 +148,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\ApiDataClient.cs" />
-    <Compile Include="Services\ApiFallbackReporter.cs" />
+    <Compile Include="Services\ApiErrorLogger.cs" />
     <EmbeddedResource Include="Forms\FrmMain.resx">
       <DependentUpon>FrmMain.cs</DependentUpon>
     </EmbeddedResource>
@@ -178,12 +178,6 @@
     <Folder Include="Images\Products\" />
     <Folder Include="Layout\" />
     <Folder Include="Models\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\eMarketing.Data\eMarketing.Data.csproj">
-      <Project>{c11a6a49-1015-46ee-aede-1c85b56e9842}</Project>
-      <Name>eMarketing.Data</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

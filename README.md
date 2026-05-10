@@ -37,6 +37,21 @@ Swagger:
 http://localhost:5088/swagger
 ```
 
+## Okul checklist karsiligi
+
+- **MS SQL Server veritabani:** `Database` klasorundeki SQL scriptleri ve mevcut `EMarketingDb`.
+- **Class Library:** `eMarketing.Service` projesi. SQL Server stored procedure cagirilari ve servis metotlari burada.
+- **WebService / API:** `eMarketing.Api` projesi. Swagger aktiftir.
+- **WebService -> Class Library referansi:** `eMarketing.Api` projesi `eMarketing.Service` projesine `ProjectReference` ile baglidir.
+- **Connection string:** `eMarketing.Api/appsettings.json` icindeki `ConnectionStrings:DbConnection`.
+- **Form uygulamasi:** `eMarketing.AdminPanel` Windows Forms projesi.
+- **Form -> API akisi:** AdminPanel dogrudan veritabanina gitmez; `ApiDataClient` ile Web API'ye baglanir.
+- **API -> SQL akisi:** `eMarketing.Api -> eMarketing.Service -> MS SQL Stored Procedure`.
+- **Login ve rol yonetimi:** Login API uzerinden token alir, rol bilgisi `AppSession` icinde tutulur.
+- **CRUD islemleri:** Urun, kategori, siparis, bayi/magaza, yetkili, bayi stok ve personel islemleri API endpointleri uzerinden yapilir.
+
+Not: `eMarketing.Data` klasoru silinmedi; eski/fallback veri erisim katmani olarak repoda durabilir. Ancak AdminPanel artik bu katmana referans vermez. Okul checklist'indeki aktif ClassLibrary yapisi `eMarketing.Service` projesidir.
+
 API sağlık kontrolü:
 
 ```text
@@ -87,3 +102,16 @@ eMarketing.AdminPanel\bin\Debug\Logs\api-fallback.log
 ## Not
 
 Şifre doğrulama şu an mevcut okul/demo yapısına uyumlu olarak eski `sp_Kullanici_GirisYap` stored procedure üzerinden çalışır. Profesyonel sürümde bir sonraki adım şifre hash migration ve JWT yetki zorunluluğudur.
+# eMarketing
+
+Repo kokunden API'yi calistirmak icin:
+
+```powershell
+dotnet run
+```
+
+Bu komut `eMarketing.Api` projesini `http://localhost:5088` adresinde baslatir. Swagger:
+
+```text
+http://localhost:5088/swagger
+```

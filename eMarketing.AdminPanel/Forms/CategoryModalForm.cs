@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Data;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
-using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class CategoryModalForm : Form
     {
-        private readonly CategoryRepository _repo = new CategoryRepository();
         private readonly ApiDataClient _apiClient = new ApiDataClient();
         private readonly int _categoryId;
 
@@ -125,14 +124,14 @@ namespace eMarketing.AdminPanel.Forms
             CancelButton = btnCancel;
         }
 
-        private void CategoryModalForm_Load(object sender, EventArgs e)
+        private async void CategoryModalForm_Load(object sender, EventArgs e)
         {
             if (_categoryId <= 0)
                 return;
 
             try
             {
-                DataRow row = GetCategoryById(_categoryId);
+                DataRow row = await GetCategoryByIdAsync(_categoryId);
 
                 if (row == null)
                 {
@@ -153,7 +152,7 @@ namespace eMarketing.AdminPanel.Forms
             }
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private async void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
@@ -177,11 +176,11 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (_categoryId > 0)
                 {
-                    UpdateCategory(_categoryId, categoryName, chkIsActive.Checked);
+                    await UpdateCategoryAsync(_categoryId, categoryName, chkIsActive.Checked);
                 }
                 else
                 {
-                    InsertCategory(categoryName);
+                    await InsertCategoryAsync(categoryName);
                 }
 
                 IsSaved = true;
@@ -220,43 +219,19 @@ namespace eMarketing.AdminPanel.Forms
             return true;
         }
 
-        private DataRow GetCategoryById(int categoryId)
+        private Task<DataRow> GetCategoryByIdAsync(int categoryId)
         {
-            try
-            {
-                return _apiClient.GetCategoryById(categoryId);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Kategori detay", ex);
-                return _repo.GetCategoryById(categoryId);
-            }
+            return _apiClient.GetCategoryByIdAsync(categoryId);
         }
 
-        private void InsertCategory(string categoryName)
+        private Task InsertCategoryAsync(string categoryName)
         {
-            try
-            {
-                _apiClient.InsertCategory(categoryName);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Kategori ekleme", ex);
-                _repo.InsertCategory(categoryName);
-            }
+            return _apiClient.InsertCategoryAsync(categoryName);
         }
 
-        private void UpdateCategory(int categoryId, string categoryName, bool isActive)
+        private Task UpdateCategoryAsync(int categoryId, string categoryName, bool isActive)
         {
-            try
-            {
-                _apiClient.UpdateCategory(categoryId, categoryName, isActive);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Kategori güncelleme", ex);
-                _repo.UpdateCategory(categoryId, categoryName, isActive);
-            }
+            return _apiClient.UpdateCategoryAsync(categoryId, categoryName, isActive);
         }
     }
 }

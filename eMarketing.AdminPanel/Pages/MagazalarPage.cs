@@ -3,18 +3,18 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class MagazalarPage : UserControl, IThemeable
     {
-        private readonly MagazaRepository magazaRepo = new MagazaRepository();
-        private readonly CustomerRepository musteriRepo = new CustomerRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private TableLayoutPanel anaYerlesim;
         private ShadowPanel listePanel;
@@ -105,7 +105,7 @@ namespace eMarketing.AdminPanel.Pages
             txtArama = CreateTextBox();
             txtArama.Location = new Point(0, 28);
             txtArama.Width = 260;
-            txtArama.TextChanged += (sender, e) => MagazalariYukle(false);
+            txtArama.TextChanged += async (sender, e) => await MagazalariYukleAsync(false);
 
             cmbBayi = new ComboBox
             {
@@ -118,10 +118,10 @@ namespace eMarketing.AdminPanel.Pages
             };
             cmbBayi.DisplayMember = "BayiGosterim";
             cmbBayi.ValueMember = "CustomerId";
-            cmbBayi.SelectedIndexChanged += (sender, e) =>
+            cmbBayi.SelectedIndexChanged += async (sender, e) =>
             {
                 if (!bayilerYukleniyor)
-                    MagazalariYukle(false);
+                    await MagazalariYukleAsync(false);
             };
 
             btnYeniMagaza = CreateButton("Yeni Mağaza", true);
@@ -229,18 +229,18 @@ namespace eMarketing.AdminPanel.Pages
             detayPanel.Controls.Add(title);
         }
 
-        private void MagazalarPage_Load(object sender, EventArgs e)
+        private async void MagazalarPage_Load(object sender, EventArgs e)
         {
-            BayileriYukle();
-            MagazalariYukle(true);
+            await BayileriYukleAsync();
+            await MagazalariYukleAsync(true);
         }
 
-        private void BayileriYukle()
+        private async Task BayileriYukleAsync()
         {
             try
             {
                 bayilerYukleniyor = true;
-                DataTable table = musteriRepo.GetActiveCustomers();
+                DataTable table = await GetBayilerAsync();
 
                 if (!table.Columns.Contains("BayiGosterim"))
                     table.Columns.Add("BayiGosterim", typeof(string));
@@ -271,15 +271,11 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void MagazalariYukle(bool ilkKaydiSec)
+        private async Task MagazalariYukleAsync(bool ilkKaydiSec)
         {
             try
             {
-                magazaTable = magazaRepo.GetMagazaSecimListesi(
-                    txtArama == null ? "" : txtArama.Text.Trim(),
-                    false,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                magazaTable = await GetMagazalarAsync();
 
                 magazaKartListesi.SuspendLayout();
                 magazaKartListesi.Controls.Clear();
@@ -507,7 +503,7 @@ namespace eMarketing.AdminPanel.Pages
             DetayiTemizle();
         }
 
-        private void BtnYeniMagaza_Click(object sender, EventArgs e)
+        private async void BtnYeniMagaza_Click(object sender, EventArgs e)
         {
             if (cmbBayi.SelectedValue == null)
             {
@@ -521,11 +517,11 @@ namespace eMarketing.AdminPanel.Pages
             using (CustomerStoreModalForm form = new CustomerStoreModalForm(musteriId))
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
-                    MagazalariYukle(false);
+                    await MagazalariYukleAsync(false);
             }
         }
 
-        private void BtnDuzenle_Click(object sender, EventArgs e)
+        private async void BtnDuzenle_Click(object sender, EventArgs e)
         {
             if (seciliMagaza == null)
                 return;
@@ -535,7 +531,7 @@ namespace eMarketing.AdminPanel.Pages
                 GetInt(seciliMagaza, "MagazaId")))
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
-                    MagazalariYukle(false);
+                    await MagazalariYukleAsync(false);
             }
         }
 
@@ -550,7 +546,7 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void BtnDurum_Click(object sender, EventArgs e)
+        private async void BtnDurum_Click(object sender, EventArgs e)
         {
             if (seciliMagaza == null)
                 return;
@@ -558,8 +554,8 @@ namespace eMarketing.AdminPanel.Pages
             try
             {
                 bool aktif = GetBool(seciliMagaza, "MagazaAktifMi");
-                musteriRepo.SetCustomerStoreActiveStatus(GetInt(seciliMagaza, "MagazaId"), !aktif);
-                MagazalariYukle(false);
+                await MagazaDurumGuncelleAsync(GetInt(seciliMagaza, "MagazaId"), !aktif);
+                await MagazalariYukleAsync(false);
             }
             catch (Exception ex)
             {
@@ -586,6 +582,25 @@ namespace eMarketing.AdminPanel.Pages
 
             MessageBox.Show("Aktif mağaza seçimi güncellendi.",
                 "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private Task<DataTable> GetBayilerAsync()
+        {
+            return apiClient.GetBayilerAsync("", 1);
+        }
+
+        private Task<DataTable> GetMagazalarAsync()
+        {
+            return apiClient.GetMagazaSecimListesiAsync(
+                txtArama == null ? "" : txtArama.Text.Trim(),
+                false,
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
+        }
+
+        private Task MagazaDurumGuncelleAsync(int magazaId, bool aktifMi)
+        {
+            return apiClient.SetBayiMagazaStatusAsync(magazaId, aktifMi);
         }
 
         private void VurgulaSeciliKart()

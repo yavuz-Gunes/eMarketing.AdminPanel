@@ -2,18 +2,18 @@
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
-using eMarketing.Data.Models;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class DashboardPage : UserControl, IThemeable
     {
-        private readonly DashboardRepository _repo = new DashboardRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private TableLayoutPanel mainLayout;
         private TableLayoutPanel cardsGrid;
@@ -282,11 +282,11 @@ namespace eMarketing.AdminPanel.Pages
             return list;
         }
 
-        private void DashboardPage_Load(object sender, EventArgs e)
+        private async void DashboardPage_Load(object sender, EventArgs e)
         {
-            LoadDashboardSummary();
-            LoadRecentOrders();
-            LoadCriticalStockProducts();
+            await LoadDashboardSummaryAsync();
+            await LoadRecentOrdersAsync();
+            await LoadCriticalStockProductsAsync();
         }
         private int? GetCurrentMagazaId()
         {
@@ -300,14 +300,11 @@ namespace eMarketing.AdminPanel.Pages
         {
             return AppSession.TumMagazalar || !AppSession.SeciliMagazaId.HasValue;
         }
-        private void LoadDashboardSummary()
+        private async Task LoadDashboardSummaryAsync()
         {
             try
             {
-                DashboardSummary summary = _repo.GetSummary(
-                    GetCurrentMagazaId(),
-                    IsTumMagazalar()
-                );
+                DashboardSummaryView summary = await GetSummaryAsync();
 
                 cTotalRevenue.SetData("₺ Toplam Ciro", FormatMoney(summary.TotalRevenue), GetScopeText("seçili mağaza cirosu"));
                 cTotalOrders.SetData("🧾 Toplam Sipariş", summary.TotalOrders.ToString(), GetScopeText("sipariş adedi"));
@@ -324,23 +321,20 @@ namespace eMarketing.AdminPanel.Pages
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    "Dashboard verileri çekilirken hata: " + ex.Message,
+                    ex.Message,
                     "Hata",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
         }
 
-        private void LoadRecentOrders()
+        private async Task LoadRecentOrdersAsync()
         {
             try
             {
                 recentOrdersList.Controls.Clear();
 
-                DataTable table = _repo.GetRecentOrders(
-                    GetCurrentMagazaId(),
-                    IsTumMagazalar()
-                );
+                DataTable table = await GetRecentOrdersAsync();
 
                 if (table.Rows.Count == 0)
                 {
@@ -362,23 +356,20 @@ namespace eMarketing.AdminPanel.Pages
                 recentOrdersList.Controls.Add(CreateEmptyItem("Son siparişler yüklenemedi."));
 
                 MessageBox.Show(
-                    "Son siparişler yüklenirken hata: " + ex.Message,
+                    ex.Message,
                     "Hata",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
         }
 
-        private void LoadCriticalStockProducts()
+        private async Task LoadCriticalStockProductsAsync()
         {
             try
             {
                 criticalStockList.Controls.Clear();
 
-                DataTable table = _repo.GetCriticalStockProducts(
-                    GetCurrentMagazaId(),
-                    IsTumMagazalar()
-                );
+                DataTable table = await GetCriticalStockProductsAsync();
 
                 if (table.Rows.Count == 0)
                 {
@@ -400,7 +391,7 @@ namespace eMarketing.AdminPanel.Pages
                 criticalStockList.Controls.Add(CreateEmptyItem("Kritik stok bilgisi yüklenemedi."));
 
                 MessageBox.Show(
-                    "Kritik stok parçaları yüklenirken hata: " + ex.Message,
+                    ex.Message,
                     "Hata",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
@@ -689,6 +680,37 @@ namespace eMarketing.AdminPanel.Pages
 
             decimal value = Convert.ToDecimal(row[columnName]);
             return FormatMoney(value);
+        }
+
+        private Task<DashboardSummaryView> GetSummaryAsync()
+        {
+            return _apiClient.GetDashboardSummaryAsync(GetCurrentMagazaId(), IsTumMagazalar());
+        }
+
+        private Task<DataTable> GetRecentOrdersAsync()
+        {
+            return _apiClient.GetDashboardRecentOrdersAsync(GetCurrentMagazaId(), IsTumMagazalar());
+        }
+
+        private Task<DataTable> GetCriticalStockProductsAsync()
+        {
+            return _apiClient.GetDashboardCriticalStockAsync(GetCurrentMagazaId(), IsTumMagazalar());
+        }
+
+        private int GetInt(DataRow row, string columnName)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return 0;
+
+            return Convert.ToInt32(row[columnName]);
+        }
+
+        private decimal GetDecimal(DataRow row, string columnName)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return 0;
+
+            return Convert.ToDecimal(row[columnName]);
         }
 
         private string FormatMoney(decimal value)

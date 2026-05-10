@@ -3,20 +3,16 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
-using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class OrderModalForm : Form
     {
-        private readonly OrderRepository _orderRepo = new OrderRepository();
         private readonly ApiDataClient _apiClient = new ApiDataClient();
-        private readonly ProductRepository _productRepo = new ProductRepository();
-        private readonly MagazaRepository _magazaRepo = new MagazaRepository();
-        private readonly BayiYetkiliRepository _yetkiliRepo = new BayiYetkiliRepository();
 
         private Label lblTitle;
 
@@ -58,10 +54,10 @@ namespace eMarketing.AdminPanel.Forms
             Load += OrderModalForm_Load;
         }
 
-        private void OrderModalForm_Load(object sender, EventArgs e)
+        private async void OrderModalForm_Load(object sender, EventArgs e)
         {
-            LoadMagazalar();
-            LoadProducts();
+            await LoadMagazalarAsync();
+            await LoadProductsAsync();
         }
 
         private void BuildLayout()
@@ -315,11 +311,21 @@ namespace eMarketing.AdminPanel.Forms
             CancelButton = btnCancel;
         }
 
-        private void LoadProducts()
+        private async Task LoadProductsAsync()
         {
             try
             {
-                DataTable products = _productRepo.GetProductsForOrder();
+                DataTable products = await GetProductsForOrderAsync();
+
+                if (!products.Columns.Contains("UrunGosterim"))
+                    products.Columns.Add("UrunGosterim", typeof(string));
+
+                foreach (DataRow row in products.Rows)
+                {
+                    string urunAdi = row.Table.Columns.Contains("UrunAdi") ? Convert.ToString(row["UrunAdi"]) : "Ürün";
+                    string stok = row.Table.Columns.Contains("Stok") ? Convert.ToString(row["Stok"]) : "0";
+                    row["UrunGosterim"] = urunAdi + " (Stok: " + stok + ")";
+                }
 
                 cmbProduct.DisplayMember = "UrunGosterim";
                 cmbProduct.ValueMember = "UrunId";
@@ -329,20 +335,31 @@ namespace eMarketing.AdminPanel.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ürünler yüklenirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void LoadMagazalar()
+        private Task<DataTable> GetProductsForOrderAsync()
+        {
+            return _apiClient.GetProductsAsync("", 1, 0);
+        }
+
+        private Task<DataTable> GetMagazaSecimListesiAsync()
+        {
+            return _apiClient.GetMagazaSecimListesiAsync("", true, AppSession.KullaniciId, AppSession.AdminMi);
+        }
+
+        private Task<DataTable> GetYetkililerAsync(int bayiId, int magazaId)
+        {
+            return _apiClient.GetBayiYetkilileriAsync("", 1, bayiId, magazaId);
+        }
+
+        private async Task LoadMagazalarAsync()
         {
             try
             {
-                DataTable magazalar = _magazaRepo.GetMagazaSecimListesi(
-                    "",
-                    true,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                DataTable magazalar = await GetMagazaSecimListesiAsync();
 
                 magazalar = AktifMagazaSecimineGoreFiltrele(magazalar);
 
@@ -372,11 +389,11 @@ namespace eMarketing.AdminPanel.Forms
                     cmbMagaza.SelectedValue = AppSession.SeciliMagazaId.Value;
 
                 cmbMagaza.Enabled = !SiparisAktifMagazayaKilitli() && magazalar.Rows.Count > 1;
-                MagazaBilgisiniFormaYansit();
+                await MagazaBilgisiniFormaYansitAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Bayi/mağaza listesi yüklenirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -407,12 +424,12 @@ namespace eMarketing.AdminPanel.Forms
             return AppSession.SeciliMagazaId.HasValue && !AppSession.TumMagazalar;
         }
 
-        private void CmbMagaza_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbMagaza_SelectedIndexChanged(object sender, EventArgs e)
         {
-            MagazaBilgisiniFormaYansit();
+            await MagazaBilgisiniFormaYansitAsync();
         }
 
-        private void MagazaBilgisiniFormaYansit()
+        private async Task MagazaBilgisiniFormaYansitAsync()
         {
             DataRowView rowView = cmbMagaza.SelectedItem as DataRowView;
             if (rowView == null)
@@ -424,16 +441,16 @@ namespace eMarketing.AdminPanel.Forms
                 txtCustomerPhone.Text = Convert.ToString(rowView["Telefon"]);
 
             txtCustomerEmail.Text = "";
-            LoadYetkililer(rowView.Row);
+            await LoadYetkililerAsync(rowView.Row);
         }
 
-        private void LoadYetkililer(DataRow magazaRow)
+        private async Task LoadYetkililerAsync(DataRow magazaRow)
         {
             try
             {
                 int bayiId = Convert.ToInt32(magazaRow["MusteriId"]);
                 int magazaId = Convert.ToInt32(magazaRow["MagazaId"]);
-                DataTable yetkililer = _yetkiliRepo.GetYetkililer("", 1, bayiId, magazaId);
+                DataTable yetkililer = await GetYetkililerAsync(bayiId, magazaId);
 
                 if (!yetkililer.Columns.Contains("YetkiliGosterim"))
                     yetkililer.Columns.Add("YetkiliGosterim", typeof(string));
@@ -583,7 +600,7 @@ namespace eMarketing.AdminPanel.Forms
             }
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private async void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
@@ -682,7 +699,8 @@ namespace eMarketing.AdminPanel.Forms
 
                 customerName = Convert.ToString(magazaRow["MusteriAdi"]);
 
-                AddOrder(
+                btnSave.Enabled = false;
+                await AddOrderAsync(
                     customerName,
                     customerEmail,
                     customerPhone,
@@ -699,8 +717,12 @@ namespace eMarketing.AdminPanel.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Sipariş kaydedilirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnSave.Enabled = true;
             }
         }
 
@@ -709,7 +731,7 @@ namespace eMarketing.AdminPanel.Forms
             return "Bayi";
         }
 
-        private void AddOrder(
+        private Task AddOrderAsync(
             string customerName,
             string customerEmail,
             string customerPhone,
@@ -721,35 +743,17 @@ namespace eMarketing.AdminPanel.Forms
             string siparisKaynagi,
             int? bayiYetkiliId)
         {
-            try
-            {
-                _apiClient.AddOrder(
-                    customerName,
-                    customerEmail,
-                    customerPhone,
-                    productId,
-                    quantity,
-                    totalPrice,
-                    magazaId,
-                    siparisTipi,
-                    siparisKaynagi,
-                    bayiYetkiliId);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Sipariş ekleme", ex);
-                _orderRepo.AddOrder(
-                    customerName,
-                    customerEmail,
-                    customerPhone,
-                    productId,
-                    quantity,
-                    totalPrice,
-                    magazaId,
-                    siparisTipi,
-                    siparisKaynagi,
-                    bayiYetkiliId);
-            }
+            return _apiClient.AddOrderAsync(
+                customerName,
+                customerEmail,
+                customerPhone,
+                productId,
+                quantity,
+                totalPrice,
+                magazaId,
+                siparisTipi,
+                siparisKaynagi,
+                bayiYetkiliId);
         }
 
         private int? GetSelectedYetkiliId()

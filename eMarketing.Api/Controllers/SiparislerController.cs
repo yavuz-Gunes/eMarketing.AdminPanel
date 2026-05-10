@@ -27,6 +27,16 @@ public sealed class SiparislerController : ControllerBase
         return Ok(await _orderService.GetOrdersAsync(magazaId, tumMagazalar, cancellationToken));
     }
 
+    [HttpGet("ozet")]
+    [AllowAnonymous]
+    public async Task<ActionResult<Dictionary<string, object>>> GetSummary(
+        [FromQuery] int? magazaId = null,
+        [FromQuery] bool tumMagazalar = true,
+        CancellationToken cancellationToken = default)
+    {
+        return Ok(await _orderService.GetOrderSummaryAsync(magazaId, tumMagazalar, cancellationToken));
+    }
+
     [HttpPost]
     [AllowAnonymous]
     public async Task<ActionResult<object>> Create([FromBody] OrderCreateRequest request, CancellationToken cancellationToken)

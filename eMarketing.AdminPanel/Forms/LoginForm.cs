@@ -3,14 +3,11 @@ using System.Drawing;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
-using eMarketing.Data.Models;
-using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public class LoginForm : Form
     {
-        private readonly LoginRepository repo = new LoginRepository();
         private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private TextBox txtKullaniciAdi;
@@ -182,7 +179,7 @@ namespace eMarketing.AdminPanel.Forms
             };
         }
 
-        private void BtnGiris_Click(object sender, EventArgs e)
+        private async void BtnGiris_Click(object sender, EventArgs e)
         {
             string kullaniciAdi = txtKullaniciAdi.Text.Trim();
             string sifre = txtSifre.Text;
@@ -200,8 +197,8 @@ namespace eMarketing.AdminPanel.Forms
                 btnGiris.Enabled = false;
                 btnGiris.Text = "Kontrol ediliyor...";
 
-                string apiToken;
-                KullaniciGirisModel kullanici = GirisYap(kullaniciAdi, sifre, out apiToken);
+                ApiLoginResult loginResult = await apiClient.LoginAsync(kullaniciAdi, sifre);
+                KullaniciGirisModel kullanici = loginResult == null ? null : loginResult.Kullanici;
 
                 if (kullanici == null)
                 {
@@ -214,7 +211,7 @@ namespace eMarketing.AdminPanel.Forms
                     kullanici.KullaniciAdi,
                     kullanici.AdSoyad,
                     kullanici.Rol,
-                    apiToken);
+                    loginResult.Token);
 
                 DialogResult = DialogResult.OK;
                 Close();
@@ -236,12 +233,12 @@ namespace eMarketing.AdminPanel.Forms
 
             try
             {
-                return apiClient.Login(kullaniciAdi, sifre, out apiToken);
+                return null;
             }
             catch (Exception ex)
             {
-                ApiFallbackReporter.Report("Kullanıcı girişi", ex);
-                return repo.GirisYap(kullaniciAdi, sifre);
+                ApiErrorLogger.Log("Kullanıcı girişi", ex);
+                return null;
             }
         }
     }

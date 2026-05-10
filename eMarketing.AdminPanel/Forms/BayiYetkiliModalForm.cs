@@ -2,16 +2,16 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public class BayiYetkiliModalForm : Form
     {
-        private readonly BayiYetkiliRepository yetkiliRepo = new BayiYetkiliRepository();
-        private readonly CustomerRepository bayiRepo = new CustomerRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
         private readonly int bayiYetkiliId;
 
         private ComboBox cmbBayi;
@@ -158,17 +158,17 @@ namespace eMarketing.AdminPanel.Forms
             CancelButton = btnIptal;
         }
 
-        private void BayiYetkiliModalForm_Load(object sender, EventArgs e)
+        private async void BayiYetkiliModalForm_Load(object sender, EventArgs e)
         {
-            LoadBayiler();
+            await LoadBayilerAsync();
 
             if (bayiYetkiliId > 0)
-                LoadYetkili();
+                await LoadYetkiliAsync();
         }
 
-        private void LoadBayiler()
+        private async Task LoadBayilerAsync()
         {
-            DataTable bayiler = bayiRepo.GetActiveCustomers();
+            DataTable bayiler = await GetBayilerAsync();
 
             if (!bayiler.Columns.Contains("BayiGosterim"))
                 bayiler.Columns.Add("BayiGosterim", typeof(string));
@@ -180,16 +180,16 @@ namespace eMarketing.AdminPanel.Forms
             cmbBayi.ValueMember = "CustomerId";
             cmbBayi.DataSource = bayiler;
 
-            LoadMagazalar();
+            await LoadMagazalarAsync();
         }
 
-        private void LoadMagazalar()
+        private async Task LoadMagazalarAsync()
         {
             int bayiId;
             if (!TryGetSelectedInt(cmbBayi, out bayiId))
                 return;
 
-            DataTable magazalar = bayiRepo.GetCustomerStores(bayiId, 1);
+            DataTable magazalar = await GetMagazalarAsync(bayiId);
             DataTable source = magazalar.Clone();
 
             DataRow bayiGeneli = source.NewRow();
@@ -217,9 +217,9 @@ namespace eMarketing.AdminPanel.Forms
             return int.TryParse(Convert.ToString(comboBox.SelectedValue), out value);
         }
 
-        private void LoadYetkili()
+        private async Task LoadYetkiliAsync()
         {
-            DataRow row = yetkiliRepo.GetYetkiliById(bayiYetkiliId);
+            DataRow row = await GetYetkiliByIdAsync();
             if (row == null)
             {
                 MessageBox.Show("Müşteri/yetkili bulunamadı.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -228,7 +228,7 @@ namespace eMarketing.AdminPanel.Forms
             }
 
             cmbBayi.SelectedValue = Convert.ToInt32(row["BayiId"]);
-            LoadMagazalar();
+            await LoadMagazalarAsync();
 
             if (row["MagazaId"] != DBNull.Value)
                 cmbMagaza.SelectedValue = Convert.ToInt32(row["MagazaId"]);
@@ -241,12 +241,12 @@ namespace eMarketing.AdminPanel.Forms
             chkAktif.Checked = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
         }
 
-        private void CmbBayi_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbBayi_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadMagazalar();
+            await LoadMagazalarAsync();
         }
 
-        private void BtnKaydet_Click(object sender, EventArgs e)
+        private async void BtnKaydet_Click(object sender, EventArgs e)
         {
             if (!ValidateForm())
                 return;
@@ -261,7 +261,7 @@ namespace eMarketing.AdminPanel.Forms
                     magazaId = parsed;
             }
 
-            yetkiliRepo.Kaydet(
+            await YetkiliKaydetAsync(
                 bayiYetkiliId > 0 ? (int?)bayiYetkiliId : null,
                 bayiId,
                 magazaId,
@@ -309,6 +309,26 @@ namespace eMarketing.AdminPanel.Forms
             }
 
             return true;
+        }
+
+        private Task<DataTable> GetBayilerAsync()
+        {
+            return apiClient.GetBayilerAsync("", 1);
+        }
+
+        private Task<DataTable> GetMagazalarAsync(int bayiId)
+        {
+            return apiClient.GetBayiMagazalariAsync(bayiId, 1);
+        }
+
+        private Task<DataRow> GetYetkiliByIdAsync()
+        {
+            return apiClient.GetBayiYetkiliByIdAsync(bayiYetkiliId);
+        }
+
+        private Task YetkiliKaydetAsync(int? id, int bayiId, int? magazaId, string adSoyad, string telefon, string email, string gorev, string notlar, bool aktifMi)
+        {
+            return apiClient.SaveBayiYetkiliAsync(id, bayiId, magazaId, adSoyad, telefon, email, gorev, notlar, aktifMi);
         }
 
         private void AddLabel(Control parent, string text, int x, int y)

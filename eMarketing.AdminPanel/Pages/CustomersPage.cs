@@ -2,17 +2,18 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class CustomersPage : UserControl, IThemeable
     {
-        private readonly BayiYetkiliRepository repo = new BayiYetkiliRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private Panel headerPanel;
         private Panel statsPanel;
@@ -200,8 +201,8 @@ namespace eMarketing.AdminPanel.Pages
 
             txtArama.TextChanged += TxtArama_TextChanged;
             txtArama.KeyDown += TxtArama_KeyDown;
-            cmbDurum.SelectedIndexChanged += (sender, e) => YetkilileriYukle();
-            btnAra.Click += (sender, e) => YetkilileriYukle();
+            cmbDurum.SelectedIndexChanged += async (sender, e) => await YetkilileriYukleAsync();
+            btnAra.Click += async (sender, e) => await YetkilileriYukleAsync();
             btnTemizle.Click += BtnTemizle_Click;
 
             filterPanel.Controls.Add(txtArama);
@@ -375,16 +376,16 @@ namespace eMarketing.AdminPanel.Pages
             });
         }
 
-        private void CustomersPage_Load(object sender, EventArgs e)
+        private async void CustomersPage_Load(object sender, EventArgs e)
         {
-            YetkilileriYukle();
+            await YetkilileriYukleAsync();
         }
 
-        private void YetkilileriYukle()
+        private async Task YetkilileriYukleAsync()
         {
             try
             {
-                yetkiliTable = repo.GetYetkililer(txtArama.Text.Trim(), GetDurum());
+                yetkiliTable = await GetYetkililerAsync();
                 ProfilDolulukHazirla(yetkiliTable);
                 dgvYetkililer.DataSource = yetkiliTable;
                 lblInfo.Text = yetkiliTable.Rows.Count + " kayıt";
@@ -480,12 +481,12 @@ namespace eMarketing.AdminPanel.Pages
                 && !string.IsNullOrWhiteSpace(Convert.ToString(row[columnName]));
         }
 
-        private void BtnYeni_Click(object sender, EventArgs e)
+        private async void BtnYeni_Click(object sender, EventArgs e)
         {
             using (BayiYetkiliModalForm form = new BayiYetkiliModalForm())
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
-                    YetkilileriYukle();
+                    await YetkilileriYukleAsync();
             }
         }
 
@@ -497,7 +498,7 @@ namespace eMarketing.AdminPanel.Pages
             OpenEdit(e.RowIndex);
         }
 
-        private void DgvYetkililer_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private async void DgvYetkililer_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
@@ -507,10 +508,10 @@ namespace eMarketing.AdminPanel.Pages
             if (columnName == "colEdit")
                 OpenEdit(e.RowIndex);
             else if (columnName == "colStatus")
-                ToggleStatus(e.RowIndex);
+                await ToggleStatusAsync(e.RowIndex);
         }
 
-        private void OpenEdit(int rowIndex)
+        private async void OpenEdit(int rowIndex)
         {
             int id = GetId(rowIndex);
             if (id <= 0)
@@ -519,11 +520,11 @@ namespace eMarketing.AdminPanel.Pages
             using (BayiYetkiliModalForm form = new BayiYetkiliModalForm(id))
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
-                    YetkilileriYukle();
+                    await YetkilileriYukleAsync();
             }
         }
 
-        private void ToggleStatus(int rowIndex)
+        private async Task ToggleStatusAsync(int rowIndex)
         {
             int id = GetId(rowIndex);
             bool aktif = GetActive(rowIndex);
@@ -537,8 +538,18 @@ namespace eMarketing.AdminPanel.Pages
             if (result != DialogResult.Yes)
                 return;
 
-            repo.DurumGuncelle(id, !aktif);
-            YetkilileriYukle();
+            await DurumGuncelleAsync(id, !aktif);
+            await YetkilileriYukleAsync();
+        }
+
+        private Task<DataTable> GetYetkililerAsync()
+        {
+            return apiClient.GetBayiYetkilileriAsync(txtArama.Text.Trim(), GetDurum());
+        }
+
+        private Task DurumGuncelleAsync(int id, bool aktifMi)
+        {
+            return apiClient.SetBayiYetkiliStatusAsync(id, aktifMi);
         }
 
         private int GetId(int rowIndex)
@@ -712,28 +723,28 @@ namespace eMarketing.AdminPanel.Pages
             aramaTimer.Start();
         }
 
-        private void TxtArama_KeyDown(object sender, KeyEventArgs e)
+        private async void TxtArama_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
                 aramaTimer.Stop();
-                YetkilileriYukle();
+                await YetkilileriYukleAsync();
                 e.SuppressKeyPress = true;
             }
         }
 
-        private void AramaTimer_Tick(object sender, EventArgs e)
+        private async void AramaTimer_Tick(object sender, EventArgs e)
         {
             aramaTimer.Stop();
-            YetkilileriYukle();
+            await YetkilileriYukleAsync();
         }
 
-        private void BtnTemizle_Click(object sender, EventArgs e)
+        private async void BtnTemizle_Click(object sender, EventArgs e)
         {
             aramaTimer.Stop();
             txtArama.Clear();
             cmbDurum.SelectedIndex = 0;
-            YetkilileriYukle();
+            await YetkilileriYukleAsync();
         }
 
         public void ApplyTheme()

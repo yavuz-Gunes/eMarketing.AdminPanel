@@ -2,9 +2,10 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Forms
 {
@@ -14,9 +15,7 @@ namespace eMarketing.AdminPanel.Forms
         private readonly int bayiId;
         private readonly int magazaId;
 
-        private readonly BayiYetkiliRepository yetkiliRepo = new BayiYetkiliRepository();
-        private readonly OrderRepository orderRepo = new OrderRepository();
-        private readonly MagazaStokRepository stokRepo = new MagazaStokRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private TabControl tabs;
         private DataGridView dgvYetkililer;
@@ -259,57 +258,50 @@ namespace eMarketing.AdminPanel.Forms
             return tab;
         }
 
-        private void BayiDetayForm_Load(object sender, EventArgs e)
+        private async void BayiDetayForm_Load(object sender, EventArgs e)
         {
-            LoadYetkililer();
-            LoadSiparisler();
-            LoadStoklar();
+            await LoadYetkililerAsync();
+            await LoadSiparislerAsync();
+            await LoadStoklarAsync();
         }
 
-        private void LoadYetkililer()
+        private async Task LoadYetkililerAsync()
         {
             try
             {
-                DataTable table = yetkiliRepo.GetYetkililer("", -1, bayiId, magazaId);
+                DataTable table = await GetYetkililerAsync();
                 BindGrid(dgvYetkililer, table, "Bu bayiye bağlı yetkili bulunamadı.");
             }
             catch (Exception ex)
             {
-                ShowError("Yetkililer yüklenirken hata: " + ex.Message);
+                ShowError(ex.Message);
             }
         }
 
-        private void LoadSiparisler()
+        private async Task LoadSiparislerAsync()
         {
             try
             {
-                DataTable table = orderRepo.GetAllOrders(magazaId, false);
+                DataTable table = await GetSiparislerAsync();
                 BindGrid(dgvSiparisler, table, "Bu mağaza üzerinden oluşan sipariş bulunamadı.");
             }
             catch (Exception ex)
             {
-                ShowError("Siparişler yüklenirken hata: " + ex.Message);
+                ShowError(ex.Message);
             }
         }
 
-        private void LoadStoklar()
+        private async Task LoadStoklarAsync()
         {
             try
             {
-                DataTable table = stokRepo.GetMagazaStoklari(
-                    magazaId,
-                    "",
-                    false,
-                    false,
-                    true,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                DataTable table = await GetStoklarAsync();
 
                 BindGrid(dgvStoklar, table, "Bu mağazaya teslim edilmiş stok kartı bulunamadı.");
             }
             catch (Exception ex)
             {
-                ShowError("Stoklar yüklenirken hata: " + ex.Message);
+                ShowError(ex.Message);
             }
         }
 
@@ -320,6 +312,28 @@ namespace eMarketing.AdminPanel.Forms
 
             if (table == null || table.Rows.Count == 0)
                 ShowGridEmptyState(grid, emptyMessage);
+        }
+
+        private Task<DataTable> GetYetkililerAsync()
+        {
+            return apiClient.GetBayiYetkilileriAsync("", -1, bayiId, magazaId);
+        }
+
+        private Task<DataTable> GetSiparislerAsync()
+        {
+            return apiClient.GetOrdersAsync(magazaId, false);
+        }
+
+        private Task<DataTable> GetStoklarAsync()
+        {
+            return apiClient.GetBayiStoklariAsync(
+                magazaId,
+                "",
+                false,
+                false,
+                true,
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
         }
 
         private void ShowGridEmptyState(DataGridView grid, string message)
@@ -350,12 +364,12 @@ namespace eMarketing.AdminPanel.Forms
             }
         }
 
-        private void BtnYeniYetkili_Click(object sender, EventArgs e)
+        private async void BtnYeniYetkili_Click(object sender, EventArgs e)
         {
             using (BayiYetkiliModalForm form = new BayiYetkiliModalForm())
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
-                    LoadYetkililer();
+                    await LoadYetkililerAsync();
             }
         }
 

@@ -2,15 +2,16 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public class MagazaSecimForm : Form
     {
-        private readonly MagazaRepository repo = new MagazaRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private FlowLayoutPanel kartListesi;
         private TextBox txtArama;
@@ -148,28 +149,24 @@ namespace eMarketing.AdminPanel.Forms
             Controls.Add(header);
         }
 
-        private void MagazaSecimForm_Load(object sender, EventArgs e)
+        private async void MagazaSecimForm_Load(object sender, EventArgs e)
         {
-            MagazalariYukle();
+            await MagazalariYukleAsync();
         }
 
-        private void TxtArama_TextChanged(object sender, EventArgs e)
+        private async void TxtArama_TextChanged(object sender, EventArgs e)
         {
-            MagazalariYukle();
+            await MagazalariYukleAsync();
         }
 
-        private void MagazalariYukle()
+        private async Task MagazalariYukleAsync()
         {
             try
             {
                 kartListesi.SuspendLayout();
                 kartListesi.Controls.Clear();
 
-                DataTable table = repo.GetMagazaSecimListesi(
-                    txtArama.Text.Trim(),
-                    true,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                DataTable table = await GetMagazaSecimListesiAsync();
 
                 if (table.Rows.Count == 0)
                 {
@@ -230,6 +227,15 @@ namespace eMarketing.AdminPanel.Forms
             card.Paint += Card_Paint;
 
             return card;
+        }
+
+        private Task<DataTable> GetMagazaSecimListesiAsync()
+        {
+            return apiClient.GetMagazaSecimListesiAsync(
+                txtArama.Text.Trim(),
+                true,
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
         }
 
         private Label CreateLabel(string text, float size, FontStyle style, Color color, int height)

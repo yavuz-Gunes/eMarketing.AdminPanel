@@ -3,16 +3,17 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class BayiStokPage : UserControl, IThemeable
     {
-        private readonly MagazaStokRepository repo = new MagazaStokRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private Panel headerPanel;
         private Panel statsPanel;
@@ -217,7 +218,7 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = Color.Transparent,
                 Cursor = Cursors.Hand
             };
-            checkBox.CheckedChanged += (sender, e) => StoklariYukle();
+            checkBox.CheckedChanged += async (sender, e) => await StoklariYukleAsync();
             return checkBox;
         }
 
@@ -519,29 +520,22 @@ namespace eMarketing.AdminPanel.Pages
             });
         }
 
-        private void BayiStokPage_Load(object sender, EventArgs e)
+        private async void BayiStokPage_Load(object sender, EventArgs e)
         {
-            StoklariYukle();
+            await StoklariYukleAsync();
         }
 
-        private void StoklariYukle()
+        private async Task StoklariYukleAsync()
         {
             try
             {
-                stokTable = repo.GetMagazaStoklari(
-                    GetCurrentMagazaId(),
-                    txtArama.Text.Trim(),
-                    chkStokta.Checked,
-                    chkKritik.Checked,
-                    true,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                stokTable = await GetStoklarAsync();
 
                 PrepareStokTable(stokTable);
                 dgvStoklar.DataSource = stokTable;
                 UpdateAdminSelection();
                 lblInfo.Text = stokTable.Rows.Count + " kayıt";
-                OzetleriYukle();
+                await OzetleriYukleAsync();
             }
             catch (Exception ex)
             {
@@ -549,13 +543,9 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void OzetleriYukle()
+        private async Task OzetleriYukleAsync()
         {
-            DataRow row = repo.GetMagazaStokOzeti(
-                GetCurrentMagazaId(),
-                IsTumMagazalar(),
-                AppSession.KullaniciId,
-                AppSession.AdminMi);
+            DataRow row = await GetStokOzetiAsync();
 
             if (row == null)
             {
@@ -663,19 +653,19 @@ namespace eMarketing.AdminPanel.Pages
             aramaTimer.Start();
         }
 
-        private void AramaTimer_Tick(object sender, EventArgs e)
+        private async void AramaTimer_Tick(object sender, EventArgs e)
         {
             aramaTimer.Stop();
-            StoklariYukle();
+            await StoklariYukleAsync();
         }
 
-        private void BtnTemizle_Click(object sender, EventArgs e)
+        private async void BtnTemizle_Click(object sender, EventArgs e)
         {
             aramaTimer.Stop();
             txtArama.Clear();
             chkStokta.Checked = false;
             chkKritik.Checked = false;
-            StoklariYukle();
+            await StoklariYukleAsync();
         }
 
         private void DgvStoklar_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -743,7 +733,7 @@ namespace eMarketing.AdminPanel.Pages
             HareketleriYukle(row, bayi, urun);
         }
 
-        private void HareketleriYukle(DataGridViewRow row, string bayi, string urun)
+        private async void HareketleriYukle(DataGridViewRow row, string bayi, string urun)
         {
             if (dgvHareketler == null)
                 return;
@@ -759,12 +749,7 @@ namespace eMarketing.AdminPanel.Pages
 
             try
             {
-                DataTable hareketler = repo.GetStokHareketleri(
-                    magazaId,
-                    urunId,
-                    25,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                DataTable hareketler = await GetStokHareketleriAsync(magazaId, urunId);
 
                 dgvHareketler.DataSource = hareketler;
 
@@ -788,7 +773,7 @@ namespace eMarketing.AdminPanel.Pages
                 lblHareketInfo.Text = message;
         }
 
-        private void StokHareketiYap(string hareketTipi)
+        private async void StokHareketiYap(string hareketTipi)
         {
             if (!AppSession.AdminMi)
                 return;
@@ -838,15 +823,10 @@ namespace eMarketing.AdminPanel.Pages
 
             try
             {
-                repo.StokHareketiIsle(
-                    magazaId,
-                    urunId,
-                    hareketTipi,
-                    miktar,
-                    "Admin panel manuel " + islemAdi);
+                await StokHareketiKaydetAsync(magazaId, urunId, hareketTipi, miktar, "Admin panel manuel " + islemAdi);
 
                 txtHareketMiktar.Clear();
-                StoklariYukle();
+                await StoklariYukleAsync();
             }
             catch (Exception ex)
             {
@@ -854,7 +834,7 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void BtnMinimumGuncelle_Click(object sender, EventArgs e)
+        private async void BtnMinimumGuncelle_Click(object sender, EventArgs e)
         {
             if (!AppSession.AdminMi)
                 return;
@@ -884,13 +864,54 @@ namespace eMarketing.AdminPanel.Pages
 
             try
             {
-                repo.MinimumStokGuncelle(magazaStokId, minimumStok);
-                StoklariYukle();
+                await MinimumStokGuncelleAsync(magazaStokId, minimumStok);
+                await StoklariYukleAsync();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private Task<DataTable> GetStoklarAsync()
+        {
+            return apiClient.GetBayiStoklariAsync(
+                GetCurrentMagazaId(),
+                txtArama.Text.Trim(),
+                chkStokta.Checked,
+                chkKritik.Checked,
+                true,
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
+        }
+
+        private Task<DataRow> GetStokOzetiAsync()
+        {
+            return apiClient.GetBayiStokOzetiAsync(
+                GetCurrentMagazaId(),
+                IsTumMagazalar(),
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
+        }
+
+        private Task<DataTable> GetStokHareketleriAsync(int magazaId, int urunId)
+        {
+            return apiClient.GetBayiStokHareketleriAsync(
+                magazaId,
+                urunId,
+                25,
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
+        }
+
+        private Task StokHareketiKaydetAsync(int magazaId, int urunId, string hareketTipi, int miktar, string aciklama)
+        {
+            return apiClient.ProcessBayiStokMovementAsync(magazaId, urunId, hareketTipi, miktar, aciklama, null);
+        }
+
+        private Task MinimumStokGuncelleAsync(int magazaStokId, int minimumStok)
+        {
+            return apiClient.UpdateBayiStokMinimumAsync(magazaStokId, minimumStok);
         }
 
         private DataGridViewRow GetSelectedGridRow()

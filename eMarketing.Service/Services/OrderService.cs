@@ -8,6 +8,7 @@ namespace eMarketing.Service.Services;
 public interface IOrderService
 {
     Task<IReadOnlyList<OrderDto>> GetOrdersAsync(int? magazaId, bool tumMagazalar, CancellationToken cancellationToken = default);
+    Task<Dictionary<string, object>> GetOrderSummaryAsync(int? magazaId, bool tumMagazalar, CancellationToken cancellationToken = default);
     Task<int> CreateOrderAsync(OrderCreateRequest request, CancellationToken cancellationToken = default);
     Task UpdateOrderStatusAsync(int orderId, string status, CancellationToken cancellationToken = default);
     Task CancelOrderAsync(int orderId, CancellationToken cancellationToken = default);
@@ -70,6 +71,30 @@ public sealed class OrderService : IOrderService
         }
 
         return orders;
+    }
+
+    public async Task<Dictionary<string, object>> GetOrderSummaryAsync(int? magazaId, bool tumMagazalar, CancellationToken cancellationToken = default)
+    {
+        await using SqlConnection connection = _connectionFactory.CreateConnection();
+        await using SqlCommand command = new("sp_Siparis_DurumOzet_Getir", connection);
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.Add("@MagazaId", SqlDbType.Int).Value = magazaId.HasValue ? magazaId.Value : DBNull.Value;
+        command.Parameters.Add("@TumMagazalar", SqlDbType.Bit).Value = tumMagazalar;
+
+        await connection.OpenAsync(cancellationToken);
+
+        await using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+            return new Dictionary<string, object>();
+
+        return new Dictionary<string, object>
+        {
+            ["ToplamSiparis"] = reader.GetInt("ToplamSiparis"),
+            ["HazirlaniyorSayisi"] = reader.GetInt("HazirlaniyorSayisi"),
+            ["KargodaSayisi"] = reader.GetInt("KargodaSayisi"),
+            ["TeslimEdildiSayisi"] = reader.GetInt("TeslimEdildiSayisi"),
+            ["IptalSayisi"] = reader.GetInt("IptalSayisi")
+        };
     }
 
     public async Task<int> CreateOrderAsync(OrderCreateRequest request, CancellationToken cancellationToken = default)

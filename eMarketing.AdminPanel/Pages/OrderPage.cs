@@ -2,19 +2,17 @@
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
 using eMarketing.AdminPanel.Services;
-using eMarketing.Data.Models;
-using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class OrdersPage : UserControl, IThemeable
     {
-        private readonly OrderRepository _repo = new OrderRepository();
         private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private Panel headerPanel;
@@ -79,11 +77,11 @@ namespace eMarketing.AdminPanel.Pages
             Load += OrdersPage_Load;
         }
 
-        private void OrdersPage_Load(object sender, EventArgs e)
+        private async void OrdersPage_Load(object sender, EventArgs e)
         {
             LoadStatuses();
-            LoadOrderSummary();
-            LoadOrders();
+            await LoadOrderSummaryAsync();
+            await LoadOrdersAsync();
         }
 
         private void BuildLayout()
@@ -693,11 +691,11 @@ namespace eMarketing.AdminPanel.Pages
         {
             return AdminModu && (AppSession.TumMagazalar || !AppSession.SeciliMagazaId.HasValue);
         }
-        private void LoadOrderSummary()
+        private async Task LoadOrderSummaryAsync()
         {
             try
             {
-                OrderSummary summary = _repo.GetOrderSummary(
+                OrderSummaryView summary = await _apiClient.GetOrderSummaryAsync(
                     GetCurrentMagazaId(),
                     IsTumMagazalar()
                 );
@@ -718,11 +716,11 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void LoadOrders()
+        private async Task LoadOrdersAsync()
         {
             try
             {
-                ordersTable = GetOrders(
+                ordersTable = await GetOrdersAsync(
                     GetCurrentMagazaId(),
                     IsTumMagazalar()
                 );
@@ -733,19 +731,19 @@ namespace eMarketing.AdminPanel.Pages
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Siparişler yüklenirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnNewOrder_Click(object sender, EventArgs e)
+        private async void BtnNewOrder_Click(object sender, EventArgs e)
         {
             using (OrderModalForm frm = new OrderModalForm())
             {
                 if (frm.ShowDialog() == DialogResult.OK)
                 {
-                    LoadOrderSummary();
-                    LoadOrders();
+                    await LoadOrderSummaryAsync();
+                    await LoadOrdersAsync();
                     ApplySearch();
                     ClearSelectedOrder();
                 }
@@ -850,17 +848,9 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private DataTable GetOrders(int? magazaId, bool tumMagazalar)
+        private Task<DataTable> GetOrdersAsync(int? magazaId, bool tumMagazalar)
         {
-            try
-            {
-                return _apiClient.GetOrders(magazaId, tumMagazalar);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Sipariş listeleme", ex);
-                return _repo.GetAllOrders(magazaId, tumMagazalar);
-            }
+            return _apiClient.GetOrdersAsync(magazaId, tumMagazalar);
         }
 
         private void DgvOrders_CellMouseMove(object sender, DataGridViewCellMouseEventArgs e)
@@ -1091,7 +1081,7 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void BtnUpdateStatus_Click(object sender, EventArgs e)
+        private async void BtnUpdateStatus_Click(object sender, EventArgs e)
         {
             try
             {
@@ -1116,13 +1106,14 @@ namespace eMarketing.AdminPanel.Pages
                 if (!CanChangeStatus(currentStatus, newStatus))
                     return;
 
-                UpdateOrderStatus(orderId, newStatus);
+                btnUpdateStatus.Enabled = false;
+                await UpdateOrderStatusAsync(orderId, newStatus);
 
                 MessageBox.Show("Sipariş durumu güncellendi.",
                     "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                LoadOrderSummary();
-                LoadOrders();
+                await LoadOrderSummaryAsync();
+                await LoadOrdersAsync();
                 ApplySearch();
                 ClearSelectedOrder();
             }
@@ -1130,6 +1121,10 @@ namespace eMarketing.AdminPanel.Pages
             {
                 MessageBox.Show("Sipariş durumu güncellenirken hata: " + ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnUpdateStatus.Enabled = true;
             }
         }
 
@@ -1177,17 +1172,9 @@ namespace eMarketing.AdminPanel.Pages
             return true;
         }
 
-        private void UpdateOrderStatus(int orderId, string status)
+        private Task UpdateOrderStatusAsync(int orderId, string status)
         {
-            try
-            {
-                _apiClient.UpdateOrderStatus(orderId, status);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Sipariş durum güncelleme", ex);
-                _repo.UpdateOrderStatus(orderId, status);
-            }
+            return _apiClient.UpdateOrderStatusAsync(orderId, status);
         }
 
         private void BtnOpenDetail_Click(object sender, EventArgs e)

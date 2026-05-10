@@ -3,16 +3,17 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class PersonelPage : UserControl, IThemeable
     {
-        private readonly PersonelRepository repo = new PersonelRepository();
+        private readonly ApiDataClient apiClient = new ApiDataClient();
 
         private TableLayoutPanel anaYerlesim;
         private ShadowPanel personelPanel;
@@ -101,7 +102,7 @@ namespace eMarketing.AdminPanel.Pages
             txtArama = CreateTextBox();
             txtArama.Dock = DockStyle.Top;
             txtArama.Margin = new Padding(0, 0, 0, 10);
-            txtArama.TextChanged += (sender, e) => PersonelleriYukle(false);
+            txtArama.TextChanged += async (sender, e) => await PersonelleriYukleAsync(false);
 
             Label lblArama = CreateFieldLabel("Personel Ara");
             lblArama.Dock = DockStyle.Top;
@@ -305,21 +306,17 @@ namespace eMarketing.AdminPanel.Pages
             return list;
         }
 
-        private void PersonelPage_Load(object sender, EventArgs e)
+        private async void PersonelPage_Load(object sender, EventArgs e)
         {
             FormuTemizle();
-            PersonelleriYukle(true);
+            await PersonelleriYukleAsync(true);
         }
 
-        private void PersonelleriYukle(bool ilkKaydiSec)
+        private async Task PersonelleriYukleAsync(bool ilkKaydiSec)
         {
             try
             {
-                DataTable table = repo.GetPersoneller(
-                    txtArama == null ? "" : txtArama.Text.Trim(),
-                    false,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                DataTable table = await GetPersonellerAsync();
 
                 personelKartListesi.SuspendLayout();
                 personelKartListesi.Controls.Clear();
@@ -371,7 +368,7 @@ namespace eMarketing.AdminPanel.Pages
             return card;
         }
 
-        private void PersonelSec(DataRow row)
+        private async void PersonelSec(DataRow row)
         {
             seciliKullaniciId = Convert.ToInt32(row["KullaniciId"]);
             kullaniciAdiOtomatik = false;
@@ -383,7 +380,7 @@ namespace eMarketing.AdminPanel.Pages
             chkAktif.Checked = GetBool(row, "AktifMi");
             lblSeciliPersonel.Text = GetText(row, "AdSoyad", "Personel");
 
-            MagazalariYukle();
+            await MagazalariYukleAsync();
             VurgulaSeciliPersonel();
         }
 
@@ -402,23 +399,16 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void MagazalariYukle()
+        private async Task MagazalariYukleAsync()
         {
             if (!seciliKullaniciId.HasValue)
                 return;
 
             try
             {
-                DataTable yetkili = repo.GetPersonelMagazalari(
-                    seciliKullaniciId.Value,
-                    AppSession.KullaniciId,
-                    AppSession.AdminMi);
+                DataTable yetkili = await GetPersonelMagazalariAsync(seciliKullaniciId.Value);
                 DataTable atanabilir = YonetimModu
-                    ? repo.GetAtanabilirMagazalar(
-                        seciliKullaniciId.Value,
-                        "",
-                        AppSession.KullaniciId,
-                        AppSession.AdminMi)
+                    ? await GetAtanabilirMagazalarAsync(seciliKullaniciId.Value)
                     : new DataTable();
 
                 FillMagazaCards(yetkiliMagazaKartListesi, yetkili, true);
@@ -471,12 +461,12 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Button action = CreateSmallButton(yetkili ? "Kaldır" : "Ata", !yetkili);
                 action.Dock = DockStyle.Bottom;
-                action.Click += (sender, e) =>
+                action.Click += async (sender, e) =>
                 {
                     if (yetkili)
-                        MagazaKaldir(row);
+                        await MagazaKaldirAsync(row);
                     else
-                        MagazaAta(row);
+                        await MagazaAtaAsync(row);
                 };
                 card.Controls.Add(action);
             }
@@ -515,7 +505,7 @@ namespace eMarketing.AdminPanel.Pages
             return card;
         }
 
-        private void MagazaAta(DataRow row)
+        private async Task MagazaAtaAsync(DataRow row)
         {
             if (!YonetimModu)
                 return;
@@ -525,9 +515,9 @@ namespace eMarketing.AdminPanel.Pages
 
             try
             {
-                repo.MagazaAta(seciliKullaniciId.Value, Convert.ToInt32(row["MagazaId"]));
-                MagazalariYukle();
-                PersonelleriYukle(false);
+                await MagazaAtaKaydetAsync(seciliKullaniciId.Value, Convert.ToInt32(row["MagazaId"]));
+                await MagazalariYukleAsync();
+                await PersonelleriYukleAsync(false);
                 VurgulaSeciliPersonel();
             }
             catch (Exception ex)
@@ -536,16 +526,16 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void MagazaKaldir(DataRow row)
+        private async Task MagazaKaldirAsync(DataRow row)
         {
             if (!YonetimModu)
                 return;
 
             try
             {
-                repo.MagazaKaldir(Convert.ToInt32(row["KullaniciMagazaId"]));
-                MagazalariYukle();
-                PersonelleriYukle(false);
+                await MagazaKaldirKaydetAsync(Convert.ToInt32(row["KullaniciMagazaId"]));
+                await MagazalariYukleAsync();
+                await PersonelleriYukleAsync(false);
                 VurgulaSeciliPersonel();
             }
             catch (Exception ex)
@@ -554,30 +544,69 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void BtnKaydet_Click(object sender, EventArgs e)
+        private async void BtnKaydet_Click(object sender, EventArgs e)
         {
             if (!YonetimModu)
                 return;
 
             try
             {
-                int id = repo.PersonelKaydet(
-                    seciliKullaniciId,
-                    txtKullaniciAdi.Text,
-                    txtSifre.Text,
-                    txtAdSoyad.Text,
-                    GetSeciliRolKodu(),
-                    chkAktif.Checked);
+                btnKaydet.Enabled = false;
+                int id = await PersonelKaydetAsync();
 
                 seciliKullaniciId = id;
                 kullaniciAdiOtomatik = false;
-                PersonelleriYukle(false);
+                await PersonelleriYukleAsync(false);
                 SelectPersonelById(id);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                btnKaydet.Enabled = true;
+            }
+        }
+
+        private Task<DataTable> GetPersonellerAsync()
+        {
+            return apiClient.GetPersonellerAsync(
+                txtArama == null ? "" : txtArama.Text.Trim(),
+                false,
+                AppSession.KullaniciId,
+                AppSession.AdminMi);
+        }
+
+        private Task<DataTable> GetPersonelMagazalariAsync(int kullaniciId)
+        {
+            return apiClient.GetPersonelMagazalariAsync(kullaniciId, AppSession.KullaniciId, AppSession.AdminMi);
+        }
+
+        private Task<DataTable> GetAtanabilirMagazalarAsync(int kullaniciId)
+        {
+            return apiClient.GetAtanabilirMagazalarAsync(kullaniciId, "", AppSession.KullaniciId, AppSession.AdminMi);
+        }
+
+        private Task<int> PersonelKaydetAsync()
+        {
+            return apiClient.SavePersonelAsync(
+                seciliKullaniciId,
+                txtKullaniciAdi.Text,
+                txtSifre.Text,
+                txtAdSoyad.Text,
+                GetSeciliRolKodu(),
+                chkAktif.Checked);
+        }
+
+        private Task MagazaAtaKaydetAsync(int kullaniciId, int magazaId)
+        {
+            return apiClient.AssignPersonelMagazaAsync(kullaniciId, magazaId);
+        }
+
+        private Task MagazaKaldirKaydetAsync(int kullaniciMagazaId)
+        {
+            return apiClient.RemovePersonelMagazaAsync(kullaniciMagazaId);
         }
 
         private void SelectPersonelById(int kullaniciId)

@@ -2,15 +2,16 @@
 using System.Data;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
-using eMarketing.Data.Repositories;
+using eMarketing.AdminPanel.Services;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public partial  class    CustomerModalForm : Form
     {
-        private readonly CustomerRepository _repo = new CustomerRepository();
+        private readonly ApiDataClient _apiClient = new ApiDataClient();
         private readonly int _customerId;
 
         private Panel headerPanel;
@@ -63,12 +64,12 @@ namespace eMarketing.AdminPanel.Forms
             Load += CustomerModalForm_Load;
         }
 
-        private void CustomerModalForm_Load(object sender, EventArgs e)
+        private async void CustomerModalForm_Load(object sender, EventArgs e)
         {
             LoadCustomerTypes();
 
             if (_customerId > 0)
-                LoadCustomer();
+                await LoadCustomerAsync();
         }
 
         private void BuildLayout()
@@ -311,11 +312,11 @@ namespace eMarketing.AdminPanel.Forms
             cmbCustomerType.SelectedIndex = 0;
         }
 
-        private void LoadCustomer()
+        private async Task LoadCustomerAsync()
         {
             try
             {
-                DataRow row = _repo.GetCustomerById(_customerId);
+                DataRow row = await GetCustomerByIdAsync(_customerId);
 
                 if (row == null)
                 {
@@ -362,7 +363,7 @@ namespace eMarketing.AdminPanel.Forms
             return row[columnName]?.ToString() ?? "";
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private async void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
@@ -381,34 +382,13 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (_customerId > 0)
                 {
-                    _repo.UpdateCustomer(
-                        _customerId,
-                        fullName,
-                        companyName,
-                        authorizedPerson,
-                        phone,
-                        email,
-                        taxNumber,
-                        taxOffice,
-                        address,
-                        customerType,
-                        chkIsActive.Checked);
+                    await UpdateCustomerAsync(fullName, companyName, authorizedPerson, phone, email, taxNumber, taxOffice, address, customerType);
                 }
                 else
                 {
-                    int newCustomerId = _repo.InsertCustomer(
-                        fullName,
-                        companyName,
-                        authorizedPerson,
-                        phone,
-                        email,
-                        taxNumber,
-                        taxOffice,
-                        address,
-                        customerType,
-                        chkIsActive.Checked);
+                    int newCustomerId = await InsertCustomerAsync(fullName, companyName, authorizedPerson, phone, email, taxNumber, taxOffice, address, customerType);
 
-                    CreateDefaultStoreIfNeeded(newCustomerId, fullName, companyName, phone, authorizedPerson, address);
+                    await CreateDefaultStoreIfNeededAsync(newCustomerId, fullName, companyName, phone, authorizedPerson, address);
                 }
 
                 IsSaved = true;
@@ -504,7 +484,7 @@ namespace eMarketing.AdminPanel.Forms
                 RegexOptions.IgnoreCase);
         }
 
-        private void CreateDefaultStoreIfNeeded(
+        private async Task CreateDefaultStoreIfNeededAsync(
             int customerId,
             string fullName,
             string companyName,
@@ -521,15 +501,27 @@ namespace eMarketing.AdminPanel.Forms
 
             string storeName = storeBaseName + " Ana Mağaza";
 
-            _repo.InsertCustomerStore(
-                customerId,
-                storeName,
-                "",
-                "",
-                address,
-                phone,
-                responsiblePerson,
-                true);
+            await InsertCustomerStoreAsync(customerId, storeName, address, phone, responsiblePerson);
+        }
+
+        private Task<DataRow> GetCustomerByIdAsync(int customerId)
+        {
+            return _apiClient.GetBayiByIdAsync(customerId);
+        }
+
+        private Task<int> InsertCustomerAsync(string fullName, string companyName, string authorizedPerson, string phone, string email, string taxNumber, string taxOffice, string address, string customerType)
+        {
+            return _apiClient.InsertBayiAsync(fullName, companyName, authorizedPerson, phone, email, taxNumber, taxOffice, address, customerType, chkIsActive.Checked);
+        }
+
+        private Task UpdateCustomerAsync(string fullName, string companyName, string authorizedPerson, string phone, string email, string taxNumber, string taxOffice, string address, string customerType)
+        {
+            return _apiClient.UpdateBayiAsync(_customerId, fullName, companyName, authorizedPerson, phone, email, taxNumber, taxOffice, address, customerType, chkIsActive.Checked);
+        }
+
+        private Task InsertCustomerStoreAsync(int customerId, string storeName, string address, string phone, string responsiblePerson)
+        {
+            return _apiClient.InsertBayiMagazaAsync(customerId, storeName, "", "", address, phone, responsiblePerson, true);
         }
     }
 }

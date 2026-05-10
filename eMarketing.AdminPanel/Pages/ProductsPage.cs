@@ -2,19 +2,17 @@
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Forms;
 using eMarketing.AdminPanel.Services;
-using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Pages
 {
     public class ProductsPage : UserControl, IThemeable
     {
-        private readonly ProductRepository _repo = new ProductRepository();
-        private readonly CategoryRepository _categoryRepo = new CategoryRepository();
         private readonly ApiDataClient _apiClient = new ApiDataClient();
 
         private Panel headerPanel;
@@ -62,10 +60,10 @@ namespace eMarketing.AdminPanel.Pages
             Load += ProductsPage_Load;
         }
 
-        private void ProductsPage_Load(object sender, EventArgs e)
+        private async void ProductsPage_Load(object sender, EventArgs e)
         {
-            LoadCategoryFilter();
-            LoadProducts();
+            await LoadCategoryFilterAsync();
+            await LoadProductsAsync();
         }
 
         private void BuildLayout()
@@ -523,13 +521,13 @@ namespace eMarketing.AdminPanel.Pages
             column.MinimumWidth = minWidth;
         }
 
-        private void LoadCategoryFilter()
+        private async Task LoadCategoryFilterAsync()
         {
             try
             {
                 cmbCategory.SelectedIndexChanged -= CmbCategory_SelectedIndexChanged;
 
-                DataTable categories = GetActiveCategories();
+                DataTable categories = await GetActiveCategoriesAsync();
 
                 DataTable source = new DataTable();
                 source.Columns.Add("KategoriId", typeof(int));
@@ -554,12 +552,12 @@ namespace eMarketing.AdminPanel.Pages
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Kategori filtresi yüklenirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void LoadProducts()
+        private async Task LoadProductsAsync()
         {
             try
             {
@@ -568,7 +566,7 @@ namespace eMarketing.AdminPanel.Pages
                 if (cmbCategory.SelectedValue != null && cmbCategory.SelectedValue is int)
                     categoryId = (int)cmbCategory.SelectedValue;
 
-                DataTable table = GetProducts(txtSearch.Text.Trim(), GetSelectedStatus(), categoryId);
+                DataTable table = await GetProductsAsync(txtSearch.Text.Trim(), GetSelectedStatus(), categoryId);
 
                 PrepareProductTable(table);
 
@@ -578,12 +576,12 @@ namespace eMarketing.AdminPanel.Pages
 
                 dgvProducts.DataSource = displayTable;
 
-                UpdateStats(table);
+                await UpdateStatsAsync(table);
                 UpdateInfoLabel(displayTable.Rows.Count, table.Rows.Count);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ürünler yüklenirken hata: " + ex.Message,
+                MessageBox.Show(ex.Message,
                     "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -670,11 +668,11 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void UpdateStats(DataTable currentTable)
+        private async Task UpdateStatsAsync(DataTable currentTable)
         {
             try
             {
-                DataTable allTable = GetProducts("", -1, 0);
+                DataTable allTable = await GetProductsAsync("", -1, 0);
 
                 int totalCount = allTable.Rows.Count;
                 int activeCount = 0;
@@ -750,31 +748,31 @@ namespace eMarketing.AdminPanel.Pages
             return Convert.ToInt32(dgvProducts.Rows[rowIndex].Cells["UrunId"].Value);
         }
 
-        private void OpenProductEditForm(int productId)
+        private async void OpenProductEditForm(int productId)
         {
             using (ProductModalForm frm = new ProductModalForm(productId))
             {
                 if (frm.ShowDialog() == DialogResult.OK)
-                    LoadProducts();
+                    await LoadProductsAsync();
             }
         }
 
-        private void BtnNewProduct_Click(object sender, EventArgs e)
+        private async void BtnNewProduct_Click(object sender, EventArgs e)
         {
             using (ProductModalForm frm = new ProductModalForm())
             {
                 if (frm.ShowDialog() == DialogResult.OK)
-                    LoadProducts();
+                    await LoadProductsAsync();
             }
         }
 
-        private void BtnSearch_Click(object sender, EventArgs e)
+        private async void BtnSearch_Click(object sender, EventArgs e)
         {
             searchTimer.Stop();
-            LoadProducts();
+            await LoadProductsAsync();
         }
 
-        private void BtnClear_Click(object sender, EventArgs e)
+        private async void BtnClear_Click(object sender, EventArgs e)
         {
             searchTimer.Stop();
 
@@ -786,15 +784,15 @@ namespace eMarketing.AdminPanel.Pages
 
             chkLowStockOnly.Checked = false;
 
-            LoadProducts();
+            await LoadProductsAsync();
         }
 
-        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
+        private async void TxtSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
                 searchTimer.Stop();
-                LoadProducts();
+                await LoadProductsAsync();
                 e.SuppressKeyPress = true;
             }
         }
@@ -805,18 +803,18 @@ namespace eMarketing.AdminPanel.Pages
             searchTimer.Start();
         }
 
-        private void SearchTimer_Tick(object sender, EventArgs e)
+        private async void SearchTimer_Tick(object sender, EventArgs e)
         {
             searchTimer.Stop();
-            LoadProducts();
+            await LoadProductsAsync();
         }
 
-        private void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadProducts();
+            await LoadProductsAsync();
         }
 
-        private void CmbCategory_SelectedIndexChanged(object sender, EventArgs e)
+        private async void CmbCategory_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cmbCategory.DataSource == null)
                 return;
@@ -827,12 +825,12 @@ namespace eMarketing.AdminPanel.Pages
             if (!(cmbCategory.SelectedValue is int))
                 return;
 
-            LoadProducts();
+            await LoadProductsAsync();
         }
 
-        private void ChkLowStockOnly_CheckedChanged(object sender, EventArgs e)
+        private async void ChkLowStockOnly_CheckedChanged(object sender, EventArgs e)
         {
-            LoadProducts();
+            await LoadProductsAsync();
         }
 
         private void DgvProducts_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -926,30 +924,14 @@ namespace eMarketing.AdminPanel.Pages
 
         }
 
-        private DataTable GetActiveCategories()
+        private Task<DataTable> GetActiveCategoriesAsync()
         {
-            try
-            {
-                return _apiClient.GetCategories("", 1);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün kategori filtresi", ex);
-                return _categoryRepo.GetActiveCategories();
-            }
+            return _apiClient.GetCategoriesAsync("", 1);
         }
 
-        private DataTable GetProducts(string search, int status, int categoryId)
+        private Task<DataTable> GetProductsAsync(string search, int status, int categoryId)
         {
-            try
-            {
-                return _apiClient.GetProducts(search, status, categoryId);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün listeleme", ex);
-                return _repo.GetProducts(search, status, categoryId);
-            }
+            return _apiClient.GetProductsAsync(search, status, categoryId);
         }
 
         private void DgvProducts_MouseLeave(object sender, EventArgs e)
@@ -1132,7 +1114,7 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
-        private void DgvProducts_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private async void DgvProducts_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
                 return;
@@ -1157,8 +1139,8 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        SetProductActiveStatus(productId, true);
-                        LoadProducts();
+                        await SetProductActiveStatusAsync(productId, true);
+                        await LoadProductsAsync();
                     }
                 }
             }
@@ -1174,8 +1156,8 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        SetProductActiveStatus(productId, false);
-                        LoadProducts();
+                        await SetProductActiveStatusAsync(productId, false);
+                        await LoadProductsAsync();
                     }
                 }
                 else
@@ -1188,47 +1170,24 @@ namespace eMarketing.AdminPanel.Pages
 
                     if (result == DialogResult.Yes)
                     {
-                        if (DeleteProduct(productId, out string message))
+                        if (await DeleteProductAsync(productId))
                         {
-                            LoadProducts();
-                        }
-                        else
-                        {
-                            MessageBox.Show(message,
-                                "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            await LoadProductsAsync();
                         }
                     }
                 }
             }
         }
 
-        private void SetProductActiveStatus(int productId, bool isActive)
+        private Task SetProductActiveStatusAsync(int productId, bool isActive)
         {
-            try
-            {
-                _apiClient.SetProductActiveStatus(productId, isActive);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün durum güncelleme", ex);
-                _repo.SetProductActiveStatus(productId, isActive);
-            }
+            return _apiClient.SetProductActiveStatusAsync(productId, isActive);
         }
 
-        private bool DeleteProduct(int productId, out string message)
+        private async Task<bool> DeleteProductAsync(int productId)
         {
-            message = "";
-
-            try
-            {
-                _apiClient.DeleteProduct(productId);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün silme", ex);
-                return _repo.DeleteProduct(productId, out message);
-            }
+            await _apiClient.DeleteProductAsync(productId);
+            return true;
         }
 
         public void ApplyTheme()

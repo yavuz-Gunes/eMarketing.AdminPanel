@@ -3,17 +3,15 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Core;
 using eMarketing.AdminPanel.Services;
-using eMarketing.Data.Repositories;
 
 namespace eMarketing.AdminPanel.Forms
 {
     public partial class ProductModalForm : Form
     {
-        private readonly ProductRepository _productRepo = new ProductRepository();
-        private readonly CategoryRepository _categoryRepo = new CategoryRepository();
         private readonly ApiDataClient _apiClient = new ApiDataClient();
         private readonly int _productId;
 
@@ -68,13 +66,13 @@ namespace eMarketing.AdminPanel.Forms
             Load += ProductModalForm_Load;
         }
 
-        private void ProductModalForm_Load(object sender, EventArgs e)
+        private async void ProductModalForm_Load(object sender, EventArgs e)
         {
             EnsureImageFolder();
-            LoadCategories();
+            await LoadCategoriesAsync();
 
             if (_productId > 0)
-                LoadProduct();
+                await LoadProductAsync();
         }
 
         private void BuildLayout()
@@ -409,11 +407,11 @@ namespace eMarketing.AdminPanel.Forms
             };
         }
 
-        private void LoadCategories()
+        private async Task LoadCategoriesAsync()
         {
             try
             {
-                DataTable categories = GetActiveCategories();
+                DataTable categories = await GetActiveCategoriesAsync();
 
                 cmbCategory.DisplayMember = "KategoriAdi";
                 cmbCategory.ValueMember = "KategoriId";
@@ -426,11 +424,11 @@ namespace eMarketing.AdminPanel.Forms
             }
         }
 
-        private void LoadProduct()
+        private async Task LoadProductAsync()
         {
             try
             {
-                DataRow row = GetProductById(_productId);
+                DataRow row = await GetProductByIdAsync(_productId);
 
                 if (row == null)
                 {
@@ -563,7 +561,7 @@ namespace eMarketing.AdminPanel.Forms
             return Path.Combine("Images", "Products", fileName);
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private async void BtnSave_Click(object sender, EventArgs e)
         {
             try
             {
@@ -577,7 +575,7 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (_productId > 0)
                 {
-                    UpdateProduct(
+                    await UpdateProductAsync(
                         _productId,
                         productName,
                         description,
@@ -589,7 +587,7 @@ namespace eMarketing.AdminPanel.Forms
                 }
                 else
                 {
-                    InsertProduct(
+                    await InsertProductAsync(
                         productName,
                         description,
                         price,
@@ -712,56 +710,24 @@ namespace eMarketing.AdminPanel.Forms
             return true;
         }
 
-        private DataTable GetActiveCategories()
+        private Task<DataTable> GetActiveCategoriesAsync()
         {
-            try
-            {
-                return _apiClient.GetCategories("", 1);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün kategori listesi", ex);
-                return _categoryRepo.GetActiveCategories();
-            }
+            return _apiClient.GetCategoriesAsync("", 1);
         }
 
-        private DataRow GetProductById(int productId)
+        private Task<DataRow> GetProductByIdAsync(int productId)
         {
-            try
-            {
-                return _apiClient.GetProductById(productId);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün detay", ex);
-                return _productRepo.GetProductById(productId);
-            }
+            return _apiClient.GetProductByIdAsync(productId);
         }
 
-        private void InsertProduct(string name, string description, decimal price, int stock, string imageUrl, bool isActive, int categoryId)
+        private Task InsertProductAsync(string name, string description, decimal price, int stock, string imageUrl, bool isActive, int categoryId)
         {
-            try
-            {
-                _apiClient.InsertProduct(name, description, price, stock, imageUrl, isActive, categoryId);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün ekleme", ex);
-                _productRepo.InsertProduct(name, description, price, stock, imageUrl, isActive, categoryId);
-            }
+            return _apiClient.InsertProductAsync(name, description, price, stock, imageUrl, isActive, categoryId);
         }
 
-        private void UpdateProduct(int id, string name, string description, decimal price, int stock, string imageUrl, bool isActive, int categoryId)
+        private Task UpdateProductAsync(int id, string name, string description, decimal price, int stock, string imageUrl, bool isActive, int categoryId)
         {
-            try
-            {
-                _apiClient.UpdateProduct(id, name, description, price, stock, imageUrl, isActive, categoryId);
-            }
-            catch (Exception ex)
-            {
-                ApiFallbackReporter.Report("Ürün güncelleme", ex);
-                _productRepo.UpdateProduct(id, name, description, price, stock, imageUrl, isActive, categoryId);
-            }
+            return _apiClient.UpdateProductAsync(id, name, description, price, stock, imageUrl, isActive, categoryId);
         }
     }
 }
