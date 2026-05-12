@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "eMarketing.Web": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54090;http://localhost:54091"
+    }
+  }
+}
