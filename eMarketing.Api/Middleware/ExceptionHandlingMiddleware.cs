@@ -24,6 +24,14 @@ public sealed class ExceptionHandlingMiddleware
         {
             await WriteErrorAsync(context, StatusCodes.Status400BadRequest, ex.Message, new[] { ex.Message });
         }
+        catch (InvalidOperationException ex)
+        {
+            await WriteErrorAsync(context, StatusCodes.Status400BadRequest, ex.Message, new[] { ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            await WriteErrorAsync(context, StatusCodes.Status403Forbidden, ex.Message, new[] { ex.Message });
+        }
         catch (SqlException ex)
         {
             _logger.LogError(ex, "SQL error while processing {Method} {Path}. TraceId: {TraceId}", context.Request.Method, context.Request.Path, context.TraceIdentifier);

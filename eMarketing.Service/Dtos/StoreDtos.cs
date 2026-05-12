@@ -10,6 +10,10 @@ public sealed class StoreDto
     public string Ilce { get; set; } = string.Empty;
     public string Telefon { get; set; } = string.Empty;
     public string SorumluKisi { get; set; } = string.Empty;
+    public string MagazaMuduru { get; set; } = string.Empty;
+    public string Supervisor { get; set; } = string.Empty;
+    public int PersonelSayisi { get; set; }
+    public int SiparisYetkilisiSayisi { get; set; }
     public string MusteriTipi { get; set; } = string.Empty;
     public bool MusteriAktifMi { get; set; }
     public bool MagazaAktifMi { get; set; }

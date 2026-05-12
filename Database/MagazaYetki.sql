@@ -5,6 +5,7 @@ BEGIN
         KullaniciMagazaId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_KullaniciMagazalari PRIMARY KEY,
         KullaniciId INT NOT NULL,
         MagazaId INT NOT NULL,
+        Gorev NVARCHAR(30) NOT NULL CONSTRAINT DF_KullaniciMagazalari_Gorev DEFAULT (N'Personel'),
         AktifMi BIT NOT NULL CONSTRAINT DF_KullaniciMagazalari_AktifMi DEFAULT (1),
         OlusturmaTarihi DATETIME2 NOT NULL CONSTRAINT DF_KullaniciMagazalari_OlusturmaTarihi DEFAULT (SYSDATETIME()),
         CONSTRAINT UQ_KullaniciMagazalari_Kullanici_Magaza UNIQUE (KullaniciId, MagazaId),
@@ -13,6 +14,14 @@ BEGIN
         CONSTRAINT FK_KullaniciMagazalari_CustomerStores FOREIGN KEY (MagazaId)
             REFERENCES dbo.CustomerStores(CustomerStoreId)
     );
+END
+GO
+
+IF COL_LENGTH('dbo.KullaniciMagazalari', 'Gorev') IS NULL
+BEGIN
+    ALTER TABLE dbo.KullaniciMagazalari
+    ADD Gorev NVARCHAR(30) NOT NULL
+        CONSTRAINT DF_KullaniciMagazalari_Gorev DEFAULT (N'Personel');
 END
 GO
 
@@ -34,6 +43,10 @@ BEGIN
         m.Ilce,
         m.Telefon,
         m.SorumluKisi,
+        m.MagazaMuduru,
+        m.Supervisor,
+        m.PersonelSayisi,
+        m.SiparisYetkilisiSayisi,
         m.MusteriTipi,
         m.MusteriAktifMi,
         m.MagazaAktifMi,
@@ -94,6 +107,10 @@ BEGIN
         m.Ilce,
         m.Telefon,
         m.SorumluKisi,
+        m.MagazaMuduru,
+        m.Supervisor,
+        m.PersonelSayisi,
+        m.SiparisYetkilisiSayisi,
         m.MusteriTipi,
         m.MusteriAktifMi,
         m.MagazaAktifMi,

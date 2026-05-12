@@ -28,6 +28,7 @@ namespace eMarketing.AdminPanel.Pages
         private Button btnAra;
         private Button btnTemizle;
         private DataGridView dgvYetkililer;
+        private FlowLayoutPanel yetkiliKartListesi;
         private CategoriesCard cToplam;
         private CategoriesCard cAktif;
         private CategoriesCard cPasif;
@@ -74,7 +75,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblTitle = new Label
             {
-                Text = "Müşteriler / Yetkililer",
+                Text = "Sipariş Yetkilileri",
                 Location = new Point(0, 2),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
@@ -83,7 +84,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblSubtitle = new Label
             {
-                Text = "Bayilere bağlı sipariş veren kişi ve iletişim bilgilerini yönetin.",
+                Text = "Aktif mağazadaki sipariş verebilen personelleri yönetin.",
                 Location = new Point(2, 38),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F),
@@ -92,7 +93,7 @@ namespace eMarketing.AdminPanel.Pages
 
             btnYeni = new Button
             {
-                Text = "+ Yeni Yetkili",
+                Text = "+ Yeni Sipariş Yetkilisi",
                 Width = 150,
                 Height = 42,
                 FlatStyle = FlatStyle.Flat,
@@ -137,7 +138,7 @@ namespace eMarketing.AdminPanel.Pages
             cToplam = CreateStatCard("Toplam", "0", new Padding(0, 0, 16, 0));
             cAktif = CreateStatCard("Aktif", "0", new Padding(0, 0, 16, 0));
             cPasif = CreateStatCard("Pasif", "0", new Padding(0, 0, 16, 0));
-            cSiparis = CreateStatCard("Sipariş Veren", "0", Padding.Empty);
+            cSiparis = CreateStatCard("Sipariş Yetkilisi", "0", Padding.Empty);
 
             grid.Controls.Add(cToplam, 0, 0);
             grid.Controls.Add(cAktif, 1, 0);
@@ -183,7 +184,7 @@ namespace eMarketing.AdminPanel.Pages
             cmbDurum.Items.Add("Hepsi");
             cmbDurum.Items.Add("Aktif");
             cmbDurum.Items.Add("Pasif");
-            cmbDurum.SelectedIndex = 0;
+            cmbDurum.SelectedIndex = 1;
 
             btnAra = CreateButton("Ara", true);
             btnTemizle = CreateButton("Temizle", false);
@@ -261,6 +262,17 @@ namespace eMarketing.AdminPanel.Pages
                 Padding = new Padding(12)
             };
 
+            yetkiliKartListesi = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                AutoScroll = true,
+                Padding = new Padding(6),
+                BackColor = AppColors.CardBackground
+            };
+            yetkiliKartListesi.SizeChanged += (sender, e) => FitYetkiliCards();
+
             dgvYetkililer = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -301,7 +313,8 @@ namespace eMarketing.AdminPanel.Pages
             dgvYetkililer.MouseLeave += DgvYetkililer_MouseLeave;
             dgvYetkililer.CellFormatting += DgvYetkililer_CellFormatting;
 
-            gridPanel.Controls.Add(dgvYetkililer);
+            dgvYetkililer.Visible = false;
+            gridPanel.Controls.Add(yetkiliKartListesi);
         }
 
         private void ConfigureColumns()
@@ -391,6 +404,7 @@ namespace eMarketing.AdminPanel.Pages
                 yetkiliTable = await GetYetkililerAsync();
                 ProfilDolulukHazirla(yetkiliTable);
                 dgvYetkililer.DataSource = yetkiliTable;
+                FillYetkiliCards();
                 lblInfo.Text = yetkiliTable.Rows.Count + " kayıt";
                 UpdateStats();
             }
@@ -398,6 +412,219 @@ namespace eMarketing.AdminPanel.Pages
             {
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void FillYetkiliCards()
+        {
+            if (yetkiliKartListesi == null)
+                return;
+
+            yetkiliKartListesi.SuspendLayout();
+            yetkiliKartListesi.Controls.Clear();
+
+            if (yetkiliTable == null || yetkiliTable.Rows.Count == 0)
+            {
+                Panel empty = CreateYetkiliBaseCard();
+                Label label = CreateCardLabel("Sipariş yetkilisi bulunamadı.", 9F, FontStyle.Regular, AppColors.TextSecondary, 42);
+                label.Dock = DockStyle.Fill;
+                label.TextAlign = ContentAlignment.MiddleCenter;
+                empty.Controls.Add(label);
+                yetkiliKartListesi.Controls.Add(empty);
+            }
+            else
+            {
+                foreach (DataRow row in yetkiliTable.Rows)
+                    yetkiliKartListesi.Controls.Add(CreateYetkiliCard(row));
+            }
+
+            FitYetkiliCards();
+            yetkiliKartListesi.ResumeLayout(true);
+        }
+
+        private Panel CreateYetkiliCard(DataRow row)
+        {
+            Panel card = CreateYetkiliBaseCard();
+            int id = GetRowInt(row, "BayiYetkiliId");
+            bool aktif = GetRowBool(row, "AktifMi");
+            string yetkiTipi = GetRowText(row, "YetkiTipi", "");
+            bool siparisYetkilisi = string.Equals(yetkiTipi, "SiparisYetkilisi", StringComparison.OrdinalIgnoreCase);
+            if (siparisYetkilisi && aktif)
+                card.BackColor = AppColors.SuccessSoft;
+
+            Label avatar = new Label
+            {
+                Text = GetInitials(GetRowText(row, "AdSoyad", "YK")),
+                Location = new Point(16, 18),
+                Size = new Size(58, 58),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                ForeColor = AppColors.Primary,
+                BackColor = AppColors.PrimarySoft
+            };
+
+            Label ad = CreateCardLabel(GetRowText(row, "AdSoyad", "Yetkili"), 11F, FontStyle.Bold, AppColors.TextPrimary, 24);
+            ad.Location = new Point(88, 16);
+            ad.Width = 260;
+
+            Label yetki = CreateCardLabel(GetRowText(row, "YetkiTipiGorunenAd", GetRowText(row, "Gorev", "")), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 20);
+            yetki.Location = new Point(88, 42);
+            yetki.Width = 260;
+
+            Label bayi = CreateCardLabel(GetRowText(row, "BayiAdi", "-") + " / " + GetRowText(row, "MagazaAdi", "-"), 8.5F, FontStyle.Regular, AppColors.TextMuted, 20);
+            bayi.Location = new Point(88, 64);
+            bayi.Width = 360;
+
+            Label telefon = CreateCardLabel(GetRowText(row, "Telefon", "-"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 20);
+            telefon.Location = new Point(18, 94);
+            telefon.Width = 170;
+
+            Label email = CreateCardLabel(GetRowText(row, "Email", "-"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 20);
+            email.Location = new Point(196, 94);
+            email.Width = 230;
+
+            Label durum = CreateCardLabel(aktif ? "Aktif" : "Pasif", 8.5F, FontStyle.Bold, aktif ? AppColors.Success : AppColors.Danger, 26);
+            durum.Location = new Point(18, 128);
+            durum.Width = 86;
+            durum.TextAlign = ContentAlignment.MiddleCenter;
+            durum.BackColor = aktif ? AppColors.SuccessSoft : AppColors.DangerSoft;
+
+            Label siparis = CreateCardLabel(GetRowInt(row, "SiparisSayisi") + " sipariş", 8.5F, FontStyle.Bold, AppColors.Primary, 26);
+            siparis.Location = new Point(112, 128);
+            siparis.Width = 100;
+            siparis.TextAlign = ContentAlignment.MiddleCenter;
+            siparis.BackColor = AppColors.PrimarySoft;
+
+            Label yetkiRozeti = CreateCardLabel("Sipariş Yetkilisi", 8F, FontStyle.Bold, AppColors.Success, 24);
+            yetkiRozeti.Location = new Point(18, 162);
+            yetkiRozeti.Width = 150;
+            yetkiRozeti.TextAlign = ContentAlignment.MiddleCenter;
+            yetkiRozeti.BackColor = siparisYetkilisi ? Color.White : AppColors.PrimarySoft;
+
+            Button edit = CreateButton("Düzenle", true);
+            edit.Size = new Size(92, 30);
+            edit.Location = new Point(card.Width - 208, 160);
+            edit.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+            edit.Click += (sender, e) => OpenEditById(id);
+
+            Button status = CreateButton(aktif ? "Pasife Al" : "Aktifleştir", false);
+            status.Size = new Size(96, 30);
+            status.Location = new Point(card.Width - 108, 160);
+            status.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
+            status.ForeColor = aktif ? AppColors.Danger : AppColors.Success;
+            status.Click += async (sender, e) => await ToggleStatusAsync(id, aktif);
+
+            card.Controls.Add(status);
+            card.Controls.Add(edit);
+            card.Controls.Add(yetkiRozeti);
+            card.Controls.Add(siparis);
+            card.Controls.Add(durum);
+            card.Controls.Add(email);
+            card.Controls.Add(telefon);
+            card.Controls.Add(bayi);
+            card.Controls.Add(yetki);
+            card.Controls.Add(ad);
+            card.Controls.Add(avatar);
+            return card;
+        }
+
+        private Panel CreateYetkiliBaseCard()
+        {
+            Panel card = new Panel
+            {
+                Width = 460,
+                Height = 206,
+                Margin = new Padding(8),
+                Padding = new Padding(14),
+                BackColor = AppColors.Surface
+            };
+            card.Paint += (sender, e) =>
+            {
+                using (Pen pen = new Pen(AppColors.Border))
+                    e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+            };
+            return card;
+        }
+
+        private void FitYetkiliCards()
+        {
+            if (yetkiliKartListesi == null)
+                return;
+
+            int columns = yetkiliKartListesi.ClientSize.Width >= 980 ? 2 : 1;
+            int width = Math.Max(420, (yetkiliKartListesi.ClientSize.Width - 38 - (columns * 16)) / columns);
+            foreach (Control control in yetkiliKartListesi.Controls)
+                control.Width = width;
+        }
+
+        private async void OpenEditById(int id)
+        {
+            if (id <= 0)
+                return;
+
+            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm(id, AppSession.SeciliMagazaId, AppSession.SeciliMusteriId))
+            {
+                if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
+                    await YetkilileriYukleAsync();
+            }
+        }
+
+        private async Task ToggleStatusAsync(int id, bool aktif)
+        {
+            DialogResult result = MessageBox.Show(
+                aktif ? "Bu yetkiliyi pasife almak istiyor musunuz?" : "Bu yetkiliyi tekrar aktifleştirmek istiyor musunuz?",
+                "Onay",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            await DurumGuncelleAsync(id, !aktif);
+            await YetkilileriYukleAsync();
+        }
+
+        private Label CreateCardLabel(string text, float size, FontStyle style, Color color, int height)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Height = height,
+                Font = new Font("Segoe UI", size, style),
+                ForeColor = color,
+                BackColor = Color.Transparent,
+                AutoEllipsis = true
+            };
+        }
+
+        private string GetInitials(string name)
+        {
+            string[] parts = (name ?? string.Empty).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
+                return "YK";
+            if (parts.Length == 1)
+                return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+            return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpperInvariant();
+        }
+
+        private string GetRowText(DataRow row, string columnName, string defaultValue)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return defaultValue;
+            string value = Convert.ToString(row[columnName]);
+            return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+        }
+
+        private int GetRowInt(DataRow row, string columnName)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return 0;
+            return Convert.ToInt32(row[columnName]);
+        }
+
+        private bool GetRowBool(DataRow row, string columnName)
+        {
+            return row != null && row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value && Convert.ToBoolean(row[columnName]);
         }
 
         private int GetDurum()
@@ -439,7 +666,7 @@ namespace eMarketing.AdminPanel.Pages
             cToplam.SetData("□", "Toplam", total.ToString());
             cAktif.SetData("□", "Aktif", active.ToString());
             cPasif.SetData("□", "Pasif", passive.ToString());
-            cSiparis.SetData("□", "Sipariş Veren", ordered.ToString());
+            cSiparis.SetData("□", "Sipariş Yetkilisi", active.ToString());
         }
 
         private void ProfilDolulukHazirla(DataTable table)
@@ -486,7 +713,7 @@ namespace eMarketing.AdminPanel.Pages
 
         private async void BtnYeni_Click(object sender, EventArgs e)
         {
-            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm())
+            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm(0, AppSession.SeciliMagazaId, AppSession.SeciliMusteriId))
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
                     await YetkilileriYukleAsync();
@@ -520,7 +747,7 @@ namespace eMarketing.AdminPanel.Pages
             if (id <= 0)
                 return;
 
-            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm(id))
+            using (BayiYetkiliModalForm form = new BayiYetkiliModalForm(id, AppSession.SeciliMagazaId, AppSession.SeciliMusteriId))
             {
                 if (form.ShowDialog(this) == DialogResult.OK && form.IsSaved)
                     await YetkilileriYukleAsync();
@@ -547,7 +774,9 @@ namespace eMarketing.AdminPanel.Pages
 
         private Task<DataTable> GetYetkililerAsync()
         {
-            return apiClient.GetBayiYetkilileriAsync(txtArama.Text.Trim(), GetDurum());
+            int? bayiId = AppSession.TumMagazalar ? null : AppSession.SeciliMusteriId;
+            int? magazaId = AppSession.TumMagazalar ? null : AppSession.SeciliMagazaId;
+            return apiClient.GetBayiYetkilileriAsync(txtArama.Text.Trim(), GetDurum(), bayiId, magazaId);
         }
 
         private Task DurumGuncelleAsync(int id, bool aktifMi)
@@ -746,7 +975,7 @@ namespace eMarketing.AdminPanel.Pages
         {
             aramaTimer.Stop();
             txtArama.Clear();
-            cmbDurum.SelectedIndex = 0;
+            cmbDurum.SelectedIndex = 1;
             await YetkilileriYukleAsync();
         }
 

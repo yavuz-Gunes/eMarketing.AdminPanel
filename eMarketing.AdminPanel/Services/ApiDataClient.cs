@@ -213,19 +213,14 @@ namespace eMarketing.AdminPanel.Services
         {
             return GetDataTableAsync(BuildUrl("magazalar/secim",
                 "arama", arama,
-                "sadeceAktif", BoolText(sadeceAktif),
-                "kullaniciId", kullaniciId.HasValue ? kullaniciId.Value.ToString() : "",
-                "adminMi", BoolText(adminMi)));
+                "sadeceAktif", BoolText(sadeceAktif)));
         }
 
         public async Task<DataRow> GetMagazaByIdAsync(int magazaId, int? kullaniciId, bool adminMi)
         {
-            DataTable table = ConvertJsonObjectToDataTable(await GetStringAsync(BuildUrl("magazalar/secim/" + magazaId,
-                "kullaniciId", kullaniciId.HasValue ? kullaniciId.Value.ToString() : "",
-                "adminMi", BoolText(adminMi)), "Mağaza detay").ConfigureAwait(false));
+            DataTable table = ConvertJsonObjectToDataTable(await GetStringAsync(_baseUrl + "/magazalar/secim/" + magazaId, "Mağaza detay").ConfigureAwait(false));
             return table.Rows.Count == 0 ? null : table.Rows[0];
         }
-
         public Task<DataTable> GetBayiYetkilileriAsync(string arama = "", int durum = -1, int? bayiId = null, int? magazaId = null)
         {
             return GetDataTableAsync(BuildUrl("bayi-yetkilileri",
@@ -241,17 +236,15 @@ namespace eMarketing.AdminPanel.Services
             return table.Rows.Count == 0 ? null : table.Rows[0];
         }
 
-        public async Task<int> SaveBayiYetkiliAsync(int? bayiYetkiliId, int bayiId, int? magazaId, string adSoyad, string telefon, string email, string gorev, string notlar, bool aktifMi)
+        public async Task<int> SaveBayiYetkiliAsync(int? bayiYetkiliId, int kullaniciId, int bayiId, int magazaId, string yetkiTipi, string notlar, bool aktifMi)
         {
             string response = await SendJsonAsync(HttpMethod.Post, _baseUrl + "/bayi-yetkilileri", _serializer.Serialize(new
             {
                 BayiYetkiliId = bayiYetkiliId,
+                KullaniciId = kullaniciId,
                 BayiId = bayiId,
                 MagazaId = magazaId,
-                AdSoyad = adSoyad,
-                Telefon = telefon,
-                Email = email,
-                Gorev = gorev,
+                YetkiTipi = yetkiTipi,
                 Notlar = notlar,
                 AktifMi = aktifMi
             }), "Yetkili kaydetme").ConfigureAwait(false);
@@ -263,6 +256,11 @@ namespace eMarketing.AdminPanel.Services
         {
             return SendJsonAsync(new HttpMethod("PATCH"), _baseUrl + "/bayi-yetkilileri/" + bayiYetkiliId + "/durum",
                 _serializer.Serialize(new { AktifMi = aktifMi }), "Yetkili durum güncelleme");
+        }
+
+        public Task<DataTable> GetSiparisYetkilileriAsync(int magazaId)
+        {
+            return GetDataTableAsync(_baseUrl + "/magazalar/" + magazaId + "/siparis-yetkilileri");
         }
 
         public Task<DataTable> GetBayiStoklariAsync(int? magazaId, string arama, bool sadeceStokta, bool sadeceKritik, bool sadeceAktif, int? kullaniciId, bool adminMi)
@@ -318,14 +316,23 @@ namespace eMarketing.AdminPanel.Services
 
         public Task<DataTable> GetPersonellerAsync(string arama, bool sadeceAktif, int? goruntuleyenKullaniciId, bool adminMi)
         {
+            return GetPersonellerAsync(arama, sadeceAktif, null);
+        }
+
+        public Task<DataTable> GetPersonellerAsync(string arama, bool sadeceAktif, int? magazaId)
+        {
             return GetDataTableAsync(BuildUrl("personel",
                 "arama", arama,
                 "sadeceAktif", BoolText(sadeceAktif),
-                "goruntuleyenKullaniciId", goruntuleyenKullaniciId.HasValue ? goruntuleyenKullaniciId.Value.ToString() : "",
-                "adminMi", BoolText(adminMi)));
+                "magazaId", magazaId.HasValue ? magazaId.Value.ToString() : ""));
         }
 
         public async Task<int> SavePersonelAsync(int? kullaniciId, string kullaniciAdi, string sifre, string adSoyad, string rol, bool aktifMi)
+        {
+            return await SavePersonelAsync(kullaniciId, kullaniciAdi, sifre, adSoyad, "", "", "", rol, aktifMi).ConfigureAwait(false);
+        }
+
+        public async Task<int> SavePersonelAsync(int? kullaniciId, string kullaniciAdi, string sifre, string adSoyad, string telefon, string email, string imageUrl, string rol, bool aktifMi)
         {
             string response = await SendJsonAsync(HttpMethod.Post, _baseUrl + "/personel", _serializer.Serialize(new
             {
@@ -333,6 +340,9 @@ namespace eMarketing.AdminPanel.Services
                 KullaniciAdi = kullaniciAdi,
                 Sifre = sifre,
                 AdSoyad = adSoyad,
+                Telefon = telefon,
+                Email = email,
+                ImageUrl = imageUrl,
                 Rol = rol,
                 AktifMi = aktifMi
             }), "Personel kaydetme").ConfigureAwait(false);
@@ -342,22 +352,32 @@ namespace eMarketing.AdminPanel.Services
 
         public Task<DataTable> GetPersonelMagazalariAsync(int kullaniciId, int? goruntuleyenKullaniciId, bool adminMi)
         {
-            return GetDataTableAsync(BuildUrl("personel/" + kullaniciId + "/magazalar",
-                "goruntuleyenKullaniciId", goruntuleyenKullaniciId.HasValue ? goruntuleyenKullaniciId.Value.ToString() : "",
-                "adminMi", BoolText(adminMi)));
+            return GetDataTableAsync(_baseUrl + "/personel/" + kullaniciId + "/magazalar");
         }
 
         public Task<DataTable> GetAtanabilirMagazalarAsync(int kullaniciId, string arama, int? goruntuleyenKullaniciId, bool adminMi)
         {
             return GetDataTableAsync(BuildUrl("personel/" + kullaniciId + "/atanabilir-magazalar",
-                "arama", arama,
-                "goruntuleyenKullaniciId", goruntuleyenKullaniciId.HasValue ? goruntuleyenKullaniciId.Value.ToString() : "",
-                "adminMi", BoolText(adminMi)));
+                "arama", arama));
         }
 
         public Task AssignPersonelMagazaAsync(int kullaniciId, int magazaId)
         {
-            return SendJsonAsync(HttpMethod.Post, _baseUrl + "/personel/" + kullaniciId + "/magazalar/" + magazaId, "{}", "Personel mağaza atama");
+            return AssignPersonelMagazaAsync(kullaniciId, magazaId, "Personel");
+        }
+
+        public Task AssignPersonelMagazaAsync(int kullaniciId, int magazaId, string gorev)
+        {
+            return SendJsonAsync(HttpMethod.Post, _baseUrl + "/personel/" + kullaniciId + "/magazalar/" + magazaId,
+                _serializer.Serialize(new { Gorev = string.IsNullOrWhiteSpace(gorev) ? "Personel" : gorev }),
+                "Personel mağaza atama");
+        }
+
+        public Task UpdatePersonelMagazaGorevAsync(int kullaniciMagazaId, string gorev)
+        {
+            return SendJsonAsync(new HttpMethod("PATCH"), _baseUrl + "/personel/magaza-yetkileri/" + kullaniciMagazaId + "/gorev",
+                _serializer.Serialize(new { Gorev = string.IsNullOrWhiteSpace(gorev) ? "Personel" : gorev }),
+                "Personel mağaza görevi güncelleme");
         }
 
         public Task RemovePersonelMagazaAsync(int kullaniciMagazaId)

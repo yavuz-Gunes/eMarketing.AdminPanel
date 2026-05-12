@@ -16,9 +16,9 @@ SELECT
     cs.City AS Sehir,
     cs.District AS Ilce,
 
-    byk.AdSoyad AS YetkiliAdi,
-    byk.Telefon AS YetkiliTelefon,
-    byk.Email AS YetkiliEmail,
+    bykUser.AdSoyad AS YetkiliAdi,
+    bykUser.Telefon AS YetkiliTelefon,
+    bykUser.Email AS YetkiliEmail,
     COALESCE(itemStats.FirstImageUrl, p.ImageUrl) AS GorselUrl,
 
     CASE
@@ -49,6 +49,8 @@ LEFT JOIN dbo.CustomerStores cs
     ON cs.CustomerStoreId = o.CustomerStoreId
 LEFT JOIN dbo.BayiYetkilileri byk
     ON byk.BayiYetkiliId = o.BayiYetkiliId
+LEFT JOIN dbo.Kullanicilar bykUser
+    ON bykUser.KullaniciId = byk.KullaniciId
 LEFT JOIN dbo.Products p
     ON p.ProductId = o.ProductId
 OUTER APPLY
@@ -90,7 +92,9 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Siparis_Listele
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1
+    @TumMagazalar BIT = 1,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -127,8 +131,24 @@ BEGIN
     WHERE IsArchived = 0
       AND
       (
-          @TumMagazalar = 1
+          @MagazaId IS NULL
           OR CustomerStoreId = @MagazaId
+      )
+      AND
+      (
+          @AdminMi = 1
+          OR
+          (
+              @KullaniciId IS NOT NULL
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM dbo.KullaniciMagazalari km
+                  WHERE km.MagazaId = CustomerStoreId
+                    AND km.KullaniciId = @KullaniciId
+                    AND km.AktifMi = 1
+              )
+          )
       )
     ORDER BY SiparisId DESC;
 END

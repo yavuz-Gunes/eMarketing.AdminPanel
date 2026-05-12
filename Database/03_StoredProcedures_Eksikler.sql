@@ -1,20 +1,5 @@
-CREATE OR ALTER PROCEDURE dbo.sp_Kullanici_GirisYap
-    @KullaniciAdi NVARCHAR(100),
-    @Sifre NVARCHAR(200)
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT TOP 1
-        KullaniciId,
-        KullaniciAdi,
-        AdSoyad,
-        Rol
-    FROM dbo.Kullanicilar
-    WHERE KullaniciAdi = LTRIM(RTRIM(@KullaniciAdi))
-      AND Sifre = LTRIM(RTRIM(@Sifre))
-      AND AktifMi = 1;
-END
+IF OBJECT_ID('dbo.sp_Kullanici_GirisYap', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_Kullanici_GirisYap;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Kategori_Listele
@@ -653,7 +638,9 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_SonSiparisler_Getir
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1
+    @TumMagazalar BIT = 1,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -673,13 +660,27 @@ BEGIN
     FROM dbo.vw_Siparis_Liste
     WHERE IsArchived = 0
       AND (@TumMagazalar = 1 OR CustomerStoreId = @MagazaId)
+      AND
+      (
+          @AdminMi = 1
+          OR EXISTS
+          (
+              SELECT 1
+              FROM dbo.KullaniciMagazalari km
+              WHERE km.MagazaId = CustomerStoreId
+                AND km.KullaniciId = @KullaniciId
+                AND km.AktifMi = 1
+          )
+      )
     ORDER BY SiparisTarihi DESC, SiparisId DESC;
 END
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Siparis_DurumOzet_Getir
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1
+    @TumMagazalar BIT = 1,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -692,6 +693,26 @@ BEGIN
         SUM(CASE WHEN SiparisDurumu = N'Iptal' OR IsCancelled = 1 THEN 1 ELSE 0 END) AS IptalSayisi
     FROM dbo.vw_Siparis_Liste
     WHERE IsArchived = 0
-      AND (@TumMagazalar = 1 OR CustomerStoreId = @MagazaId);
+      AND
+      (
+          @MagazaId IS NULL
+          OR CustomerStoreId = @MagazaId
+      )
+      AND
+      (
+          @AdminMi = 1
+          OR
+          (
+              @KullaniciId IS NOT NULL
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM dbo.KullaniciMagazalari km
+                  WHERE km.MagazaId = CustomerStoreId
+                    AND km.KullaniciId = @KullaniciId
+                    AND km.AktifMi = 1
+              )
+          )
+      );
 END
 GO

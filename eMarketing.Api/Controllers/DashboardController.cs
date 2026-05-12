@@ -1,52 +1,37 @@
+using eMarketing.Service.Dtos;
 using eMarketing.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using System.Data;
 
 namespace eMarketing.Api.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize]
+[Authorize(Policy = "CanViewDashboard")]
 public sealed class DashboardController : ControllerBase
 {
-    private readonly ISqlDataService _dataService;
+    private readonly IDashboardService _dashboardService;
 
-    public DashboardController(ISqlDataService dataService)
+    public DashboardController(IDashboardService dashboardService)
     {
-        _dataService = dataService;
+        _dashboardService = dashboardService;
     }
 
     [HttpGet("ozet")]
-    public async Task<ActionResult<object>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<DashboardSummaryDto>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
-        Dictionary<string, object?>? row = await _dataService.QuerySingleAsync(
-            "sp_Dashboard_Ozet_Getir",
-            MagazaParams(magazaId, tumMagazalar),
-            cancellationToken);
-
-        return Ok(row ?? new Dictionary<string, object?>());
+        return Ok(await _dashboardService.GetSummaryAsync(magazaId, tumMagazalar, cancellationToken));
     }
 
     [HttpGet("son-siparisler")]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetSonSiparisler([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IReadOnlyList<DashboardRecentOrderDto>>> GetSonSiparisler([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_Dashboard_SonSiparisler_Getir", MagazaParams(magazaId, tumMagazalar), cancellationToken));
+        return Ok(await _dashboardService.GetRecentOrdersAsync(magazaId, tumMagazalar, cancellationToken));
     }
 
     [HttpGet("kritik-stok")]
-    public async Task<ActionResult<IReadOnlyList<Dictionary<string, object?>>>> GetKritikStok([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IReadOnlyList<DashboardCriticalStockDto>>> GetKritikStok([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
     {
-        return Ok(await _dataService.QueryAsync("sp_Dashboard_KritikStok_Getir", MagazaParams(magazaId, tumMagazalar), cancellationToken));
-    }
-
-    private static SqlParameter[] MagazaParams(int? magazaId, bool tumMagazalar)
-    {
-        return new[]
-        {
-            SqlDataService.Param("@MagazaId", SqlDbType.Int, magazaId),
-            SqlDataService.Param("@TumMagazalar", SqlDbType.Bit, tumMagazalar)
-        };
+        return Ok(await _dashboardService.GetCriticalStockAsync(magazaId, tumMagazalar, cancellationToken));
     }
 }

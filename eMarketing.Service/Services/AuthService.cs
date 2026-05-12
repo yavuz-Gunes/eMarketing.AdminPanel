@@ -41,26 +41,7 @@ public sealed class AuthService : IAuthService
             };
         }
 
-        // Compatibility fallback for databases where the auth security migration has not been applied yet.
-        await using SqlConnection connection = _connectionFactory.CreateConnection();
-        await using SqlCommand command = new("sp_Kullanici_GirisYap", connection);
-        command.CommandType = CommandType.StoredProcedure;
-        command.Parameters.Add("@KullaniciAdi", SqlDbType.NVarChar, 100).Value = (kullaniciAdi ?? string.Empty).Trim();
-        command.Parameters.Add("@Sifre", SqlDbType.NVarChar, 200).Value = (sifre ?? string.Empty).Trim();
-
-        await connection.OpenAsync(cancellationToken);
-
-        await using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
-            return null;
-
-        return new KullaniciDto
-        {
-            KullaniciId = reader.GetInt("KullaniciId"),
-            KullaniciAdi = reader.GetText("KullaniciAdi"),
-            AdSoyad = reader.GetText("AdSoyad"),
-            Rol = reader.GetText("Rol")
-        };
+        return null;
     }
 
     private async Task<KullaniciLoginRecord?> TryGetLoginRecordAsync(string kullaniciAdi, CancellationToken cancellationToken)
@@ -89,7 +70,7 @@ public sealed class AuthService : IAuthService
         }
         catch (SqlException ex) when (ex.Number == 2812)
         {
-            return null;
+            throw new InvalidOperationException("Login altyapısı eksik. Database/04_AuthSecurity.sql scriptini çalıştırın.", ex);
         }
     }
 

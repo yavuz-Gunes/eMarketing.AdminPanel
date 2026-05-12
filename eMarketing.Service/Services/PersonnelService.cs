@@ -11,7 +11,8 @@ public interface IPersonnelService
     Task<int> SavePersonnelAsync(CreatePersonnelRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PersonnelStorePermissionDto>> GetStoresAsync(int userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PersonnelStorePermissionDto>> GetAssignableStoresAsync(int userId, string search, CancellationToken cancellationToken = default);
-    Task AssignStoreAsync(int userId, int storeId, CancellationToken cancellationToken = default);
+    Task AssignStoreAsync(int userId, int storeId, string duty, CancellationToken cancellationToken = default);
+    Task UpdateStoreDutyAsync(int userStoreId, string duty, CancellationToken cancellationToken = default);
     Task RemoveStoreAsync(int userStoreId, CancellationToken cancellationToken = default);
 }
 
@@ -44,6 +45,9 @@ public sealed class PersonnelService : IPersonnelService
             KullaniciAdi = request.KullaniciAdi,
             Sifre = BuildPasswordForSave(request),
             AdSoyad = request.AdSoyad,
+            Telefon = request.Telefon,
+            Email = request.Email,
+            ImageUrl = request.ImageUrl,
             Rol = request.Rol,
             AktifMi = request.AktifMi
         };
@@ -76,15 +80,26 @@ public sealed class PersonnelService : IPersonnelService
         return _repository.GetAssignableStoresAsync(userId, search, currentUser.UserId, currentUser.CanSeeAllStores, cancellationToken);
     }
 
-    public async Task AssignStoreAsync(int userId, int storeId, CancellationToken cancellationToken = default)
+    public async Task AssignStoreAsync(int userId, int storeId, string duty, CancellationToken cancellationToken = default)
     {
-        await _repository.AssignStoreAsync(userId, storeId, cancellationToken);
-        _logger.LogInformation("Personnel store permission assigned. PersonnelId: {PersonnelId}, StoreId: {StoreId}, ActorUserId: {ActorUserId}", userId, storeId, _currentUserService.CurrentUser.UserId);
+        await _repository.AssignStoreAsync(userId, storeId, NormalizeDuty(duty), cancellationToken);
+        _logger.LogInformation("Personnel store permission assigned. PersonnelId: {PersonnelId}, StoreId: {StoreId}, Duty: {Duty}, ActorUserId: {ActorUserId}", userId, storeId, duty, _currentUserService.CurrentUser.UserId);
+    }
+
+    public async Task UpdateStoreDutyAsync(int userStoreId, string duty, CancellationToken cancellationToken = default)
+    {
+        await _repository.UpdateStoreDutyAsync(userStoreId, NormalizeDuty(duty), cancellationToken);
+        _logger.LogInformation("Personnel store duty updated. UserStoreId: {UserStoreId}, Duty: {Duty}, ActorUserId: {ActorUserId}", userStoreId, duty, _currentUserService.CurrentUser.UserId);
     }
 
     public async Task RemoveStoreAsync(int userStoreId, CancellationToken cancellationToken = default)
     {
         await _repository.RemoveStoreAsync(userStoreId, cancellationToken);
         _logger.LogInformation("Personnel store permission removed. UserStoreId: {UserStoreId}, ActorUserId: {ActorUserId}", userStoreId, _currentUserService.CurrentUser.UserId);
+    }
+
+    private static string NormalizeDuty(string duty)
+    {
+        return duty is "MagazaMuduru" or "Supervisor" or "Personel" ? duty : "Personel";
     }
 }

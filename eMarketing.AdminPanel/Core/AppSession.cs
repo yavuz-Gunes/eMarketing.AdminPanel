@@ -85,6 +85,12 @@ namespace eMarketing.AdminPanel.Core
 
         public static void TumMagazalariSec()
         {
+            if (!AdminMi)
+            {
+                MagazaSeciminiTemizle();
+                return;
+            }
+
             SeciliMusteriId = null;
             SeciliMagazaId = null;
 

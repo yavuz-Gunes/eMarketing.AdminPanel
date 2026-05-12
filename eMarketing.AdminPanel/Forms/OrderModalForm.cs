@@ -364,7 +364,7 @@ namespace eMarketing.AdminPanel.Forms
 
         private Task<DataTable> GetYetkililerAsync(int bayiId, int magazaId)
         {
-            return _apiClient.GetBayiYetkilileriAsync("", 1, bayiId, magazaId);
+            return _apiClient.GetSiparisYetkilileriAsync(magazaId);
         }
 
         private async Task LoadMagazalarAsync()
@@ -466,6 +466,10 @@ namespace eMarketing.AdminPanel.Forms
 
                 if (!yetkililer.Columns.Contains("YetkiliGosterim"))
                     yetkililer.Columns.Add("YetkiliGosterim", typeof(string));
+                if (!yetkililer.Columns.Contains("BayiYetkiliId"))
+                    yetkililer.Columns.Add("BayiYetkiliId", typeof(int));
+                if (!yetkililer.Columns.Contains("AdSoyad"))
+                    yetkililer.Columns.Add("AdSoyad", typeof(string));
 
                 DataTable source = yetkililer.Clone();
                 DataRow empty = source.NewRow();
@@ -477,7 +481,7 @@ namespace eMarketing.AdminPanel.Forms
                 foreach (DataRow row in yetkililer.Rows)
                 {
                     string adSoyad = Convert.ToString(row["AdSoyad"]);
-                    string gorev = row.Table.Columns.Contains("Gorev") ? Convert.ToString(row["Gorev"]) : "";
+                    string gorev = row.Table.Columns.Contains("YetkiTipiGorunenAd") ? Convert.ToString(row["YetkiTipiGorunenAd"]) : "";
                     row["YetkiliGosterim"] = string.IsNullOrWhiteSpace(gorev)
                         ? adSoyad
                         : adSoyad + " - " + gorev;
@@ -708,6 +712,13 @@ namespace eMarketing.AdminPanel.Forms
                 int productId = Convert.ToInt32(cmbProduct.SelectedValue);
                 int magazaId = Convert.ToInt32(cmbMagaza.SelectedValue);
                 int? bayiYetkiliId = GetSelectedYetkiliId();
+                if (!bayiYetkiliId.HasValue)
+                {
+                    MessageBox.Show("Sipariş oluşturmak için aktif bir sipariş yetkilisi seçmelisiniz.",
+                        "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    cmbYetkili.Focus();
+                    return;
+                }
 
                 customerName = Convert.ToString(magazaRow["MusteriAdi"]);
 

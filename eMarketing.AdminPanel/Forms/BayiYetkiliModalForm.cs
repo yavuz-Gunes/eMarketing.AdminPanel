@@ -1,7 +1,6 @@
 using System;
 using System.Data;
 using System.Drawing;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using eMarketing.AdminPanel.Componets;
@@ -14,13 +13,18 @@ namespace eMarketing.AdminPanel.Forms
     {
         private readonly ApiDataClient apiClient = new ApiDataClient();
         private readonly int bayiYetkiliId;
+        private readonly int? contextMagazaId;
+        private readonly int? contextBayiId;
+        private bool loading;
 
+        private ComboBox cmbKullanici;
         private ComboBox cmbBayi;
         private ComboBox cmbMagaza;
+        private ComboBox cmbYetkiTipi;
         private TextBox txtAdSoyad;
         private TextBox txtTelefon;
         private TextBox txtEmail;
-        private TextBox txtGorev;
+        private TextBox txtRol;
         private TextBox txtNotlar;
         private CheckBox chkAktif;
         private Button btnKaydet;
@@ -28,16 +32,18 @@ namespace eMarketing.AdminPanel.Forms
 
         public bool IsSaved { get; private set; }
 
-        public BayiYetkiliModalForm(int bayiYetkiliId = 0)
+        public BayiYetkiliModalForm(int bayiYetkiliId = 0, int? magazaId = null, int? bayiId = null)
         {
             this.bayiYetkiliId = bayiYetkiliId;
+            contextMagazaId = magazaId ?? AppSession.SeciliMagazaId;
+            contextBayiId = bayiId ?? AppSession.SeciliMusteriId;
             BuildLayout();
             Load += BayiYetkiliModalForm_Load;
         }
 
         private void BuildLayout()
         {
-            Text = bayiYetkiliId > 0 ? "Müşteri / Yetkili Düzenle" : "Yeni Müşteri / Yetkili";
+            Text = bayiYetkiliId > 0 ? "Sipariş Yetkilisi Düzenle" : "Yeni Sipariş Yetkilisi";
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -45,20 +51,20 @@ namespace eMarketing.AdminPanel.Forms
             ShowInTaskbar = false;
             ShowIcon = false;
             BackColor = AppColors.Background;
-            Width = 680;
-            Height = 620;
+            Width = 760;
+            Height = 650;
 
             Panel header = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 90,
+                Height = 92,
                 BackColor = AppColors.CardBackground,
                 Padding = new Padding(26, 18, 26, 12)
             };
 
             Label title = new Label
             {
-                Text = bayiYetkiliId > 0 ? "Müşteri / Yetkili Düzenle" : "Yeni Müşteri / Yetkili",
+                Text = Text,
                 Dock = DockStyle.Top,
                 Height = 34,
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
@@ -67,7 +73,7 @@ namespace eMarketing.AdminPanel.Forms
 
             Label subtitle = new Label
             {
-                Text = "Bayiye bağlı sipariş veren kişi bilgilerini yönetin.",
+                Text = "Aktif mağazadaki bir personeli sipariş yetkilisi olarak bağlayın.",
                 Dock = DockStyle.Top,
                 Height = 24,
                 Font = new Font("Segoe UI", 9F),
@@ -86,24 +92,27 @@ namespace eMarketing.AdminPanel.Forms
 
             Panel form = new Panel
             {
-                Location = new Point(24, 20),
-                Size = new Size(620, 390),
+                Dock = DockStyle.Fill,
                 BackColor = AppColors.CardBackground,
                 Padding = new Padding(22)
             };
 
-            cmbBayi = CreateComboBox(22, 42, 576);
-            cmbBayi.SelectedIndexChanged += CmbBayi_SelectedIndexChanged;
-            cmbMagaza = CreateComboBox(22, 110, 576);
-            txtAdSoyad = CreateTextBox(22, 178, 280);
-            txtTelefon = CreateTextBox(322, 178, 276);
-            txtEmail = CreateTextBox(22, 246, 280);
-            txtGorev = CreateTextBox(322, 246, 276);
-            txtNotlar = CreateTextBox(22, 314, 576);
+            cmbKullanici = CreateComboBox(22, 42, 654);
+            cmbBayi = CreateComboBox(22, 116, 654);
+            cmbMagaza = CreateComboBox(22, 190, 654);
+            cmbYetkiTipi = CreateComboBox(386, 338, 290);
+            cmbBayi.Enabled = false;
+            cmbMagaza.Enabled = false;
+            cmbYetkiTipi.Enabled = false;
+            txtAdSoyad = CreateTextBox(22, 264, 310, true);
+            txtTelefon = CreateTextBox(366, 264, 310, true);
+            txtEmail = CreateTextBox(22, 338, 310, true);
+            txtRol = CreateTextBox(22, 412, 310, true);
+            txtNotlar = CreateTextBox(366, 412, 310, false);
             chkAktif = new CheckBox
             {
                 Text = "Aktif",
-                Location = new Point(22, 354),
+                Location = new Point(22, 482),
                 AutoSize = true,
                 Checked = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -111,23 +120,29 @@ namespace eMarketing.AdminPanel.Forms
                 BackColor = Color.Transparent
             };
 
-            AddLabel(form, "Bayi", 22, 18);
-            AddLabel(form, "Bağlı Mağaza", 22, 86);
-            AddLabel(form, "Ad Soyad", 22, 154);
-            AddLabel(form, "Telefon", 322, 154);
-            AddLabel(form, "E-Posta", 22, 222);
-            AddLabel(form, "Görev", 322, 222);
-            AddLabel(form, "Not", 22, 290);
+            cmbKullanici.SelectedIndexChanged += CmbKullanici_SelectedIndexChanged;
+            cmbBayi.SelectedIndexChanged += CmbBayi_SelectedIndexChanged;
 
+            AddLabel(form, "Yetkili Personel", 22, 18);
+            AddLabel(form, "Bayi", 22, 92);
+            AddLabel(form, "Aktif Mağaza", 22, 166);
+            AddLabel(form, "Ad Soyad", 22, 240);
+            AddLabel(form, "Telefon", 366, 240);
+            AddLabel(form, "E-Posta", 22, 314);
+            AddLabel(form, "Yetki Tipi", 386, 314);
+            AddLabel(form, "Rol", 22, 388);
+            AddLabel(form, "Not", 366, 388);
+
+            form.Controls.Add(cmbKullanici);
             form.Controls.Add(cmbBayi);
             form.Controls.Add(cmbMagaza);
             form.Controls.Add(txtAdSoyad);
             form.Controls.Add(txtTelefon);
             form.Controls.Add(txtEmail);
-            form.Controls.Add(txtGorev);
+            form.Controls.Add(cmbYetkiTipi);
+            form.Controls.Add(txtRol);
             form.Controls.Add(txtNotlar);
             form.Controls.Add(chkAktif);
-
             body.Controls.Add(form);
 
             Panel footer = new Panel
@@ -161,16 +176,95 @@ namespace eMarketing.AdminPanel.Forms
 
         private async void BayiYetkiliModalForm_Load(object sender, EventArgs e)
         {
-            await LoadBayilerAsync();
+            try
+            {
+                loading = true;
+                LoadYetkiTipleri();
+                await LoadKullanicilarAsync();
+                await LoadBayilerAsync();
+                loading = false;
 
-            if (bayiYetkiliId > 0)
-                await LoadYetkiliAsync();
+                if (bayiYetkiliId > 0)
+                    await LoadYetkiliAsync();
+                else
+                    FillUserFields();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
+            }
+            finally
+            {
+                loading = false;
+            }
+        }
+
+        private void LoadYetkiTipleri()
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add("Kod", typeof(string));
+            table.Columns.Add("Ad", typeof(string));
+            table.Rows.Add("SiparisYetkilisi", "Sipariş Yetkilisi");
+
+            cmbYetkiTipi.DisplayMember = "Ad";
+            cmbYetkiTipi.ValueMember = "Kod";
+            cmbYetkiTipi.DataSource = table;
+        }
+
+        private async Task LoadKullanicilarAsync()
+        {
+            if (!contextMagazaId.HasValue && bayiYetkiliId <= 0)
+                throw new InvalidOperationException("Sipariş yetkilisi eklemek için önce aktif mağaza seçin.");
+
+            DataTable users = await apiClient.GetPersonellerAsync("", true, contextMagazaId);
+            for (int i = users.Rows.Count - 1; i >= 0; i--)
+            {
+                if (string.Equals(GetText(users.Rows[i], "Rol", ""), "Admin", StringComparison.OrdinalIgnoreCase))
+                    users.Rows.RemoveAt(i);
+            }
+
+            if (!users.Columns.Contains("KullaniciGosterim"))
+                users.Columns.Add("KullaniciGosterim", typeof(string));
+
+            foreach (DataRow row in users.Rows)
+            {
+                string role = GetRolGorunenAd(GetText(row, "Rol", ""));
+                row["KullaniciGosterim"] = GetText(row, "AdSoyad", "Personel") + " - " + role;
+            }
+
+            cmbKullanici.DisplayMember = "KullaniciGosterim";
+            cmbKullanici.ValueMember = "KullaniciId";
+            cmbKullanici.DataSource = users;
         }
 
         private async Task LoadBayilerAsync()
         {
-            DataTable bayiler = await GetBayilerAsync();
+            if (contextMagazaId.HasValue)
+            {
+                DataRow magaza = await apiClient.GetMagazaByIdAsync(contextMagazaId.Value, AppSession.KullaniciId, AppSession.AdminMi);
+                if (magaza == null)
+                    throw new InvalidOperationException("Aktif mağaza bilgisi alınamadı.");
 
+                DataTable contextBayiler = new DataTable();
+                contextBayiler.Columns.Add("CustomerId", typeof(int));
+                contextBayiler.Columns.Add("BayiGosterim", typeof(string));
+                contextBayiler.Rows.Add(GetInt(magaza, "MusteriId"), GetText(magaza, "MusteriAdi", "Bayi"));
+                cmbBayi.DisplayMember = "BayiGosterim";
+                cmbBayi.ValueMember = "CustomerId";
+                cmbBayi.DataSource = contextBayiler;
+
+                DataTable magazalar = new DataTable();
+                magazalar.Columns.Add("CustomerStoreId", typeof(int));
+                magazalar.Columns.Add("StoreName", typeof(string));
+                magazalar.Rows.Add(GetInt(magaza, "MagazaId"), GetText(magaza, "MagazaAdi", "Mağaza"));
+                cmbMagaza.DisplayMember = "StoreName";
+                cmbMagaza.ValueMember = "CustomerStoreId";
+                cmbMagaza.DataSource = magazalar;
+                return;
+            }
+
+            DataTable bayiler = await apiClient.GetBayilerAsync("", 1);
             if (!bayiler.Columns.Contains("BayiGosterim"))
                 bayiler.Columns.Add("BayiGosterim", typeof(string));
 
@@ -188,63 +282,73 @@ namespace eMarketing.AdminPanel.Forms
         {
             int bayiId;
             if (!TryGetSelectedInt(cmbBayi, out bayiId))
+            {
+                cmbMagaza.DataSource = null;
                 return;
+            }
 
-            DataTable magazalar = await GetMagazalarAsync(bayiId);
-            DataTable source = magazalar.Clone();
-
-            DataRow bayiGeneli = source.NewRow();
-            if (source.Columns.Contains("CustomerStoreId"))
-                bayiGeneli["CustomerStoreId"] = DBNull.Value;
-            if (source.Columns.Contains("StoreName"))
-                bayiGeneli["StoreName"] = "Bayi geneli";
-            source.Rows.Add(bayiGeneli);
-
-            foreach (DataRow row in magazalar.Rows)
-                source.ImportRow(row);
-
+            DataTable magazalar = await apiClient.GetBayiMagazalariAsync(bayiId, 1);
             cmbMagaza.DisplayMember = "StoreName";
             cmbMagaza.ValueMember = "CustomerStoreId";
-            cmbMagaza.DataSource = source;
-        }
-
-        private bool TryGetSelectedInt(ComboBox comboBox, out int value)
-        {
-            value = 0;
-
-            if (comboBox.SelectedValue == null || comboBox.SelectedValue == DBNull.Value)
-                return false;
-
-            return int.TryParse(Convert.ToString(comboBox.SelectedValue), out value);
+            cmbMagaza.DataSource = magazalar;
         }
 
         private async Task LoadYetkiliAsync()
         {
-            DataRow row = await GetYetkiliByIdAsync();
+            DataRow row = await apiClient.GetBayiYetkiliByIdAsync(bayiYetkiliId);
             if (row == null)
             {
-                MessageBox.Show("Müşteri/yetkili bulunamadı.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Yetkili bulunamadı.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Close();
                 return;
             }
 
+            cmbKullanici.SelectedValue = Convert.ToInt32(row["KullaniciId"]);
             cmbBayi.SelectedValue = Convert.ToInt32(row["BayiId"]);
             await LoadMagazalarAsync();
-
-            if (row["MagazaId"] != DBNull.Value)
-                cmbMagaza.SelectedValue = Convert.ToInt32(row["MagazaId"]);
-
-            txtAdSoyad.Text = GetText(row, "AdSoyad", "");
-            txtTelefon.Text = GetText(row, "Telefon", "");
-            txtEmail.Text = GetText(row, "Email", "");
-            txtGorev.Text = GetText(row, "Gorev", "");
+            cmbMagaza.SelectedValue = Convert.ToInt32(row["MagazaId"]);
+            cmbYetkiTipi.SelectedValue = GetText(row, "YetkiTipi", "SiparisYetkilisi");
             txtNotlar.Text = GetText(row, "Notlar", "");
-            chkAktif.Checked = row["AktifMi"] != DBNull.Value && Convert.ToBoolean(row["AktifMi"]);
+            chkAktif.Checked = GetBool(row, "AktifMi", true);
+            FillUserFields();
         }
 
         private async void CmbBayi_SelectedIndexChanged(object sender, EventArgs e)
         {
-            await LoadMagazalarAsync();
+            if (loading)
+                return;
+
+            try
+            {
+                await LoadMagazalarAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CmbKullanici_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            FillUserFields();
+        }
+
+        private void FillUserFields()
+        {
+            DataRowView rowView = cmbKullanici.SelectedItem as DataRowView;
+            if (rowView == null)
+            {
+                txtAdSoyad.Text = "";
+                txtTelefon.Text = "";
+                txtEmail.Text = "";
+                txtRol.Text = "";
+                return;
+            }
+
+            txtAdSoyad.Text = GetText(rowView.Row, "AdSoyad", "");
+            txtTelefon.Text = GetText(rowView.Row, "Telefon", "");
+            txtEmail.Text = GetText(rowView.Row, "Email", "");
+            txtRol.Text = GetRolGorunenAd(GetText(rowView.Row, "Rol", ""));
         }
 
         private async void BtnKaydet_Click(object sender, EventArgs e)
@@ -252,84 +356,65 @@ namespace eMarketing.AdminPanel.Forms
             if (!ValidateForm())
                 return;
 
-            int bayiId = Convert.ToInt32(cmbBayi.SelectedValue);
-            int? magazaId = null;
-
-            if (cmbMagaza.SelectedValue != null && cmbMagaza.SelectedValue != DBNull.Value)
+            try
             {
-                int parsed;
-                if (int.TryParse(Convert.ToString(cmbMagaza.SelectedValue), out parsed) && parsed > 0)
-                    magazaId = parsed;
+                btnKaydet.Enabled = false;
+                await apiClient.SaveBayiYetkiliAsync(
+                    bayiYetkiliId > 0 ? (int?)bayiYetkiliId : null,
+                    Convert.ToInt32(cmbKullanici.SelectedValue),
+                    Convert.ToInt32(cmbBayi.SelectedValue),
+                    Convert.ToInt32(cmbMagaza.SelectedValue),
+                    "SiparisYetkilisi",
+                    txtNotlar.Text,
+                    chkAktif.Checked);
+
+                IsSaved = true;
+                DialogResult = DialogResult.OK;
+                Close();
             }
-
-            await YetkiliKaydetAsync(
-                bayiYetkiliId > 0 ? (int?)bayiYetkiliId : null,
-                bayiId,
-                magazaId,
-                txtAdSoyad.Text,
-                txtTelefon.Text,
-                txtEmail.Text,
-                txtGorev.Text,
-                txtNotlar.Text,
-                chkAktif.Checked);
-
-            IsSaved = true;
-            DialogResult = DialogResult.OK;
-            Close();
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnKaydet.Enabled = true;
+            }
         }
 
         private bool ValidateForm()
         {
-            if (cmbBayi.SelectedValue == null)
+            if (!TryGetSelectedInt(cmbKullanici, out _))
+            {
+                MessageBox.Show("Yetkili personel seçimi zorunludur.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cmbKullanici.Focus();
+                return false;
+            }
+
+            if (!TryGetSelectedInt(cmbBayi, out _))
             {
                 MessageBox.Show("Bayi seçimi zorunludur.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cmbBayi.Focus();
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(txtAdSoyad.Text))
+            if (!TryGetSelectedInt(cmbMagaza, out _))
             {
-                MessageBox.Show("Ad soyad zorunludur.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtAdSoyad.Focus();
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(txtEmail.Text) &&
-                !Regex.IsMatch(txtEmail.Text.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase))
-            {
-                MessageBox.Show("Geçerli bir e-posta adresi giriniz.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtEmail.Focus();
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(txtTelefon.Text) && txtTelefon.Text.Trim().Length < 10)
-            {
-                MessageBox.Show("Telefon numarası en az 10 karakter olmalıdır.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtTelefon.Focus();
+                MessageBox.Show("Mağaza seçimi zorunludur.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cmbMagaza.Focus();
                 return false;
             }
 
             return true;
         }
 
-        private Task<DataTable> GetBayilerAsync()
+        private bool TryGetSelectedInt(ComboBox comboBox, out int value)
         {
-            return apiClient.GetBayilerAsync("", 1);
-        }
+            value = 0;
+            if (comboBox.SelectedValue == null || comboBox.SelectedValue == DBNull.Value)
+                return false;
 
-        private Task<DataTable> GetMagazalarAsync(int bayiId)
-        {
-            return apiClient.GetBayiMagazalariAsync(bayiId, 1);
-        }
-
-        private Task<DataRow> GetYetkiliByIdAsync()
-        {
-            return apiClient.GetBayiYetkiliByIdAsync(bayiYetkiliId);
-        }
-
-        private Task YetkiliKaydetAsync(int? id, int bayiId, int? magazaId, string adSoyad, string telefon, string email, string gorev, string notlar, bool aktifMi)
-        {
-            return apiClient.SaveBayiYetkiliAsync(id, bayiId, magazaId, adSoyad, telefon, email, gorev, notlar, aktifMi);
+            return int.TryParse(Convert.ToString(comboBox.SelectedValue), out value) && value > 0;
         }
 
         private void AddLabel(Control parent, string text, int x, int y)
@@ -345,7 +430,7 @@ namespace eMarketing.AdminPanel.Forms
             });
         }
 
-        private TextBox CreateTextBox(int x, int y, int width)
+        private TextBox CreateTextBox(int x, int y, int width, bool readOnly)
         {
             TextBox textBox = new TextBox
             {
@@ -353,8 +438,9 @@ namespace eMarketing.AdminPanel.Forms
                 Width = width,
                 Font = new Font("Segoe UI", 10F),
                 BorderStyle = BorderStyle.FixedSingle,
-                BackColor = AppColors.InputBackground,
-                ForeColor = AppColors.TextPrimary
+                BackColor = readOnly ? Color.FromArgb(248, 250, 252) : AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary,
+                ReadOnly = readOnly
             };
             ButtonStyleHelper.ApplyInput(textBox);
             return textBox;
@@ -388,10 +474,12 @@ namespace eMarketing.AdminPanel.Forms
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
+
             if (primary)
                 ButtonStyleHelper.ApplyPrimary(button);
             else
                 ButtonStyleHelper.ApplyOutline(button);
+
             return button;
         }
 
@@ -402,6 +490,35 @@ namespace eMarketing.AdminPanel.Forms
 
             string value = Convert.ToString(row[columnName]);
             return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+        }
+
+        private int GetInt(DataRow row, string columnName)
+        {
+            if (row == null || !row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return 0;
+
+            return Convert.ToInt32(row[columnName]);
+        }
+
+        private bool GetBool(DataRow row, string columnName, bool defaultValue)
+        {
+            if (!row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
+                return defaultValue;
+
+            return Convert.ToBoolean(row[columnName]);
+        }
+
+        private string GetRolGorunenAd(string rol)
+        {
+            if (string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+                return "Admin";
+            if (string.Equals(rol, "Yonetici", StringComparison.OrdinalIgnoreCase) || string.Equals(rol, "StoreManager", StringComparison.OrdinalIgnoreCase))
+                return "Yönetici";
+            if (string.Equals(rol, "MagazaYetkilisi", StringComparison.OrdinalIgnoreCase))
+                return "Mağaza Yetkilisi";
+            if (string.Equals(rol, "SalesPerson", StringComparison.OrdinalIgnoreCase) || string.Equals(rol, "Personel", StringComparison.OrdinalIgnoreCase))
+                return "Personel";
+            return string.IsNullOrWhiteSpace(rol) ? "Rol yok" : rol;
         }
     }
 }

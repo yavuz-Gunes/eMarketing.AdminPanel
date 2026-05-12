@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eMarketing Bayi Sipariş</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="brand">
+      <div>
+        <p class="eyebrow">Bayi Portalı</p>
+        <h1>eMarketing</h1>
+        <p class="summary">Mağazanı seç, ürünleri sepete ekle ve yetkili hesabınla sipariş oluştur.</p>
+      </div>
+      <div class="api-box">
+        <label for="apiBase">API adresi</label>
+        <input id="apiBase" value="http://localhost:5088/api" autocomplete="off">
+      </div>
+    </section>
+
+    <section id="loginPanel" class="panel login-panel">
+      <h2>Giriş</h2>
+      <div class="field">
+        <label for="username">Kullanıcı adı</label>
+        <input id="username" autocomplete="username" value="mehmet.demir">
+      </div>
+      <div class="field">
+        <label for="password">Şifre</label>
+        <input id="password" type="password" autocomplete="current-password" value="1234">
+      </div>
+      <button id="loginButton" class="primary">Giriş yap</button>
+      <p id="loginMessage" class="message"></p>
+    </section>
+
+    <section id="appPanel" class="workspace hidden">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Oturum</p>
+          <h2 id="userTitle">-</h2>
+        </div>
+        <button id="logoutButton" class="secondary">Çıkış</button>
+      </header>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h3>Mağazalar</h3>
+            <p>Yalnızca bağlı olduğun mağazalar listelenir.</p>
+          </div>
+          <button id="refreshButton" class="secondary">Yenile</button>
+        </div>
+        <div id="stores" class="cards"></div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <h3>Ürünler</h3>
+              <p id="storeHint">Sipariş için mağaza seç.</p>
+            </div>
+            <input id="productSearch" class="search" placeholder="Ürün ara">
+          </div>
+          <div id="products" class="product-grid"></div>
+        </div>
+
+        <aside class="panel cart">
+          <h3>Sepet</h3>
+          <div id="authorityBox" class="authority muted">Sipariş yetkilisi bekleniyor.</div>
+          <div id="cartItems" class="cart-items"></div>
+          <div class="total">
+            <span>Toplam</span>
+            <strong id="cartTotal">0,00 TL</strong>
+          </div>
+          <button id="checkoutButton" class="primary" disabled>Sipariş oluştur</button>
+          <p id="orderMessage" class="message"></p>
+        </aside>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

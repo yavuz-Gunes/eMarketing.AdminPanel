@@ -11,10 +11,12 @@ namespace eMarketing.Api.Controllers;
 public sealed class MagazalarController : ControllerBase
 {
     private readonly IStoreService _storeService;
+    private readonly IBayiYetkiliService _bayiYetkiliService;
 
-    public MagazalarController(IStoreService storeService)
+    public MagazalarController(IStoreService storeService, IBayiYetkiliService bayiYetkiliService)
     {
         _storeService = storeService;
+        _bayiYetkiliService = bayiYetkiliService;
     }
 
     [HttpGet("secim")]
@@ -30,5 +32,12 @@ public sealed class MagazalarController : ControllerBase
     {
         StoreDto? row = await _storeService.GetStoreAsync(id, cancellationToken);
         return row == null ? NotFound("Mağaza bulunamadı.") : Ok(row);
+    }
+
+    [HttpGet("{magazaId:int}/siparis-yetkilileri")]
+    [Authorize(Policy = "CanManageOrders")]
+    public async Task<ActionResult<IReadOnlyList<SiparisYetkilisiDto>>> GetSiparisYetkilileri(int magazaId, CancellationToken cancellationToken = default)
+    {
+        return Ok(await _bayiYetkiliService.GetOrderAuthoritiesAsync(magazaId, cancellationToken));
     }
 }

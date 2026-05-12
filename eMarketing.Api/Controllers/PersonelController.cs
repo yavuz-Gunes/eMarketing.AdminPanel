@@ -19,17 +19,18 @@ public sealed class PersonelController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = "CanViewPersonnel")]
-    public async Task<ActionResult<IReadOnlyList<PersonnelDto>>> Get([FromQuery] string arama = "", [FromQuery] bool sadeceAktif = false, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IReadOnlyList<PersonnelDto>>> Get([FromQuery] string arama = "", [FromQuery] bool sadeceAktif = false, [FromQuery] int? magazaId = null, CancellationToken cancellationToken = default)
     {
         return Ok(await _personnelService.GetPersonnelAsync(new PersonnelFilterRequest
         {
             Arama = arama,
-            SadeceAktif = sadeceAktif
+            SadeceAktif = sadeceAktif,
+            MagazaId = magazaId
         }, cancellationToken));
     }
 
     [HttpPost]
-    [Authorize(Policy = "CanViewPersonnel")]
+    [Authorize(Policy = "CanManagePersonnel")]
     public async Task<ActionResult<object>> Save([FromBody] PersonelSaveRequest request, CancellationToken cancellationToken)
     {
         int id = await _personnelService.SavePersonnelAsync(new CreatePersonnelRequest
@@ -38,6 +39,9 @@ public sealed class PersonelController : ControllerBase
             KullaniciAdi = request.KullaniciAdi,
             Sifre = request.Sifre,
             AdSoyad = request.AdSoyad,
+            Telefon = request.Telefon,
+            Email = request.Email,
+            ImageUrl = request.ImageUrl,
             Rol = request.Rol,
             AktifMi = request.AktifMi
         }, cancellationToken);
@@ -61,9 +65,17 @@ public sealed class PersonelController : ControllerBase
 
     [HttpPost("{kullaniciId:int}/magazalar/{magazaId:int}")]
     [Authorize(Policy = "CanManagePersonnel")]
-    public async Task<IActionResult> MagazaAta(int kullaniciId, int magazaId, CancellationToken cancellationToken)
+    public async Task<IActionResult> MagazaAta(int kullaniciId, int magazaId, [FromBody] AssignPersonnelStoreRequest? request, CancellationToken cancellationToken)
     {
-        await _personnelService.AssignStoreAsync(kullaniciId, magazaId, cancellationToken);
+        await _personnelService.AssignStoreAsync(kullaniciId, magazaId, request?.Gorev ?? "Personel", cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPatch("magaza-yetkileri/{kullaniciMagazaId:int}/gorev")]
+    [Authorize(Policy = "CanManagePersonnel")]
+    public async Task<IActionResult> MagazaGorevGuncelle(int kullaniciMagazaId, [FromBody] UpdatePersonnelStoreDutyRequest request, CancellationToken cancellationToken)
+    {
+        await _personnelService.UpdateStoreDutyAsync(kullaniciMagazaId, request.Gorev, cancellationToken);
         return NoContent();
     }
 
@@ -82,6 +94,9 @@ public sealed class PersonelSaveRequest
     public string KullaniciAdi { get; set; } = string.Empty;
     public string Sifre { get; set; } = string.Empty;
     public string AdSoyad { get; set; } = string.Empty;
+    public string Telefon { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string ImageUrl { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;
     public bool AktifMi { get; set; } = true;
 }

@@ -1,6 +1,8 @@
 CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_Ozet_Getir
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1
+    @TumMagazalar BIT = 1,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -11,12 +13,36 @@ BEGIN
         FROM dbo.vw_Siparis_Liste
         WHERE IsArchived = 0
           AND (@TumMagazalar = 1 OR CustomerStoreId = @MagazaId)
+          AND
+          (
+              @AdminMi = 1
+              OR EXISTS
+              (
+                  SELECT 1
+                  FROM dbo.KullaniciMagazalari km
+                  WHERE km.MagazaId = CustomerStoreId
+                    AND km.KullaniciId = @KullaniciId
+                    AND km.AktifMi = 1
+              )
+          )
     ),
     Magazalar AS
     (
         SELECT *
-        FROM dbo.vw_Magaza_Secim
-        WHERE (@TumMagazalar = 1 OR MagazaId = @MagazaId)
+        FROM dbo.vw_Magaza_Secim ms
+        WHERE (@TumMagazalar = 1 OR ms.MagazaId = @MagazaId)
+          AND
+          (
+              @AdminMi = 1
+              OR EXISTS
+              (
+                  SELECT 1
+                  FROM dbo.KullaniciMagazalari km
+                  WHERE km.MagazaId = ms.MagazaId
+                    AND km.KullaniciId = @KullaniciId
+                    AND km.AktifMi = 1
+              )
+          )
     )
     SELECT
         (SELECT COUNT(*) FROM dbo.Products) AS ToplamUrun,
@@ -44,7 +70,9 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_KritikStok_Getir
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1
+    @TumMagazalar BIT = 1,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -89,6 +117,19 @@ BEGIN
                         )
                   )
             )
+      )
+      AND
+      (
+          @AdminMi = 1
+          OR @MagazaId IS NULL
+          OR EXISTS
+          (
+              SELECT 1
+              FROM dbo.KullaniciMagazalari km
+              WHERE km.MagazaId = @MagazaId
+                AND km.KullaniciId = @KullaniciId
+                AND km.AktifMi = 1
+          )
       )
     ORDER BY p.Stock ASC, p.ProductName ASC;
 END

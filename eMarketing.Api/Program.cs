@@ -49,6 +49,17 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebClient", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5090", "https://localhost:7090")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -87,17 +98,23 @@ string connectionString = builder.Configuration.GetConnectionString("DbConnectio
 builder.Services.AddSingleton<ISqlConnectionFactory>(new SqlConnectionFactory(connectionString));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IStoreAuthorizationService, StoreAuthorizationService>();
 builder.Services.AddScoped<ISqlExecutor, SqlExecutor>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ISqlDataService, SqlDataService>();
 builder.Services.AddScoped<IPersonnelRepository, PersonnelRepository>();
+builder.Services.AddScoped<IBayiYetkiliRepository, BayiYetkiliRepository>();
+builder.Services.AddScoped<IDealerRepository, DealerRepository>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
 builder.Services.AddScoped<IStockRepository, StockRepository>();
 builder.Services.AddScoped<IStoreRepository, StoreRepository>();
 builder.Services.AddScoped<IPersonnelService, PersonnelService>();
+builder.Services.AddScoped<IBayiYetkiliService, BayiYetkiliService>();
+builder.Services.AddScoped<IDealerService, DealerService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -130,7 +147,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     string[] managers = { AppRoles.Admin, AppRoles.Yonetici, "StoreManager" };
-    string[] storeUsers = { AppRoles.Admin, AppRoles.Yonetici, AppRoles.MagazaYetkilisi, "StoreManager", "SalesPerson" };
+    string[] storeUsers = { AppRoles.Admin, AppRoles.Yonetici, AppRoles.MagazaYetkilisi, "StoreManager", "SalesPerson", "Personel" };
 
     options.AddPolicy("CanViewDashboard", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanViewOrders", policy => policy.RequireRole(storeUsers));
@@ -158,6 +175,7 @@ app.UseSwaggerUI();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
+app.UseCors("WebClient");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

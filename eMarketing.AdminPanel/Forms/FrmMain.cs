@@ -129,8 +129,8 @@ namespace eMarketing.AdminPanel.Forms
             else if (pageKey == "Customers")
             {
                 page = new CustomersPage();
-                title = "Bayi Yetkilileri";
-                subtitle = "Bayilere bağlı sipariş veren kişi ve iletişim bilgilerini yönet";
+                title = "Sipariş Yetkilileri";
+                subtitle = "Aktif mağazada sipariş verebilen personelleri yönet";
             }
             else if (pageKey == "Stores")
             {
@@ -249,7 +249,7 @@ namespace eMarketing.AdminPanel.Forms
             }
 
             if (pageKey == "Personnel")
-                return AppSession.AdminMi || AppSession.Rol.Equals("StoreManager", StringComparison.OrdinalIgnoreCase);
+                return true;
 
             return true;
         }

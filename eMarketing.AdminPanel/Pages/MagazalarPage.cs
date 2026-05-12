@@ -344,25 +344,35 @@ namespace eMarketing.AdminPanel.Pages
 
         private Panel CreateMagazaCard(DataRow row)
         {
-            Panel card = CreateBaseCard(172);
+            Panel card = CreateBaseCard(238);
             card.Tag = row;
+            card.BackColor = GetMagazaCardBackColor(row, false);
 
             Label magaza = CreateCardLabel(GetText(row, "MagazaAdi", "Mağaza"), 11F, FontStyle.Bold, AppColors.TextPrimary, 28);
             Label bayi = CreateCardLabel(GetText(row, "MusteriAdi", "Bayi"), 9F, FontStyle.Regular, AppColors.TextSecondary, 22);
             Label konum = CreateCardLabel(GetKonumText(row), 8.5F, FontStyle.Regular, AppColors.TextMuted, 22);
-            Label sorumlu = CreateCardLabel("Sorumlu: " + GetText(row, "SorumluKisi", "-"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 22);
+            string mudur = GetText(row, "MagazaMuduru", "-");
+            string supervisor = GetText(row, "Supervisor", "-");
+            Label mudurLabel = CreateCardLabel("Müdür: " + mudur, 8.5F, FontStyle.Regular, AppColors.TextSecondary, 22);
+            Label supervisorLabel = CreateCardLabel("Supervisor: " + supervisor, 8.5F, FontStyle.Regular, AppColors.TextSecondary, 22);
+            Label personel = CreateCardLabel("Personel: " + GetInt(row, "PersonelSayisi") + "  |  Sipariş Yetkilisi: " + GetInt(row, "SiparisYetkilisiSayisi"), 8.5F, FontStyle.Bold, AppColors.Primary, 22);
             Label ozet = CreateCardLabel(GetInt(row, "SiparisSayisi") + " sipariş  |  " + GetMoney(row, "ToplamCiro"), 9F, FontStyle.Bold, AppColors.Primary, 24);
-            Label durum = CreateStatusLabel(GetBool(row, "MagazaAktifMi") ? "Aktif" : "Pasif", GetBool(row, "MagazaAktifMi"));
+            bool aktifMagazaContext = IsAktifMagazaContext(row);
+            Label durum = CreateStatusLabel(aktifMagazaContext ? "Aktif Mağaza" : (GetBool(row, "MagazaAktifMi") ? "Aktif" : "Pasif"), GetBool(row, "MagazaAktifMi"));
             Panel header = CreateCardHeader(row, magaza, bayi);
 
             konum.Dock = DockStyle.Top;
-            sorumlu.Dock = DockStyle.Top;
+            mudurLabel.Dock = DockStyle.Top;
+            supervisorLabel.Dock = DockStyle.Top;
+            personel.Dock = DockStyle.Top;
             ozet.Dock = DockStyle.Top;
             durum.Dock = DockStyle.Bottom;
 
             card.Controls.Add(durum);
             card.Controls.Add(ozet);
-            card.Controls.Add(sorumlu);
+            card.Controls.Add(personel);
+            card.Controls.Add(supervisorLabel);
+            card.Controls.Add(mudurLabel);
             card.Controls.Add(konum);
             card.Controls.Add(header);
 
@@ -449,7 +459,10 @@ namespace eMarketing.AdminPanel.Pages
             lblBayi.Text = "Bayi: " + GetText(row, "MusteriAdi", "-");
             lblKonum.Text = "Konum: " + GetKonumText(row);
             lblTelefon.Text = "Telefon: " + GetText(row, "Telefon", "-");
-            lblSorumlu.Text = "Sorumlu: " + GetText(row, "SorumluKisi", "-");
+            lblSorumlu.Text = "Müdür: " + GetText(row, "MagazaMuduru", "-")
+                + "    Supervisor: " + GetText(row, "Supervisor", "-")
+                + "    Personel: " + GetInt(row, "PersonelSayisi")
+                + "    Sipariş Yetkilisi: " + GetInt(row, "SiparisYetkilisiSayisi");
             lblSiparis.Text = "Sipariş: " + GetInt(row, "SiparisSayisi") + " adet";
             lblCiro.Text = "Ciro: " + GetMoney(row, "ToplamCiro");
             lblSonSiparis.Text = "Son Sipariş: " + GetDate(row, "SonSiparisTarihi");
@@ -615,7 +628,7 @@ namespace eMarketing.AdminPanel.Pages
                 bool secili = seciliMagaza != null &&
                     GetInt(row, "MagazaId") == GetInt(seciliMagaza, "MagazaId");
 
-                card.BackColor = secili ? AppColors.PrimarySoft : AppColors.Surface;
+                card.BackColor = GetMagazaCardBackColor(row, secili);
             }
         }
 
@@ -634,15 +647,34 @@ namespace eMarketing.AdminPanel.Pages
         {
             card.MouseEnter += (sender, e) =>
             {
-                if (!IsSeciliMagazaCard(card))
+                if (!IsSeciliMagazaCard(card) && !IsAktifMagazaContextCard(card))
                     card.BackColor = AppColors.PrimarySoft;
             };
 
             card.MouseLeave += (sender, e) =>
             {
-                if (!IsSeciliMagazaCard(card))
-                    card.BackColor = AppColors.Surface;
+                if (card.Tag is DataRow row)
+                    card.BackColor = GetMagazaCardBackColor(row, IsSeciliMagazaCard(card));
             };
+        }
+
+        private Color GetMagazaCardBackColor(DataRow row, bool secili)
+        {
+            if (IsAktifMagazaContext(row))
+                return AppColors.SuccessSoft;
+
+            return secili ? AppColors.PrimarySoft : AppColors.Surface;
+        }
+
+        private bool IsAktifMagazaContextCard(Panel card)
+        {
+            return card.Tag is DataRow row && IsAktifMagazaContext(row);
+        }
+
+        private bool IsAktifMagazaContext(DataRow row)
+        {
+            return AppSession.SeciliMagazaId.HasValue &&
+                GetInt(row, "MagazaId") == AppSession.SeciliMagazaId.Value;
         }
 
         private bool IsSeciliMagazaCard(Panel card)
@@ -876,8 +908,15 @@ namespace eMarketing.AdminPanel.Pages
             if (card == null)
                 return;
 
-            using (Pen pen = new Pen(AppColors.Border))
+            bool aktifMagazaContext = card.Tag is DataRow row && IsAktifMagazaContext(row);
+            using (Pen pen = new Pen(aktifMagazaContext ? AppColors.Success : AppColors.Border, aktifMagazaContext ? 2F : 1F))
                 e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+
+            if (aktifMagazaContext)
+            {
+                using (SolidBrush brush = new SolidBrush(AppColors.Success))
+                    e.Graphics.FillRectangle(brush, 0, 0, 5, card.Height);
+            }
         }
 
         public void ApplyTheme()

@@ -1,6 +1,7 @@
 using System.Data;
 using eMarketing.Service.Connection;
 using eMarketing.Service.Dtos;
+using eMarketing.Service.Security;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -18,11 +19,15 @@ public interface IOrderService
 public sealed class OrderService : IOrderService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IStoreAuthorizationService _storeAuthorizationService;
     private readonly ILogger<OrderService> _logger;
 
-    public OrderService(ISqlConnectionFactory connectionFactory, ILogger<OrderService> logger)
+    public OrderService(ISqlConnectionFactory connectionFactory, ICurrentUserService currentUserService, IStoreAuthorizationService storeAuthorizationService, ILogger<OrderService> logger)
     {
         _connectionFactory = connectionFactory;
+        _currentUserService = currentUserService;
+        _storeAuthorizationService = storeAuthorizationService;
         _logger = logger;
     }
 
@@ -33,8 +38,11 @@ public sealed class OrderService : IOrderService
         await using SqlConnection connection = _connectionFactory.CreateConnection();
         await using SqlCommand command = new("sp_Siparis_Listele", connection);
         command.CommandType = CommandType.StoredProcedure;
+        CurrentUser currentUser = _currentUserService.CurrentUser;
         command.Parameters.Add("@MagazaId", SqlDbType.Int).Value = magazaId.HasValue ? magazaId.Value : DBNull.Value;
-        command.Parameters.Add("@TumMagazalar", SqlDbType.Bit).Value = tumMagazalar;
+        command.Parameters.Add("@TumMagazalar", SqlDbType.Bit).Value = tumMagazalar && currentUser.CanSeeAllStores;
+        command.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = currentUser.UserId.HasValue ? currentUser.UserId.Value : DBNull.Value;
+        command.Parameters.Add("@AdminMi", SqlDbType.Bit).Value = currentUser.CanSeeAllStores;
 
         await connection.OpenAsync(cancellationToken);
 
@@ -81,8 +89,11 @@ public sealed class OrderService : IOrderService
         await using SqlConnection connection = _connectionFactory.CreateConnection();
         await using SqlCommand command = new("sp_Siparis_DurumOzet_Getir", connection);
         command.CommandType = CommandType.StoredProcedure;
+        CurrentUser currentUser = _currentUserService.CurrentUser;
         command.Parameters.Add("@MagazaId", SqlDbType.Int).Value = magazaId.HasValue ? magazaId.Value : DBNull.Value;
-        command.Parameters.Add("@TumMagazalar", SqlDbType.Bit).Value = tumMagazalar;
+        command.Parameters.Add("@TumMagazalar", SqlDbType.Bit).Value = tumMagazalar && currentUser.CanSeeAllStores;
+        command.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = currentUser.UserId.HasValue ? currentUser.UserId.Value : DBNull.Value;
+        command.Parameters.Add("@AdminMi", SqlDbType.Bit).Value = currentUser.CanSeeAllStores;
 
         await connection.OpenAsync(cancellationToken);
 
@@ -102,6 +113,12 @@ public sealed class OrderService : IOrderService
 
     public async Task<int> CreateOrderAsync(OrderCreateRequest request, CancellationToken cancellationToken = default)
     {
+        if (!request.CustomerStoreId.HasValue || request.CustomerStoreId.Value <= 0)
+            throw new InvalidOperationException("Sipariş için mağaza seçimi zorunludur.");
+
+        await _storeAuthorizationService.EnsureStoreAccessAsync(request.CustomerStoreId.Value, cancellationToken);
+        await _storeAuthorizationService.EnsureCanCreateOrderAsync(request.CustomerStoreId.Value, request.BayiYetkiliId, cancellationToken);
+
         await using SqlConnection connection = _connectionFactory.CreateConnection();
         await using SqlCommand command = new("sp_Siparis_Ekle_TekUrun", connection);
         command.CommandType = CommandType.StoredProcedure;
@@ -156,5 +173,26 @@ public sealed class OrderService : IOrderService
     private static object GetNullableText(string value)
     {
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
+    }
+
+    private async Task EnsureStoreAccessAsync(SqlConnection connection, int storeId, CancellationToken cancellationToken)
+    {
+        CurrentUser currentUser = _currentUserService.CurrentUser;
+        if (currentUser.CanSeeAllStores)
+            return;
+
+        if (!currentUser.UserId.HasValue)
+            throw new UnauthorizedAccessException("Kullanıcı oturumu bulunamadı.");
+
+        await using SqlCommand accessCommand = new(
+            "SELECT COUNT(1) FROM dbo.KullaniciMagazalari WHERE KullaniciId = @KullaniciId AND MagazaId = @MagazaId AND AktifMi = 1",
+            connection);
+        accessCommand.CommandType = CommandType.Text;
+        accessCommand.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = currentUser.UserId.Value;
+        accessCommand.Parameters.Add("@MagazaId", SqlDbType.Int).Value = storeId;
+
+        object? result = await accessCommand.ExecuteScalarAsync(cancellationToken);
+        if (result == null || Convert.ToInt32(result) <= 0)
+            throw new UnauthorizedAccessException("Bu mağaza için sipariş oluşturma yetkiniz yok.");
     }
 }

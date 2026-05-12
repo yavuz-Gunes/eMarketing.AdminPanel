@@ -189,7 +189,7 @@ namespace eMarketing.AdminPanel.Forms
             Panel panel = CreateTabPanel();
 
             Panel top = CreateTabTop("Bu bayiye bağlı sipariş veren yetkili kişiler");
-            Button btnYeni = CreateButton("+ Yeni Yetkili", true);
+            Button btnYeni = CreateButton("+ Yeni Sipariş Yetkilisi", true);
             btnYeni.Width = 130;
             btnYeni.Click += BtnYeniYetkili_Click;
             top.Controls.Add(btnYeni);

@@ -15,8 +15,9 @@ public sealed class CurrentUser
     public bool IsManager => string.Equals(Role, "Yonetici", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Role, "StoreManager", StringComparison.OrdinalIgnoreCase);
     public bool IsStoreUser => string.Equals(Role, "MagazaYetkilisi", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(Role, "SalesPerson", StringComparison.OrdinalIgnoreCase);
-    public bool CanSeeAllStores => IsAdmin || IsManager;
+        || string.Equals(Role, "SalesPerson", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Role, "Personel", StringComparison.OrdinalIgnoreCase);
+    public bool CanSeeAllStores => IsAdmin;
 }
 
 public static class AppRoles
@@ -24,4 +25,5 @@ public static class AppRoles
     public const string Admin = "Admin";
     public const string Yonetici = "Yonetici";
     public const string MagazaYetkilisi = "MagazaYetkilisi";
+    public const string Personel = "Personel";
 }

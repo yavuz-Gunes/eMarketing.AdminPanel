@@ -20,9 +20,6 @@ namespace eMarketing.AdminPanel.Pages
         private ShadowPanel yetkiPanel;
 
         private FlowLayoutPanel personelKartListesi;
-        private FlowLayoutPanel yetkiliMagazaKartListesi;
-        private FlowLayoutPanel atanabilirMagazaKartListesi;
-
         private TextBox txtArama;
         private TextBox txtKullaniciAdi;
         private TextBox txtSifre;
@@ -34,10 +31,16 @@ namespace eMarketing.AdminPanel.Pages
         private Button btnKaydet;
         private Label lblSeciliPersonel;
         private Label lblAktifMagazaBaglami;
-        private Label lblYetkiliMagazaBaslik;
-        private Label lblAtanabilirMagazaBaslik;
+        private Label lblYetkiMagaza;
+        private Label lblYetkiDurum;
+        private ComboBox cmbAktifMagazaGorev;
+        private CheckBox chkSiparisYetkilisi;
+        private TextBox txtSiparisYetkiNot;
+        private Button btnYetkiKaydet;
+        private Button btnAktifMagazayaAta;
 
         private int? seciliKullaniciId;
+        private DataRow aktifMagazaYetkiRow;
         private bool kullaniciAdiOtomatik = true;
         private bool kullaniciAdiKodlaDegisiyor;
 
@@ -192,10 +195,9 @@ namespace eMarketing.AdminPanel.Pages
             };
             cmbRol.DisplayMember = "Ad";
             cmbRol.ValueMember = "Kod";
-            cmbRol.Items.Add(new RolSecenegi("Admin", "Yönetici"));
-            cmbRol.Items.Add(new RolSecenegi("StoreManager", "Mağaza Yetkilisi"));
-            cmbRol.Items.Add(new RolSecenegi("SalesPerson", "Satış Personeli"));
-            cmbRol.SelectedIndex = 2;
+            cmbRol.Items.Add(new RolSecenegi("Admin", "Admin"));
+            cmbRol.Items.Add(new RolSecenegi("Personel", "Personel"));
+            cmbRol.SelectedIndex = 1;
 
             chkAktif = new CheckBox
             {
@@ -273,52 +275,126 @@ namespace eMarketing.AdminPanel.Pages
             return wrapper;
         }
 
+        private Label CreateFormLabel(string text)
+        {
+            return new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Text = text,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = AppColors.TextSecondary,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 6, 0, 0)
+            };
+        }
+
         private void BuildYetkiPanel()
         {
-            Label title = CreateTitle(YonetimModu ? "Mağaza Yetkileri" : "Bağlı Mağazalar");
-            Label subtitle = CreateSubtitle(YonetimModu
-                ? "Personelin çalıştığı mağazaları kart üzerinden yönetin"
-                : "Seçili personelin bayiniz içindeki mağaza erişimleri");
+            Label title = CreateTitle("Aktif Mağaza Yetkisi");
+            Label subtitle = CreateSubtitle("Personelin bu mağazadaki görevini ve sipariş yetkisini yönetin");
 
             lblSeciliPersonel = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 28,
+                Height = 32,
                 Text = "Önce personel seçin",
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
                 ForeColor = AppColors.Primary,
                 BackColor = Color.Transparent
             };
 
-            lblYetkiliMagazaBaslik = CreateSectionLabel("Yetkili Mağazalar");
-            lblAtanabilirMagazaBaslik = CreateSectionLabel("Atanabilir Mağazalar");
-
-            yetkiliMagazaKartListesi = CreateMagazaListesi();
-            atanabilirMagazaKartListesi = CreateMagazaListesi();
-
-            TableLayoutPanel magazaYerlesim = new TableLayoutPanel
+            lblYetkiMagaza = new Label
             {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = YonetimModu ? 4 : 2,
-                BackColor = AppColors.CardBackground
+                Dock = DockStyle.Top,
+                Height = 44,
+                Text = "Aktif mağaza: " + AppSession.MagazaGorunumAdi,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary,
+                BackColor = AppColors.PrimarySoft,
+                Padding = new Padding(12, 0, 12, 0),
+                TextAlign = ContentAlignment.MiddleLeft
             };
-            magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, YonetimModu ? 48F : 100F));
-            if (YonetimModu)
-            {
-                magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
-                magazaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, 52F));
-            }
-            magazaYerlesim.Controls.Add(lblYetkiliMagazaBaslik, 0, 0);
-            magazaYerlesim.Controls.Add(yetkiliMagazaKartListesi, 0, 1);
-            if (YonetimModu)
-            {
-                magazaYerlesim.Controls.Add(lblAtanabilirMagazaBaslik, 0, 2);
-                magazaYerlesim.Controls.Add(atanabilirMagazaKartListesi, 0, 3);
-            }
 
-            yetkiPanel.Controls.Add(magazaYerlesim);
+            lblYetkiDurum = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 52,
+                Text = "Personel seçince bu mağazadaki görev ve sipariş yetkisi burada açılır.",
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = AppColors.TextSecondary,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 12, 0, 0)
+            };
+
+            cmbAktifMagazaGorev = new ComboBox
+            {
+                Dock = DockStyle.Top,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Height = 32,
+                Font = new Font("Segoe UI", 10F),
+                BackColor = AppColors.InputBackground,
+                ForeColor = AppColors.TextPrimary
+            };
+            cmbAktifMagazaGorev.DisplayMember = "Ad";
+            cmbAktifMagazaGorev.ValueMember = "Kod";
+            cmbAktifMagazaGorev.Items.Add(new RolSecenegi("Personel", "Personel"));
+            cmbAktifMagazaGorev.Items.Add(new RolSecenegi("Supervisor", "Supervisor"));
+            cmbAktifMagazaGorev.Items.Add(new RolSecenegi("MagazaMuduru", "Mağaza Müdürü"));
+            cmbAktifMagazaGorev.SelectedIndex = 0;
+
+            chkSiparisYetkilisi = new CheckBox
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                Text = "Bu personel aktif mağazada sipariş verebilsin",
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = AppColors.TextPrimary,
+                BackColor = Color.Transparent
+            };
+
+            txtSiparisYetkiNot = CreateTextBox();
+            txtSiparisYetkiNot.Dock = DockStyle.Top;
+            txtSiparisYetkiNot.Height = 32;
+
+            btnYetkiKaydet = CreateButton("Yetkiyi Kaydet", true);
+            btnYetkiKaydet.Width = 150;
+            btnYetkiKaydet.Click += BtnYetkiKaydet_Click;
+
+            btnAktifMagazayaAta = CreateButton("Aktif Mağazaya Personel Olarak Ata", false);
+            btnAktifMagazayaAta.Width = 245;
+            btnAktifMagazayaAta.Click += BtnAktifMagazayaAta_Click;
+
+            Panel form = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 260,
+                BackColor = AppColors.Surface,
+                Padding = new Padding(18)
+            };
+
+            FlowLayoutPanel buttons = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 46,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+            buttons.Controls.Add(btnYetkiKaydet);
+            buttons.Controls.Add(btnAktifMagazayaAta);
+
+            form.Controls.Add(buttons);
+            form.Controls.Add(txtSiparisYetkiNot);
+            form.Controls.Add(CreateFormLabel("Not"));
+            form.Controls.Add(chkSiparisYetkilisi);
+            form.Controls.Add(cmbAktifMagazaGorev);
+            form.Controls.Add(CreateFormLabel("Mağaza Görevi"));
+
+            yetkiPanel.Controls.Add(form);
+            yetkiPanel.Controls.Add(lblYetkiDurum);
+            yetkiPanel.Controls.Add(lblYetkiMagaza);
             yetkiPanel.Controls.Add(lblSeciliPersonel);
             yetkiPanel.Controls.Add(subtitle);
             yetkiPanel.Controls.Add(title);
@@ -380,21 +456,54 @@ namespace eMarketing.AdminPanel.Pages
 
         private Panel CreatePersonelCard(DataRow row)
         {
-            Panel card = CreateBaseCard(92);
+            bool siparisYetkilisi = GetBool(row, "SiparisYetkilisiMi");
+            int siparisYetkiliMagazaSayisi = GetInt(row, "SiparisYetkiliMagazaSayisi");
+            Panel card = CreateBaseCard(128);
             card.Name = "PersonelCard";
             card.Tag = row;
+            card.BackColor = GetPersonelCardBackColor(row, false);
+            card.Padding = new Padding(82, 12, 14, 12);
+
+            Label avatar = new Label
+            {
+                Width = 58,
+                Height = 58,
+                Location = new Point(14, 16),
+                Text = GetInitials(GetText(row, "AdSoyad", "Personel")),
+                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                ForeColor = siparisYetkilisi ? AppColors.Success : AppColors.Primary,
+                BackColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
 
             Label adSoyad = CreateCardLabel(GetText(row, "AdSoyad", "Personel"), 10.5F, FontStyle.Bold, AppColors.TextPrimary, 24);
             Label kullanici = CreateCardLabel("@" + GetText(row, "KullaniciAdi", "-"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 20);
-            Label rol = CreateCardLabel(GetRolAdi(GetText(row, "Rol", "")) + "  |  " + GetInt(row, "MagazaSayisi") + " mağaza", 8.5F, FontStyle.Bold, AppColors.Primary, 20);
+            string aktifMagazaGorevi = GetText(row, "AktifMagazaGorevGorunenAd", "");
+            string rolText = GetRolAdi(GetText(row, "Rol", "")) + "  |  " + GetInt(row, "MagazaSayisi") + " mağaza";
+            if (!string.IsNullOrWhiteSpace(aktifMagazaGorevi))
+                rolText += "  |  " + aktifMagazaGorevi;
+            Label rol = CreateCardLabel(rolText, 8.5F, FontStyle.Bold, AppColors.Primary, 20);
+            Label siparisRozeti = CreateCardLabel(
+                siparisYetkiliMagazaSayisi > 1 ? "Sipariş Yetkilisi  |  " + siparisYetkiliMagazaSayisi + " mağaza" : "Sipariş Yetkilisi",
+                8F,
+                FontStyle.Bold,
+                AppColors.Success,
+                24);
 
             adSoyad.Dock = DockStyle.Top;
             kullanici.Dock = DockStyle.Top;
-            rol.Dock = DockStyle.Bottom;
+            rol.Dock = DockStyle.Top;
+            siparisRozeti.Dock = DockStyle.Bottom;
+            siparisRozeti.BackColor = Color.White;
+            siparisRozeti.TextAlign = ContentAlignment.MiddleCenter;
+
+            if (siparisYetkilisi)
+                card.Controls.Add(siparisRozeti);
 
             card.Controls.Add(rol);
             card.Controls.Add(kullanici);
             card.Controls.Add(adSoyad);
+            card.Controls.Add(avatar);
 
             AttachClick(card, () => PersonelSec(row));
             AddHover(card);
@@ -410,7 +519,7 @@ namespace eMarketing.AdminPanel.Pages
             SetText(txtKullaniciAdi, GetText(row, "KullaniciAdi", ""));
             txtSifre.Text = "";
             txtAdSoyad.Text = GetText(row, "AdSoyad", "");
-            SelectRol(GetText(row, "Rol", "SalesPerson"));
+            SelectRol(GetText(row, "Rol", "Personel"));
             chkAktif.Checked = GetBool(row, "AktifMi");
             lblSeciliPersonel.Text = GetText(row, "AdSoyad", "Personel");
 
@@ -429,34 +538,83 @@ namespace eMarketing.AdminPanel.Pages
                 DataRow row = (DataRow)card.Tag;
                 bool selected = seciliKullaniciId.HasValue &&
                     Convert.ToInt32(row["KullaniciId"]) == seciliKullaniciId.Value;
-                card.BackColor = selected ? AppColors.PrimarySoft : AppColors.Surface;
+                card.BackColor = GetPersonelCardBackColor(row, selected);
             }
         }
 
         private async Task MagazalariYukleAsync()
         {
+            YetkiFormuTemizle();
+
             if (!seciliKullaniciId.HasValue)
                 return;
 
             try
             {
-                DataTable yetkili = await GetPersonelMagazalariAsync(seciliKullaniciId.Value);
-                DataTable atanabilir = YonetimModu
-                    ? await GetAtanabilirMagazalarAsync(seciliKullaniciId.Value)
-                    : new DataTable();
+                if (!AppSession.SeciliMagazaId.HasValue)
+                {
+                    lblYetkiDurum.Text = "Görev ve sipariş yetkisi yönetmek için üst bardan aktif mağaza seçin.";
+                    SetYetkiFormEnabled(false, false);
+                    return;
+                }
 
-                FillMagazaCards(yetkiliMagazaKartListesi, yetkili, true);
-                if (YonetimModu)
-                    FillMagazaCards(atanabilirMagazaKartListesi, atanabilir, false);
+                DataTable magazalar = await GetPersonelMagazalariAsync(seciliKullaniciId.Value);
+                aktifMagazaYetkiRow = FindAktifMagazaRow(magazalar);
 
-                lblYetkiliMagazaBaslik.Text = "Yetkili Mağazalar (" + yetkili.Rows.Count + ")";
-                if (YonetimModu)
-                    lblAtanabilirMagazaBaslik.Text = "Atanabilir Mağazalar (" + atanabilir.Rows.Count + ")";
+                if (aktifMagazaYetkiRow == null)
+                {
+                    lblYetkiDurum.Text = "Bu personel aktif mağazaya bağlı değil. Önce aktif mağazaya personel olarak atayın.";
+                    SelectAktifMagazaGorev("Personel");
+                    chkSiparisYetkilisi.Checked = false;
+                    SetYetkiFormEnabled(false, YonetimModu);
+                    return;
+                }
+
+                lblYetkiDurum.Text = "Bu personel aktif mağazaya bağlı. Görevini ve sipariş yetkisini buradan yönetin.";
+                SelectAktifMagazaGorev(GetText(aktifMagazaYetkiRow, "Gorev", "Personel"));
+                chkSiparisYetkilisi.Checked = GetBool(aktifMagazaYetkiRow, "SiparisYetkilisiMi");
+                txtSiparisYetkiNot.Text = "";
+                SetYetkiFormEnabled(YonetimModu, false);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private DataRow FindAktifMagazaRow(DataTable table)
+        {
+            if (table == null || !AppSession.SeciliMagazaId.HasValue)
+                return null;
+
+            foreach (DataRow row in table.Rows)
+            {
+                if (GetInt(row, "MagazaId") == AppSession.SeciliMagazaId.Value)
+                    return row;
+            }
+
+            return null;
+        }
+
+        private void YetkiFormuTemizle()
+        {
+            aktifMagazaYetkiRow = null;
+            lblYetkiMagaza.Text = "Aktif mağaza: " + AppSession.MagazaGorunumAdi;
+            lblYetkiDurum.Text = "Personel seçince bu mağazadaki görev ve sipariş yetkisi burada açılır.";
+            SelectAktifMagazaGorev("Personel");
+            chkSiparisYetkilisi.Checked = false;
+            txtSiparisYetkiNot.Text = "";
+            SetYetkiFormEnabled(false, false);
+        }
+
+        private void SetYetkiFormEnabled(bool enabled, bool allowAssign)
+        {
+            cmbAktifMagazaGorev.Enabled = enabled;
+            chkSiparisYetkilisi.Enabled = enabled;
+            txtSiparisYetkiNot.Enabled = enabled;
+            btnYetkiKaydet.Enabled = enabled;
+            btnAktifMagazayaAta.Visible = allowAssign;
+            btnAktifMagazayaAta.Enabled = allowAssign;
         }
 
         private void FillMagazaCards(FlowLayoutPanel list, DataTable table, bool yetkili)
@@ -484,11 +642,13 @@ namespace eMarketing.AdminPanel.Pages
             Label magaza = CreateCardLabel(GetText(row, "MagazaAdi", "Mağaza"), 10F, FontStyle.Bold, AppColors.TextPrimary, 24);
             Label musteri = CreateCardLabel(GetText(row, "MusteriAdi", "Müşteri"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 20);
             Label konum = CreateCardLabel(GetKonumText(row), 8.5F, FontStyle.Regular, AppColors.TextMuted, 20);
+            Label gorev = CreateCardLabel("Görev: " + GetText(row, "GorevGorunenAd", "Personel"), 8.5F, FontStyle.Bold, AppColors.Primary, 20);
             Label ozet = CreateCardLabel(GetInt(row, "SiparisSayisi") + " sipariş  |  " + GetMoney(row, "ToplamCiro"), 8.5F, FontStyle.Bold, AppColors.Primary, 22);
 
             magaza.Dock = DockStyle.Top;
             musteri.Dock = DockStyle.Top;
             konum.Dock = DockStyle.Top;
+            gorev.Dock = DockStyle.Top;
             ozet.Dock = DockStyle.Top;
 
             if (YonetimModu)
@@ -506,6 +666,7 @@ namespace eMarketing.AdminPanel.Pages
             }
 
             card.Controls.Add(ozet);
+            card.Controls.Add(gorev);
             card.Controls.Add(konum);
             card.Controls.Add(musteri);
             card.Controls.Add(magaza);
@@ -560,6 +721,76 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
+        private async void BtnAktifMagazayaAta_Click(object sender, EventArgs e)
+        {
+            if (!YonetimModu || !seciliKullaniciId.HasValue || !AppSession.SeciliMagazaId.HasValue)
+                return;
+
+            try
+            {
+                btnAktifMagazayaAta.Enabled = false;
+                await MagazaAtaKaydetAsync(seciliKullaniciId.Value, AppSession.SeciliMagazaId.Value, GetSeciliAktifMagazaGorev());
+                await MagazalariYukleAsync();
+                await PersonelleriYukleAsync(false);
+                VurgulaSeciliPersonel();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnAktifMagazayaAta.Enabled = true;
+            }
+        }
+
+        private async void BtnYetkiKaydet_Click(object sender, EventArgs e)
+        {
+            if (!YonetimModu || !seciliKullaniciId.HasValue || aktifMagazaYetkiRow == null)
+                return;
+
+            try
+            {
+                btnYetkiKaydet.Enabled = false;
+
+                int kullaniciMagazaId = GetInt(aktifMagazaYetkiRow, "KullaniciMagazaId");
+                if (kullaniciMagazaId > 0)
+                    await apiClient.UpdatePersonelMagazaGorevAsync(kullaniciMagazaId, GetSeciliAktifMagazaGorev());
+
+                int bayiYetkiliId = GetInt(aktifMagazaYetkiRow, "BayiYetkiliId");
+                int magazaId = GetInt(aktifMagazaYetkiRow, "MagazaId");
+                int bayiId = GetInt(aktifMagazaYetkiRow, "MusteriId");
+
+                if (chkSiparisYetkilisi.Checked)
+                {
+                    await apiClient.SaveBayiYetkiliAsync(
+                        bayiYetkiliId > 0 ? (int?)bayiYetkiliId : null,
+                        seciliKullaniciId.Value,
+                        bayiId,
+                        magazaId,
+                        "SiparisYetkilisi",
+                        txtSiparisYetkiNot.Text,
+                        true);
+                }
+                else if (bayiYetkiliId > 0)
+                {
+                    await apiClient.SetBayiYetkiliStatusAsync(bayiYetkiliId, false);
+                }
+
+                await MagazalariYukleAsync();
+                await PersonelleriYukleAsync(false);
+                VurgulaSeciliPersonel();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnYetkiKaydet.Enabled = true;
+            }
+        }
+
         private async Task MagazaKaldirAsync(DataRow row)
         {
             if (!YonetimModu)
@@ -605,11 +836,14 @@ namespace eMarketing.AdminPanel.Pages
 
         private Task<DataTable> GetPersonellerAsync()
         {
+            int? magazaId = null;
+            if (cmbGorunum == null || cmbGorunum.SelectedIndex == 0)
+                magazaId = AppSession.SeciliMagazaId;
+
             return apiClient.GetPersonellerAsync(
                 txtArama == null ? "" : txtArama.Text.Trim(),
                 false,
-                AppSession.KullaniciId,
-                AppSession.AdminMi);
+                magazaId);
         }
 
         private async Task<DataTable> ApplyPersonelScopeAsync(DataTable table)
@@ -691,9 +925,9 @@ namespace eMarketing.AdminPanel.Pages
                 chkAktif.Checked);
         }
 
-        private Task MagazaAtaKaydetAsync(int kullaniciId, int magazaId)
+        private Task MagazaAtaKaydetAsync(int kullaniciId, int magazaId, string gorev = "Personel")
         {
-            return apiClient.AssignPersonelMagazaAsync(kullaniciId, magazaId);
+            return apiClient.AssignPersonelMagazaAsync(kullaniciId, magazaId, gorev);
         }
 
         private Task MagazaKaldirKaydetAsync(int kullaniciMagazaId)
@@ -725,13 +959,10 @@ namespace eMarketing.AdminPanel.Pages
             SetText(txtKullaniciAdi, "");
             txtSifre.Text = "";
             txtAdSoyad.Text = "";
-            SelectRol("SalesPerson");
+            SelectRol("Personel");
             chkAktif.Checked = true;
             lblSeciliPersonel.Text = "Yeni personel";
-            yetkiliMagazaKartListesi.Controls.Clear();
-            atanabilirMagazaKartListesi.Controls.Clear();
-            lblYetkiliMagazaBaslik.Text = "Yetkili Mağazalar";
-            lblAtanabilirMagazaBaslik.Text = "Atanabilir Mağazalar";
+            YetkiFormuTemizle();
             VurgulaSeciliPersonel();
         }
 
@@ -792,7 +1023,7 @@ namespace eMarketing.AdminPanel.Pages
         private string GetSeciliRolKodu()
         {
             RolSecenegi secenek = cmbRol.SelectedItem as RolSecenegi;
-            return secenek == null ? "SalesPerson" : secenek.Kod;
+            return secenek == null ? "Personel" : secenek.Kod;
         }
 
         private void SelectRol(string kod)
@@ -807,18 +1038,40 @@ namespace eMarketing.AdminPanel.Pages
                 }
             }
 
-            cmbRol.SelectedIndex = 2;
+            cmbRol.SelectedIndex = Math.Min(1, cmbRol.Items.Count - 1);
+        }
+
+        private string GetSeciliAktifMagazaGorev()
+        {
+            RolSecenegi secenek = cmbAktifMagazaGorev.SelectedItem as RolSecenegi;
+            return secenek == null ? "Personel" : secenek.Kod;
+        }
+
+        private void SelectAktifMagazaGorev(string kod)
+        {
+            if (cmbAktifMagazaGorev == null)
+                return;
+
+            foreach (object item in cmbAktifMagazaGorev.Items)
+            {
+                RolSecenegi secenek = item as RolSecenegi;
+                if (secenek != null && secenek.Kod == kod)
+                {
+                    cmbAktifMagazaGorev.SelectedItem = item;
+                    return;
+                }
+            }
+
+            if (cmbAktifMagazaGorev.Items.Count > 0)
+                cmbAktifMagazaGorev.SelectedIndex = 0;
         }
 
         private string GetRolAdi(string kod)
         {
             if (kod == "Admin")
-                return "Yönetici";
+                return "Admin";
 
-            if (kod == "StoreManager")
-                return "Mağaza Yetkilisi";
-
-            return "Satış Personeli";
+            return "Personel";
         }
 
         private void AddFormControl(Panel parent, string labelText, Control control, int x, int y)
@@ -853,9 +1106,19 @@ namespace eMarketing.AdminPanel.Pages
 
             card.MouseLeave += (sender, e) =>
             {
-                if (!(card.Tag is DataRow) || !IsSeciliPersonelCard(card))
-                    card.BackColor = AppColors.Surface;
+                if (!(card.Tag is DataRow))
+                    return;
+
+                card.BackColor = GetPersonelCardBackColor((DataRow)card.Tag, IsSeciliPersonelCard(card));
             };
+        }
+
+        private Color GetPersonelCardBackColor(DataRow row, bool selected)
+        {
+            if (selected)
+                return AppColors.PrimarySoft;
+
+            return GetBool(row, "SiparisYetkilisiMi") ? AppColors.SuccessSoft : AppColors.Surface;
         }
 
         private bool IsSeciliPersonelCard(Panel card)
@@ -877,10 +1140,7 @@ namespace eMarketing.AdminPanel.Pages
         private void FitCards(FlowLayoutPanel list)
         {
             int width = list.ClientSize.Width - 34;
-            if (list == atanabilirMagazaKartListesi || list == yetkiliMagazaKartListesi)
-                width = Math.Max(240, (list.ClientSize.Width - 44) / 2);
-            else
-                width = Math.Max(240, width);
+            width = Math.Max(240, width);
 
             foreach (Control control in list.Controls)
             {
@@ -1013,6 +1273,25 @@ namespace eMarketing.AdminPanel.Pages
             return value.ToString("N2", new CultureInfo("tr-TR")) + " TL";
         }
 
+        private string GetInitials(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return "P";
+
+            string[] parts = text.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            StringBuilder builder = new StringBuilder();
+
+            foreach (string part in parts)
+            {
+                builder.Append(char.ToUpper(part[0], new CultureInfo("tr-TR")));
+
+                if (builder.Length == 2)
+                    break;
+            }
+
+            return builder.Length == 0 ? "P" : builder.ToString();
+        }
+
         private string GetText(DataRow row, string columnName, string defaultValue)
         {
             if (!row.Table.Columns.Contains(columnName) || row[columnName] == DBNull.Value)
@@ -1052,9 +1331,16 @@ namespace eMarketing.AdminPanel.Pages
             if (card == null)
                 return;
 
-            using (Pen pen = new Pen(AppColors.Border))
+            bool siparisYetkilisi = card.Tag is DataRow row && GetBool(row, "SiparisYetkilisiMi");
+            using (Pen pen = new Pen(siparisYetkilisi ? AppColors.Success : AppColors.Border, siparisYetkilisi ? 2F : 1F))
             {
                 e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+            }
+
+            if (siparisYetkilisi)
+            {
+                using (SolidBrush brush = new SolidBrush(AppColors.Success))
+                    e.Graphics.FillRectangle(brush, 0, 0, 5, card.Height);
             }
         }
 

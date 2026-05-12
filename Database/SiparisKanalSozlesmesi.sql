@@ -151,16 +151,27 @@ BEGIN
             (
                 SELECT 1
                 FROM dbo.BayiYetkilileri byk
+                INNER JOIN dbo.KullaniciMagazalari km
+                    ON km.KullaniciId = byk.KullaniciId
+                   AND km.MagazaId = byk.MagazaId
+                   AND km.AktifMi = 1
                 WHERE byk.BayiYetkiliId = @BayiYetkiliId
                   AND byk.BayiId = @CustomerId
                   AND byk.AktifMi = 1
-                  AND (byk.MagazaId IS NULL OR byk.MagazaId = @CustomerStoreId)
+                  AND byk.MagazaId = @CustomerStoreId
+                  AND byk.YetkiTipi = N'SiparisYetkilisi'
             )
             BEGIN
                 RAISERROR('Seçili bayi yetkilisi bu bayi/mağaza için geçerli değil.', 16, 1);
                 ROLLBACK TRANSACTION;
                 RETURN;
             END
+        END
+        ELSE
+        BEGIN
+            RAISERROR('Sipariş yetkilisi seçimi zorunludur.', 16, 1);
+            ROLLBACK TRANSACTION;
+            RETURN;
         END
 
         INSERT INTO dbo.Orders
