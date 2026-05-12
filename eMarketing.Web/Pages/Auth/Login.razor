@@ -1,0 +1,81 @@
+@page "/login"
+@inject AuthApiClient AuthApi
+@inject AuthSession Auth
+@inject ActiveStoreState Stores
+@inject NavigationManager Navigation
+
+<PageTitle>Giriş - eMarketing</PageTitle>
+
+<section class="grid min-h-screen bg-white lg:grid-cols-[1.1fr_0.9fr]">
+    <div class="flex items-center px-6 py-12 sm:px-10 lg:px-16">
+        <div class="w-full max-w-md">
+            <p class="text-sm font-semibold uppercase text-slate-500">Bayi Portalı</p>
+            <h1 class="mt-3 text-4xl font-semibold tracking-normal text-slate-950">eMarketing</h1>
+            <p class="mt-3 text-base text-slate-600">Mağazanı seç, ekibini yönet ve siparişlerini tek bir kurumsal portaldan takip et.</p>
+
+            <EditForm Model="Model" OnValidSubmit="LoginAsync" class="mt-8 space-y-4">
+                <DataAnnotationsValidator />
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <div class="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
+                }
+                <label class="block space-y-1 text-sm font-medium text-slate-700">
+                    <span>Kullanıcı adı</span>
+                    <InputText class="w-full rounded-md border border-slate-200 px-3 py-2.5 outline-none focus:border-slate-400" @bind-Value="Model.KullaniciAdi" autocomplete="username" />
+                </label>
+                <label class="block space-y-1 text-sm font-medium text-slate-700">
+                    <span>Şifre</span>
+                    <InputText type="password" class="w-full rounded-md border border-slate-200 px-3 py-2.5 outline-none focus:border-slate-400" @bind-Value="Model.Sifre" autocomplete="current-password" />
+                </label>
+                <ValidationSummary class="text-sm text-rose-700" />
+                <button class="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-slate-300" disabled="@Busy">
+                    Giriş yap
+                </button>
+            </EditForm>
+        </div>
+    </div>
+    <div class="hidden bg-slate-950 p-10 text-white lg:flex lg:flex-col lg:justify-end">
+        <div class="max-w-lg">
+            <p class="text-sm font-medium uppercase text-slate-400">Operasyon</p>
+            <h2 class="mt-3 text-3xl font-semibold">Mağaza içi yetki, ekip ve sipariş akışı aynı yerde.</h2>
+            <div class="mt-8 grid grid-cols-3 gap-3 text-sm">
+                <div class="rounded-lg bg-white/10 p-4">Mağaza</div>
+                <div class="rounded-lg bg-white/10 p-4">Ekip</div>
+                <div class="rounded-lg bg-white/10 p-4">Sipariş</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private LoginRequest Model { get; set; } = new();
+    private string Message { get; set; } = string.Empty;
+    private bool Busy { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (Auth.IsAuthenticated)
+            Navigation.NavigateTo("/");
+    }
+
+    private async Task LoginAsync()
+    {
+        Busy = true;
+        Message = string.Empty;
+
+        try
+        {
+            await AuthApi.LoginAsync(Model.KullaniciAdi, Model.Sifre);
+            Stores.Clear();
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+}

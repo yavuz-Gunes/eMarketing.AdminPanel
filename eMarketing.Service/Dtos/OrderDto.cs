@@ -58,6 +58,53 @@ public class OrderCreateRequest
     public int? BayiYetkiliId { get; set; }
 }
 
+public sealed class OrderCreateItemRequest
+{
+    [Range(1, int.MaxValue)]
+    public int ProductId { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int Quantity { get; set; }
+
+    [Range(0, double.MaxValue)]
+    public decimal TotalPrice { get; set; }
+}
+
+public sealed class OrderDetailItemDto
+{
+    public int OrderItemId { get; set; }
+    public int ProductId { get; set; }
+    public string UrunAdi { get; set; } = string.Empty;
+    public string KategoriAdi { get; set; } = string.Empty;
+    public string GorselUrl { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal LineTotal { get; set; }
+}
+
+public sealed class OrderDetailResponseDto
+{
+    public OrderDto Order { get; set; } = new();
+    public IReadOnlyList<OrderDetailItemDto> Items { get; set; } = Array.Empty<OrderDetailItemDto>();
+}
+
+public sealed class CartOrderCreateRequest
+{
+    [Required, StringLength(300)]
+    public string CustomerName { get; set; } = string.Empty;
+
+    public string CustomerEmail { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
+
+    [Range(1, int.MaxValue)]
+    public int? CustomerStoreId { get; set; }
+
+    public string OrderType { get; set; } = "Bayi";
+    public string OrderSource { get; set; } = "Web";
+    public int? BayiYetkiliId { get; set; }
+    public IReadOnlyList<OrderCreateItemRequest> Items { get; set; } = Array.Empty<OrderCreateItemRequest>();
+}
+
 public class OrderStatusUpdateRequest
 {
     [Required, StringLength(50)]

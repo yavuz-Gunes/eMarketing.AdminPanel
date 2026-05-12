@@ -1,0 +1,15 @@
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Layout.MainLayout)">
+            <section class="mx-auto max-w-3xl px-6 py-16">
+                <p class="text-sm font-semibold text-slate-500">404</p>
+                <h1 class="mt-2 text-2xl font-semibold text-slate-950">Sayfa bulunamadı</h1>
+                <p class="mt-2 text-slate-600">Aradığınız bayi portalı sayfası mevcut değil.</p>
+            </section>
+        </LayoutView>
+    </NotFound>
+</Router>

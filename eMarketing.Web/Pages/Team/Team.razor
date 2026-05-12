@@ -1,0 +1,103 @@
+@page "/team"
+@inject ActiveStoreState StoreState
+@inject StoreApiClient StoreApi
+@inject TeamApiClient TeamApi
+
+<PageTitle>Ekibim - eMarketing</PageTitle>
+
+<AuthGate>
+    <section class="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <p class="text-sm font-bold uppercase text-slate-500">Ekibim</p>
+                <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Mağaza ekibi</h1>
+                <p class="mt-1 text-sm text-slate-500">Aktif mağaza: @(TeamResponse?.Context.MagazaAdi ?? StoreState.SelectedStore?.MagazaAdi ?? "-")</p>
+            </div>
+            @if (TeamResponse?.Context.PersonelEkleyebilir == true)
+            {
+                <button class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 hover:bg-blue-700" @onclick="() => ShowNewPersonnel = true">Yeni personel</button>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
+        }
+
+        @if (TeamResponse is not null)
+        {
+            <div class="grid gap-4 md:grid-cols-4">
+                <MetricCard Title="Görevin" Value="@DutyName(TeamResponse.Context.KullaniciGorev)" Icon="◎" Tone="blue" />
+                <MetricCard Title="Ekip" Value="@($"{TeamResponse.Members.Count} kişi")" Icon="◌" Tone="violet" />
+                <MetricCard Title="Sipariş Yetkilisi" Value="@TeamResponse.Members.Count(x => x.SiparisYetkilisiMi).ToString(CultureInfo.InvariantCulture)" Icon="✓" Tone="emerald" />
+                <MetricCard Title="Yönetim" Value="@(TeamResponse.Context.SiparisYetkisiYonetebilir ? "Açık" : "Kapalı")" Icon="▤" Tone="amber" />
+            </div>
+
+            @if (ShowNewPersonnel)
+            {
+                <NewPersonnelForm StoreId="@TeamResponse.Context.MagazaId" OnSaved="LoadTeamAsync" OnCancel="() => ShowNewPersonnel = false" />
+            }
+
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach (StoreTeamMemberDto member in TeamResponse.Members)
+                {
+                    <TeamMemberCard Member="member" OnSelect="SelectMember" />
+                }
+            </div>
+
+            <TeamMemberDrawer StoreId="@TeamResponse.Context.MagazaId"
+                              Context="@TeamResponse.Context"
+                              Member="@SelectedMember"
+                              OnClose="CloseDrawer"
+                              OnChanged="LoadTeamAsync" />
+        }
+    </section>
+</AuthGate>
+
+@code {
+    private StoreTeamResponseDto? TeamResponse { get; set; }
+    private StoreTeamMemberDto? SelectedMember { get; set; }
+    private string Message { get; set; } = string.Empty;
+    private bool ShowNewPersonnel { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StoreState.LoadAsync(StoreApi);
+        StoreState.Changed += OnStoreChanged;
+        await LoadTeamAsync();
+    }
+
+    private async void OnStoreChanged()
+    {
+        await LoadTeamAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadTeamAsync()
+    {
+        Message = string.Empty;
+        SelectedMember = null;
+        if (StoreState.SelectedStoreId is not int storeId)
+            return;
+
+        try
+        {
+            TeamResponse = await TeamApi.GetTeamAsync(storeId);
+        }
+        catch (Exception ex)
+        {
+            TeamResponse = null;
+            Message = ex.Message;
+        }
+    }
+
+    private void SelectMember(StoreTeamMemberDto member) => SelectedMember = member;
+    private void CloseDrawer() => SelectedMember = null;
+
+    private static string DutyName(string duty) => duty switch
+    {
+        "Supervisor" => "Supervisor",
+        "MagazaMuduru" => "Mağaza Müdürü",
+        _ => "Personel"
+    };
+}

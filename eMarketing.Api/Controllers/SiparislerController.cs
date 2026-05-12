@@ -37,6 +37,14 @@ public sealed class SiparislerController : ControllerBase
         return Ok(await _orderService.GetOrderSummaryAsync(magazaId, tumMagazalar, cancellationToken));
     }
 
+    [HttpGet("{id:int}")]
+    [Authorize(Policy = "CanManageOrders")]
+    public async Task<ActionResult<OrderDetailResponseDto>> GetById(int id, CancellationToken cancellationToken)
+    {
+        OrderDetailResponseDto? order = await _orderService.GetOrderDetailAsync(id, cancellationToken);
+        return order == null ? NotFound("Sipariş bulunamadı.") : Ok(order);
+    }
+
     [HttpPost]
     [Authorize(Policy = "CanManageOrders")]
     public async Task<ActionResult<object>> Create([FromBody] OrderCreateRequest request, CancellationToken cancellationToken)
@@ -46,6 +54,18 @@ public sealed class SiparislerController : ControllerBase
             return BadRequest(validationMessage);
 
         int orderId = await _orderService.CreateOrderAsync(request, cancellationToken);
+        return Ok(new { SiparisId = orderId });
+    }
+
+    [HttpPost("sepet")]
+    [Authorize(Policy = "CanManageOrders")]
+    public async Task<ActionResult<object>> CreateCart([FromBody] CartOrderCreateRequest request, CancellationToken cancellationToken)
+    {
+        string validationMessage = ValidateCartRequest(request);
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+            return BadRequest(validationMessage);
+
+        int orderId = await _orderService.CreateCartOrderAsync(request, cancellationToken);
         return Ok(new { SiparisId = orderId });
     }
 
@@ -81,6 +101,32 @@ public sealed class SiparislerController : ControllerBase
 
         if (request.TotalPrice < 0)
             return "Toplam tutar negatif olamaz.";
+
+        return string.Empty;
+    }
+
+    private static string ValidateCartRequest(CartOrderCreateRequest request)
+    {
+        if (request.CustomerStoreId == null || request.CustomerStoreId <= 0)
+            return "Sipariş için bayi/mağaza seçimi zorunludur.";
+
+        if (request.BayiYetkiliId == null || request.BayiYetkiliId <= 0)
+            return "Sipariş yetkilisi seçimi zorunludur.";
+
+        if (request.Items.Count == 0)
+            return "Sepette ürün bulunmalıdır.";
+
+        foreach (OrderCreateItemRequest item in request.Items)
+        {
+            if (item.ProductId <= 0)
+                return "Ürün seçimi zorunludur.";
+
+            if (item.Quantity <= 0)
+                return "Adet sıfırdan büyük olmalıdır.";
+
+            if (item.TotalPrice < 0)
+                return "Toplam tutar negatif olamaz.";
+        }
 
         return string.Empty;
     }

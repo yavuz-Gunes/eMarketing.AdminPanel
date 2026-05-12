@@ -1,0 +1,35 @@
+@inject ActiveStoreState StoreState
+@inject StoreApiClient Stores
+
+@if (StoreState.Stores.Count == 0)
+{
+    <span class="inline-flex h-12 w-full items-center rounded-xl border border-slate-200 px-4 text-sm text-slate-500">Mağaza yok</span>
+}
+else
+{
+    <label class="relative block">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600">▤</span>
+        <select class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                value="@StoreState.SelectedStoreId"
+                @onchange="OnStoreChanged">
+            @foreach (StoreDto store in StoreState.Stores)
+            {
+                <option value="@store.MagazaId">@store.MagazaAdi</option>
+            }
+        </select>
+    </label>
+}
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (StoreState.Stores.Count == 0)
+            await StoreState.LoadAsync(Stores);
+    }
+
+    private void OnStoreChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(Convert.ToString(args.Value, CultureInfo.InvariantCulture), out int storeId))
+            StoreState.Select(storeId);
+    }
+}

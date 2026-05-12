@@ -1,0 +1,46 @@
+<button class="@CardClass" @onclick="() => OnSelect.InvokeAsync(Member)">
+    <div class="flex items-center gap-4 text-left">
+        @if (!string.IsNullOrWhiteSpace(Member.ImageUrl))
+        {
+            <img class="h-14 w-14 shrink-0 rounded-full object-cover ring-4 ring-slate-100" src="@Member.ImageUrl.Replace("\\", "/")" alt="@Member.AdSoyad" />
+        }
+        else
+        {
+            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white ring-4 ring-slate-100">@Initials</div>
+        }
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="truncate text-base font-semibold text-slate-950">@Member.AdSoyad</h3>
+                    <p class="mt-1 truncate text-sm text-slate-500">@Member.MagazaGorevGorunenAd</p>
+                </div>
+                <span class="text-2xl text-slate-400">›</span>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @if (Member.SiparisYetkilisiMi)
+                {
+                    <StatusBadge Text="Sipariş Yetkisi" Tone="info" />
+                }
+                else
+                {
+                    <StatusBadge Text="Görüntüleme" Tone="purple" />
+                }
+                @if (Member.MagazaGorev == "Supervisor")
+                {
+                    <StatusBadge Text="Supervisor" Tone="supervisor" />
+                }
+            </div>
+        </div>
+    </div>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public StoreTeamMemberDto Member { get; set; } = new();
+    [Parameter] public EventCallback<StoreTeamMemberDto> OnSelect { get; set; }
+
+    private string CardClass => Member.SiparisYetkilisiMi
+        ? "w-full rounded-2xl border border-blue-300 bg-white p-4 shadow-sm shadow-blue-100 transition hover:border-blue-400 hover:shadow-md"
+        : "w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60 transition hover:border-slate-300 hover:shadow-md";
+
+    private string Initials => string.Join("", Member.AdSoyad.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
+}

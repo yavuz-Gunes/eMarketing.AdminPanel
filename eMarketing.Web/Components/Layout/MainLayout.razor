@@ -1,0 +1,83 @@
+@inherits LayoutComponentBase
+@inject AuthSession Auth
+@inject NavigationManager Navigation
+
+<div class="min-h-screen bg-[#f5f7fb] text-slate-950">
+    @if (Auth.IsAuthenticated)
+    {
+        <aside class="fixed inset-y-0 left-0 z-30 hidden w-72 overflow-hidden bg-[#081422] text-white shadow-2xl lg:flex lg:flex-col">
+            <div class="flex h-24 items-center gap-3 px-6">
+                <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl font-black">e</div>
+                <div>
+                    <a href="/" class="text-lg font-semibold tracking-normal text-white">eMarketing.Web</a>
+                    <p class="text-sm text-slate-300">Bayi Portalı</p>
+                </div>
+            </div>
+            <PortalNav />
+            <div class="mt-auto space-y-5 p-5">
+                <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 text-xl text-emerald-300">✓</div>
+                        <div>
+                            <p class="text-sm font-semibold text-white">Server-first güvenli oturum</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-300">JWT web sunucusunda korunur.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    }
+
+    <div class="@(Auth.IsAuthenticated ? "lg:pl-72" : "")">
+        @if (Auth.IsAuthenticated)
+        {
+            <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+                <div class="grid min-h-20 items-center gap-4 px-4 py-3 sm:px-6 lg:grid-cols-[260px_1fr_auto] lg:px-8">
+                    <div class="space-y-1">
+                        <p class="text-xs font-semibold text-slate-500">Aktif Mağaza</p>
+                        <StoreSwitcher />
+                    </div>
+                    <label class="relative hidden lg:block">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400">⌕</span>
+                        <input class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                               placeholder="Ürün, sipariş veya personel ara" />
+                    </label>
+                    <div class="flex items-center justify-end gap-3">
+                        <button class="relative flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl text-slate-700 hover:bg-slate-50" title="Bildirimler">
+                            ♧
+                            <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">3</span>
+                        </button>
+                        <div class="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm sm:flex">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">@UserInitials</div>
+                            <div class="min-w-32">
+                                <p class="truncate text-sm font-semibold text-slate-950">@DisplayName</p>
+                                <p class="text-xs text-slate-500">@DisplayRole</p>
+                            </div>
+                            <button class="text-slate-400 hover:text-slate-700" title="Çıkış" @onclick="Logout">⌄</button>
+                        </div>
+                        <button class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" @onclick="Logout">Çıkış</button>
+                    </div>
+                </div>
+                <div class="border-t border-slate-100 px-4 py-2 lg:hidden">
+                    <PortalNav Compact="true" />
+                </div>
+            </header>
+        }
+
+        <main class="min-h-[calc(100vh-5rem)]">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private string DisplayName => Auth.User?.AdSoyad is { Length: > 0 } name ? name : Auth.User?.KullaniciAdi ?? "-";
+    private string DisplayRole => Auth.User?.Rol ?? "-";
+    private string UserInitials => string.Join("", DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
+
+    private void Logout()
+    {
+        Auth.Clear();
+        Navigation.NavigateTo("/login", true);
+    }
+}

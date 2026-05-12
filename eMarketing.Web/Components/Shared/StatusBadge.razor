@@ -1,0 +1,20 @@
+<span class="@CssClass">@Text</span>
+
+@code {
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public string Tone { get; set; } = "slate";
+
+    private string CssClass => Tone switch
+    {
+        "success" => Base("bg-emerald-50 text-emerald-700 ring-emerald-600/15"),
+        "warning" => Base("bg-amber-50 text-amber-700 ring-amber-600/15"),
+        "danger" => Base("bg-rose-50 text-rose-700 ring-rose-600/15"),
+        "info" => Base("bg-blue-50 text-blue-700 ring-blue-600/15"),
+        "purple" => Base("bg-violet-50 text-violet-700 ring-violet-600/15"),
+        "manager" => Base("bg-sky-50 text-sky-700 ring-sky-600/15"),
+        "supervisor" => Base("bg-indigo-50 text-indigo-700 ring-indigo-600/15"),
+        _ => Base("bg-slate-100 text-slate-700 ring-slate-600/10")
+    };
+
+    private static string Base(string tone) => $"inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ring-1 {tone}";
+}

@@ -117,6 +117,7 @@ builder.Services.AddScoped<IDealerService, DealerService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
+builder.Services.AddScoped<IDealerOperationService, DealerOperationService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]

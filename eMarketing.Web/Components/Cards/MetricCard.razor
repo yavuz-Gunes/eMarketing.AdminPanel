@@ -1,0 +1,39 @@
+<article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+    <div class="flex items-start gap-4">
+        <div class="@IconClass">@Icon</div>
+        <div class="min-w-0">
+            <p class="text-sm font-semibold text-slate-700">@Title</p>
+            <p class="mt-2 text-2xl font-bold tracking-normal text-slate-950">@Value</p>
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Trend))
+    {
+        <p class="mt-5 text-xs font-medium text-slate-500"><span class="@TrendClass">@TrendPrefix</span> @Trend</p>
+    }
+</article>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = "●";
+    [Parameter] public string Tone { get; set; } = "blue";
+    [Parameter] public string Trend { get; set; } = string.Empty;
+    [Parameter] public string TrendPrefix { get; set; } = "↗";
+
+    private string IconClass => Tone switch
+    {
+        "amber" => "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-2xl text-amber-600",
+        "rose" => "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-2xl text-rose-600",
+        "emerald" => "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-2xl text-emerald-600",
+        "violet" => "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-2xl text-violet-600",
+        _ => "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-2xl text-blue-600"
+    };
+
+    private string TrendClass => Tone switch
+    {
+        "rose" => "font-semibold text-rose-600",
+        "amber" => "font-semibold text-amber-600",
+        "emerald" => "font-semibold text-emerald-600",
+        _ => "font-semibold text-blue-600"
+    };
+}

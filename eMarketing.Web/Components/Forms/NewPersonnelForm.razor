@@ -1,0 +1,92 @@
+@inject TeamApiClient TeamApi
+
+<EditForm Model="Model" OnValidSubmit="SubmitAsync" class="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+    <DataAnnotationsValidator />
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            <h3 class="text-lg font-bold text-slate-950">Yeni personel</h3>
+            <p class="text-sm text-slate-500">Personel aktif mağaza bağlamında eklenir.</p>
+        </div>
+        <button type="button" class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" @onclick="Cancel">Kapat</button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="@MessageClass">@Message</div>
+    }
+
+    <div class="grid gap-3 sm:grid-cols-2">
+        <label class="space-y-1 text-sm font-semibold text-slate-700">
+            <span>Ad soyad</span>
+            <InputText class="h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind-Value="Model.AdSoyad" />
+        </label>
+        <label class="space-y-1 text-sm font-semibold text-slate-700">
+            <span>Kullanıcı adı</span>
+            <InputText class="h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind-Value="Model.KullaniciAdi" />
+        </label>
+        <label class="space-y-1 text-sm font-semibold text-slate-700">
+            <span>E-posta</span>
+            <InputText class="h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind-Value="Model.Email" />
+        </label>
+        <label class="space-y-1 text-sm font-semibold text-slate-700">
+            <span>Telefon</span>
+            <InputText class="h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind-Value="Model.Telefon" />
+        </label>
+        <label class="space-y-1 text-sm font-semibold text-slate-700">
+            <span>Geçici şifre</span>
+            <InputText class="h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind-Value="Model.Sifre" />
+        </label>
+        <label class="space-y-1 text-sm font-semibold text-slate-700">
+            <span>Mağaza görevi</span>
+            <InputSelect class="h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind-Value="Model.Gorev">
+                <option value="Personel">Personel</option>
+                <option value="MagazaMuduru">Mağaza Müdürü</option>
+                <option value="Supervisor">Supervisor</option>
+            </InputSelect>
+        </label>
+    </div>
+
+    <ValidationSummary class="text-sm text-rose-700" />
+
+    <button class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 hover:bg-blue-700 disabled:bg-slate-300 disabled:shadow-none" disabled="@Busy">
+        Kaydet
+    </button>
+</EditForm>
+
+@code {
+    [Parameter] public int StoreId { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private StorePersonnelCreateRequest Model { get; set; } = new();
+    private string Message { get; set; } = string.Empty;
+    private bool IsError { get; set; }
+    private bool Busy { get; set; }
+    private string MessageClass => IsError
+        ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+        : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700";
+
+    private async Task SubmitAsync()
+    {
+        Busy = true;
+        try
+        {
+            await TeamApi.CreatePersonnelAsync(StoreId, Model);
+            Message = "Personel eklendi.";
+            IsError = false;
+            Model = new StorePersonnelCreateRequest();
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            IsError = true;
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private Task Cancel() => OnCancel.InvokeAsync();
+}
