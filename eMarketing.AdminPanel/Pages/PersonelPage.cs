@@ -361,14 +361,14 @@ namespace eMarketing.AdminPanel.Pages
             btnYetkiKaydet.Width = 150;
             btnYetkiKaydet.Click += BtnYetkiKaydet_Click;
 
-            btnAktifMagazayaAta = CreateButton("Aktif Mağazaya Personel Olarak Ata", false);
-            btnAktifMagazayaAta.Width = 245;
+            btnAktifMagazayaAta = CreateButton("Aktif Mağazaya Ata", false);
+            btnAktifMagazayaAta.Width = 170;
             btnAktifMagazayaAta.Click += BtnAktifMagazayaAta_Click;
 
             Panel form = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 260,
+                Height = 278,
                 BackColor = AppColors.Surface,
                 Padding = new Padding(18)
             };
@@ -553,7 +553,7 @@ namespace eMarketing.AdminPanel.Pages
             {
                 if (!AppSession.SeciliMagazaId.HasValue)
                 {
-                    lblYetkiDurum.Text = "Görev ve sipariş yetkisi yönetmek için üst bardan aktif mağaza seçin.";
+                    SetYetkiDurum("Görev ve sipariş yetkisi yönetmek için üst bardan aktif mağaza seçin.", AppColors.WarningSoft, AppColors.Warning);
                     SetYetkiFormEnabled(false, false);
                     return;
                 }
@@ -563,17 +563,19 @@ namespace eMarketing.AdminPanel.Pages
 
                 if (aktifMagazaYetkiRow == null)
                 {
-                    lblYetkiDurum.Text = "Bu personel aktif mağazaya bağlı değil. Önce aktif mağazaya personel olarak atayın.";
+                    SetYetkiDurum("Bu personel aktif mağazaya bağlı değil. Görev seçip aktif mağazaya atayabilirsiniz.", AppColors.WarningSoft, AppColors.Warning);
                     SelectAktifMagazaGorev("Personel");
                     chkSiparisYetkilisi.Checked = false;
+                    btnAktifMagazayaAta.Text = "Aktif Mağazaya Ata";
                     SetYetkiFormEnabled(false, YonetimModu);
                     return;
                 }
 
-                lblYetkiDurum.Text = "Bu personel aktif mağazaya bağlı. Görevini ve sipariş yetkisini buradan yönetin.";
+                SetYetkiDurum("Bu personel aktif mağazaya bağlı. Görevini ve sipariş yetkisini buradan yönetin.", AppColors.SuccessSoft, AppColors.Success);
                 SelectAktifMagazaGorev(GetText(aktifMagazaYetkiRow, "Gorev", "Personel"));
                 chkSiparisYetkilisi.Checked = GetBool(aktifMagazaYetkiRow, "SiparisYetkilisiMi");
                 txtSiparisYetkiNot.Text = "";
+                btnAktifMagazayaAta.Text = "Aktif Mağazaya Bağlı";
                 SetYetkiFormEnabled(YonetimModu, false);
             }
             catch (Exception ex)
@@ -600,20 +602,28 @@ namespace eMarketing.AdminPanel.Pages
         {
             aktifMagazaYetkiRow = null;
             lblYetkiMagaza.Text = "Aktif mağaza: " + AppSession.MagazaGorunumAdi;
-            lblYetkiDurum.Text = "Personel seçince bu mağazadaki görev ve sipariş yetkisi burada açılır.";
+            SetYetkiDurum("Personel seçince bu mağazadaki görev ve sipariş yetkisi burada açılır.", AppColors.PrimarySoft, AppColors.TextSecondary);
             SelectAktifMagazaGorev("Personel");
             chkSiparisYetkilisi.Checked = false;
             txtSiparisYetkiNot.Text = "";
+            btnAktifMagazayaAta.Text = "Aktif Mağazaya Ata";
             SetYetkiFormEnabled(false, false);
+        }
+
+        private void SetYetkiDurum(string text, Color background, Color foreground)
+        {
+            lblYetkiDurum.Text = text;
+            lblYetkiDurum.BackColor = background;
+            lblYetkiDurum.ForeColor = foreground;
         }
 
         private void SetYetkiFormEnabled(bool enabled, bool allowAssign)
         {
-            cmbAktifMagazaGorev.Enabled = enabled;
+            cmbAktifMagazaGorev.Enabled = enabled || allowAssign;
             chkSiparisYetkilisi.Enabled = enabled;
             txtSiparisYetkiNot.Enabled = enabled;
             btnYetkiKaydet.Enabled = enabled;
-            btnAktifMagazayaAta.Visible = allowAssign;
+            btnAktifMagazayaAta.Visible = YonetimModu;
             btnAktifMagazayaAta.Enabled = allowAssign;
         }
 

@@ -185,6 +185,7 @@ namespace eMarketing.AdminPanel.Pages
             lblKonum = CreateDetailLine("Konum", "-");
             lblTelefon = CreateDetailLine("Telefon", "-");
             lblSorumlu = CreateDetailLine("Sorumlu", "-");
+            lblSorumlu.Height = 86;
             lblSiparis = CreateDetailLine("Sipariş", "-");
             lblCiro = CreateDetailLine("Ciro", "-");
             lblSonSiparis = CreateDetailLine("Son Sipariş", "-");
@@ -460,8 +461,8 @@ namespace eMarketing.AdminPanel.Pages
             lblKonum.Text = "Konum: " + GetKonumText(row);
             lblTelefon.Text = "Telefon: " + GetText(row, "Telefon", "-");
             lblSorumlu.Text = "Müdür: " + GetText(row, "MagazaMuduru", "-")
-                + "    Supervisor: " + GetText(row, "Supervisor", "-")
-                + "    Personel: " + GetInt(row, "PersonelSayisi")
+                + Environment.NewLine + "Supervisor: " + GetText(row, "Supervisor", "-")
+                + Environment.NewLine + "Personel: " + GetInt(row, "PersonelSayisi")
                 + "    Sipariş Yetkilisi: " + GetInt(row, "SiparisYetkilisiSayisi");
             lblSiparis.Text = "Sipariş: " + GetInt(row, "SiparisSayisi") + " adet";
             lblCiro.Text = "Ciro: " + GetMoney(row, "ToplamCiro");
@@ -485,7 +486,9 @@ namespace eMarketing.AdminPanel.Pages
             lblBayi.Text = "Bayi: -";
             lblKonum.Text = "Konum: -";
             lblTelefon.Text = "Telefon: -";
-            lblSorumlu.Text = "Sorumlu: -";
+            lblSorumlu.Text = "Müdür: -" + Environment.NewLine
+                + "Supervisor: -" + Environment.NewLine
+                + "Personel: -    Sipariş Yetkilisi: -";
             lblSiparis.Text = "Sipariş: -";
             lblCiro.Text = "Ciro: -";
             lblSonSiparis.Text = "Son Sipariş: -";
@@ -760,7 +763,7 @@ namespace eMarketing.AdminPanel.Pages
                 Font = new Font("Segoe UI", 9.5F, FontStyle.Regular),
                 ForeColor = AppColors.TextSecondary,
                 BackColor = Color.Transparent,
-                AutoEllipsis = true
+                AutoEllipsis = false
             };
         }
 
