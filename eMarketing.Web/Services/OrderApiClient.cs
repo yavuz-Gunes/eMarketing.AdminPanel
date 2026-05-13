@@ -27,6 +27,22 @@ public sealed class OrderApiClient : ApiClientBase
         return await ReadRequiredAsync<OrderDetailResponseDto>(response, cancellationToken);
     }
 
+    public async Task UpdateOrderStatusAsync(int orderId, string status, CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"siparisler/{orderId}/durum", new OrderStatusUpdateRequest
+        {
+            SiparisDurumu = status
+        }, cancellationToken);
+
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task CancelOrderAsync(int orderId, CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await CreateClient().PostAsJsonAsync($"siparisler/{orderId}/iptal", new { }, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task<int> CreateCartOrderAsync(StoreDto store, SiparisYetkilisiDto authority, IReadOnlyList<CartItem> items, CancellationToken cancellationToken = default)
     {
         var request = new CartOrderCreateRequest

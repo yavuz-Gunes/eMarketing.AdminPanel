@@ -32,6 +32,7 @@ builder.Services.AddScoped<ProductApiClient>();
 builder.Services.AddScoped<OrderApiClient>();
 builder.Services.AddScoped<TeamApiClient>();
 builder.Services.AddScoped<DashboardApiClient>();
+builder.Services.AddScoped<CampaignApiClient>();
 
 var app = builder.Build();
 

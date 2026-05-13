@@ -75,6 +75,20 @@ public sealed class BayiStoklariController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("merkez-stok/artir")]
+    [Authorize(Policy = "CanManageCentralStock")]
+    public async Task<IActionResult> MerkezStokArtir([FromBody] MerkezStokArtirRequest request, CancellationToken cancellationToken)
+    {
+        await _stockService.ProcessCentralStockAsync(new CentralStockOperationRequest
+        {
+            UrunId = request.UrunId,
+            Miktar = request.Miktar,
+            Aciklama = request.Aciklama
+        }, cancellationToken);
+
+        return NoContent();
+    }
 }
 
 public sealed class MinimumStokRequest
@@ -90,4 +104,11 @@ public sealed class StokHareketRequest
     public int Miktar { get; set; }
     public string Aciklama { get; set; } = string.Empty;
     public int? MinimumStok { get; set; }
+}
+
+public sealed class MerkezStokArtirRequest
+{
+    public int UrunId { get; set; }
+    public int Miktar { get; set; }
+    public string Aciklama { get; set; } = string.Empty;
 }

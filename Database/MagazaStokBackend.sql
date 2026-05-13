@@ -287,6 +287,60 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_MerkezStok_Artir
+    @ProductId INT,
+    @Miktar INT,
+    @Aciklama NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @ProductId IS NULL OR @ProductId <= 0
+    BEGIN
+        RAISERROR('Ürün seçimi zorunludur.', 16, 1);
+        RETURN;
+    END;
+
+    IF @Miktar IS NULL OR @Miktar <= 0
+    BEGIN
+        RAISERROR('Merkez stok hareket miktarı sıfırdan büyük olmalıdır.', 16, 1);
+        RETURN;
+    END;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Products WHERE ProductId = @ProductId AND IsActive = 1)
+    BEGIN
+        RAISERROR('Merkez stokta ürün bulunamadı veya aktif değil.', 16, 1);
+        RETURN;
+    END;
+
+    BEGIN TRANSACTION;
+
+    UPDATE dbo.Products
+    SET Stock = Stock + @Miktar
+    WHERE ProductId = @ProductId
+      AND IsActive = 1;
+
+    INSERT INTO dbo.StockMovements
+    (
+        ProductId,
+        OrderId,
+        MovementType,
+        Quantity,
+        Description
+    )
+    VALUES
+    (
+        @ProductId,
+        NULL,
+        N'MerkezGiris',
+        @Miktar,
+        ISNULL(@Aciklama, N'Admin panel merkez stok artırma')
+    );
+
+    COMMIT TRANSACTION;
+END
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_Siparis_BayiStok_TeslimIsle
     @SiparisId INT
 AS

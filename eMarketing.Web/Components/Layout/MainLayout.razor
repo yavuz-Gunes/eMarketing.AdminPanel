@@ -2,25 +2,35 @@
 @inject AuthSession Auth
 @inject NavigationManager Navigation
 
-<div class="min-h-screen bg-[#f5f7fb] text-slate-950">
+<div class="min-h-screen bg-slate-100 text-slate-950">
     @if (Auth.IsAuthenticated)
     {
-        <aside class="fixed inset-y-0 left-0 z-30 hidden w-72 overflow-hidden bg-[#081422] text-white shadow-2xl lg:flex lg:flex-col">
-            <div class="flex h-24 items-center gap-3 px-6">
-                <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl font-black">e</div>
-                <div>
-                    <a href="/" class="text-lg font-semibold tracking-normal text-white">eMarketing.Web</a>
-                    <p class="text-sm text-slate-300">Bayi Portalı</p>
+        <aside class="fixed inset-y-0 left-0 z-30 hidden w-72 bg-[#102033] text-white shadow-2xl lg:flex lg:flex-col">
+            <div class="border-b border-white/10 px-6 py-6">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl font-black text-[#102033]">
+                        e
+                    </a>
+                    <div>
+                        <a href="/" class="block text-lg font-black text-white">eMarketing</a>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-100/70">Bayi Portalı</p>
+                    </div>
                 </div>
             </div>
-            <PortalNav />
-            <div class="mt-auto space-y-5 p-5">
-                <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 text-xl text-emerald-300">✓</div>
+
+            <div class="flex-1 overflow-y-auto py-5">
+                <PortalNav />
+            </div>
+
+            <div class="border-t border-white/10 p-5">
+                <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300">
+                            <AppIcon Name="shield" CssClass="h-5 w-5" />
+                        </div>
                         <div>
-                            <p class="text-sm font-semibold text-white">Server-first güvenli oturum</p>
-                            <p class="mt-1 text-xs leading-5 text-slate-300">JWT web sunucusunda korunur.</p>
+                            <p class="text-sm font-bold text-white">Güvenli oturum</p>
+                            <p class="mt-1 text-xs leading-5 text-blue-100/60">JWT web sunucusunda korunur.</p>
                         </div>
                     </div>
                 </div>
@@ -32,32 +42,45 @@
         @if (Auth.IsAuthenticated)
         {
             <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-                <div class="grid min-h-20 items-center gap-4 px-4 py-3 sm:px-6 lg:grid-cols-[260px_1fr_auto] lg:px-8">
-                    <div class="space-y-1">
-                        <p class="text-xs font-semibold text-slate-500">Aktif Mağaza</p>
+                <div class="flex h-20 items-center gap-4 px-4 sm:px-6 lg:px-8">
+                    <div class="min-w-0 flex-1 lg:max-w-[360px]">
                         <StoreSwitcher />
                     </div>
-                    <label class="relative hidden lg:block">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400">⌕</span>
-                        <input class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+
+                    <label class="relative hidden flex-1 xl:block">
+                        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="search" CssClass="h-5 w-5" />
+                        </span>
+                        <input class="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
                                placeholder="Ürün, sipariş veya personel ara" />
                     </label>
-                    <div class="flex items-center justify-end gap-3">
-                        <button class="relative flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl text-slate-700 hover:bg-slate-50" title="Bildirimler">
-                            ♧
-                            <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">3</span>
+
+                    <div class="ml-auto flex shrink-0 items-center gap-3">
+                        <button class="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                                title="Bildirimler"
+                                type="button">
+                            <AppIcon Name="alert" CssClass="h-5 w-5" />
+                            <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[11px] font-black text-white">3</span>
                         </button>
-                        <div class="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm sm:flex">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">@UserInitials</div>
-                            <div class="min-w-32">
-                                <p class="truncate text-sm font-semibold text-slate-950">@DisplayName</p>
-                                <p class="text-xs text-slate-500">@DisplayRole</p>
+
+                        <div class="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-white">
+                                @UserInitials
                             </div>
-                            <button class="text-slate-400 hover:text-slate-700" title="Çıkış" @onclick="Logout">⌄</button>
+                            <div class="min-w-28 max-w-40">
+                                <p class="truncate text-sm font-bold text-slate-950">@DisplayName</p>
+                                <p class="truncate text-xs text-slate-500">@DisplayRole</p>
+                            </div>
                         </div>
-                        <button class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" @onclick="Logout">Çıkış</button>
+
+                        <button class="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                                type="button"
+                                @onclick="Logout">
+                            Çıkış
+                        </button>
                     </div>
                 </div>
+
                 <div class="border-t border-slate-100 px-4 py-2 lg:hidden">
                     <PortalNav Compact="true" />
                 </div>
@@ -71,9 +94,19 @@
 </div>
 
 @code {
-    private string DisplayName => Auth.User?.AdSoyad is { Length: > 0 } name ? name : Auth.User?.KullaniciAdi ?? "-";
+    private string DisplayName => Auth.User?.AdSoyad is { Length: > 0 } name
+        ? name
+        : Auth.User?.KullaniciAdi ?? "-";
+
     private string DisplayRole => Auth.User?.Rol ?? "-";
-    private string UserInitials => string.Join("", DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
+
+    private string UserInitials => string.Join(
+            "",
+            DisplayName
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(x => x[0]))
+        .ToUpper(new CultureInfo("tr-TR"));
 
     private void Logout()
     {

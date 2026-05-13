@@ -80,6 +80,18 @@ public sealed class StockOperationRequest
     public int? MinimumStok { get; set; }
 }
 
+public sealed class CentralStockOperationRequest
+{
+    [Range(1, int.MaxValue)]
+    public int UrunId { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int Miktar { get; set; }
+
+    [StringLength(500)]
+    public string Aciklama { get; set; } = string.Empty;
+}
+
 public sealed class StockFilterRequest
 {
     public int? MagazaId { get; set; }

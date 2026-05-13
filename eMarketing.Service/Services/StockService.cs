@@ -12,6 +12,7 @@ public interface IStockService
     Task<IReadOnlyList<StockMovementDto>> GetMovementsAsync(int storeId, int productId, int count, CancellationToken cancellationToken = default);
     Task UpdateMinimumAsync(int storeStockId, int minimumStock, CancellationToken cancellationToken = default);
     Task ProcessMovementAsync(StockOperationRequest request, CancellationToken cancellationToken = default);
+    Task ProcessCentralStockAsync(CentralStockOperationRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class StockService : IStockService
@@ -58,5 +59,17 @@ public sealed class StockService : IStockService
     {
         _logger.LogInformation("Manual stock movement requested. StoreId: {StoreId}, ProductId: {ProductId}, Type: {MovementType}, Quantity: {Quantity}, ActorUserId: {ActorUserId}", request.MagazaId, request.UrunId, request.HareketTipi, request.Miktar, _currentUserService.CurrentUser.UserId);
         return _repository.ProcessMovementAsync(request, cancellationToken);
+    }
+
+    public Task ProcessCentralStockAsync(CentralStockOperationRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.UrunId <= 0)
+            throw new ArgumentException("Ürün seçimi zorunludur.", nameof(request.UrunId));
+
+        if (request.Miktar <= 0)
+            throw new ArgumentException("Merkez stok miktarı sıfırdan büyük olmalıdır.", nameof(request.Miktar));
+
+        _logger.LogInformation("Central stock increase requested. ProductId: {ProductId}, Quantity: {Quantity}, ActorUserId: {ActorUserId}", request.UrunId, request.Miktar, _currentUserService.CurrentUser.UserId);
+        return _repository.ProcessCentralStockAsync(request, cancellationToken);
     }
 }

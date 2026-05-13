@@ -1,4 +1,5 @@
 @page "/orders"
+@implements IDisposable
 @inject ActiveStoreState StoreState
 @inject StoreApiClient StoreApi
 @inject OrderApiClient OrdersApi
@@ -6,11 +7,11 @@
 <PageTitle>Siparişler - eMarketing</PageTitle>
 
 <AuthGate>
-    <section class="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <section class="mx-auto max-w-[1440px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="text-sm font-bold uppercase text-slate-500">Siparişler</p>
-                <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Mağaza siparişleri</h1>
+                <h1 class="mt-1 text-3xl font-black tracking-tight text-slate-950">Mağaza siparişleri</h1>
                 <p class="mt-1 text-sm text-slate-500">Aktif mağaza: @(StoreState.SelectedStore?.MagazaAdi ?? "-")</p>
             </div>
             <button class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50" @onclick="LoadAsync">Yenile</button>
@@ -21,7 +22,7 @@
             <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
         }
 
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
                 <thead class="bg-slate-50 text-left text-xs font-bold uppercase text-slate-500">
                     <tr>
@@ -34,25 +35,36 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @foreach (OrderDto order in OrderList)
+                    @if (OrderList.Count == 0)
                     {
-                        <tr class="cursor-pointer transition hover:bg-blue-50/50" @onclick="() => SelectedOrderId = order.SiparisId">
-                            <td class="px-5 py-4 font-bold text-slate-950">@order.OrderNo</td>
-                            <td class="px-5 py-4">
-                                <div class="font-semibold text-slate-700">@order.UrunAdi</div>
-                                <div class="mt-1 text-xs text-slate-500">@order.UrunKalemi kalem · @order.Adet adet</div>
-                            </td>
-                            <td class="px-5 py-4 text-slate-700">@order.YetkiliAdi</td>
-                            <td class="px-5 py-4"><StatusBadge Text="@order.SiparisDurumu" Tone="@StatusTone(order.SiparisDurumu)" /></td>
-                            <td class="px-5 py-4 text-right font-bold text-slate-950">@order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</td>
-                            <td class="px-5 py-4 text-right text-2xl text-slate-400">›</td>
+                        <tr>
+                            <td colspan="6" class="px-5 py-10 text-center text-sm font-semibold text-slate-500">Henüz sipariş yok</td>
                         </tr>
+                    }
+                    else
+                    {
+                        @foreach (OrderDto order in OrderList)
+                        {
+                            <tr class="cursor-pointer transition hover:bg-blue-50/50" @onclick="() => SelectedOrderId = order.SiparisId">
+                                <td class="px-5 py-4 font-bold text-slate-950">@order.OrderNo</td>
+                                <td class="px-5 py-4">
+                                    <div class="font-semibold text-slate-700">@order.UrunAdi</div>
+                                    <div class="mt-1 text-xs text-slate-500">@order.UrunKalemi kalem · @order.Adet adet</div>
+                                </td>
+                                <td class="px-5 py-4 text-slate-700">@order.YetkiliAdi</td>
+                                <td class="px-5 py-4"><StatusBadge Text="@DisplayStatus(order.SiparisDurumu)" Tone="@StatusTone(order.SiparisDurumu)" /></td>
+                                <td class="px-5 py-4 text-right font-bold text-slate-950">@order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</td>
+                                <td class="px-5 py-4 text-right text-slate-400">
+                                    <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
         </div>
 
-        <OrderDetailDrawer OrderId="@SelectedOrderId" OnClose="CloseOrderDrawer" />
+        <OrderDetailDrawer OrderId="@SelectedOrderId" OnClose="CloseOrderDrawer" OnChanged="LoadAsync" />
     </section>
 </AuthGate>
 
@@ -78,6 +90,7 @@
     {
         try
         {
+            Message = string.Empty;
             OrderList = await OrdersApi.GetOrdersAsync(StoreState.SelectedStoreId);
         }
         catch (Exception ex)
@@ -87,6 +100,16 @@
     }
 
     private void CloseOrderDrawer() => SelectedOrderId = null;
+
+    private static string DisplayStatus(string status)
+    {
+        return status switch
+        {
+            "Hazirlaniyor" => "Hazırlanıyor",
+            "Iptal" => "İptal",
+            _ => status
+        };
+    }
 
     private static string StatusTone(string status)
     {
@@ -99,5 +122,10 @@
             "İptal" => "danger",
             _ => "warning"
         };
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
     }
 }

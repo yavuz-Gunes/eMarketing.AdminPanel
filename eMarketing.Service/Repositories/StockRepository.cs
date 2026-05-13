@@ -126,4 +126,14 @@ public sealed class StockRepository : IStockRepository
             SqlParameterFactory.Param("@MinimumStok", SqlDbType.Int, request.MinimumStok)
         }, cancellationToken);
     }
+
+    public Task ProcessCentralStockAsync(CentralStockOperationRequest request, CancellationToken cancellationToken = default)
+    {
+        return _sqlExecutor.ExecuteAsync("sp_MerkezStok_Artir", new[]
+        {
+            SqlParameterFactory.Param("@ProductId", SqlDbType.Int, request.UrunId),
+            SqlParameterFactory.Param("@Miktar", SqlDbType.Int, request.Miktar),
+            SqlParameterFactory.NullableTextParam("@Aciklama", 500, request.Aciklama)
+        }, cancellationToken);
+    }
 }

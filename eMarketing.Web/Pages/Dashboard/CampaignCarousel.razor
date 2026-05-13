@@ -1,0 +1,227 @@
+@implements IDisposable
+@inject CampaignApiClient CampaignApi
+@inject ActiveStoreState StoreState
+
+<section class="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-white shadow-sm">
+    <div class="@Current.BandClass">
+        <div class="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:p-5">
+            <div class="flex min-w-0 items-center gap-4">
+                <div class="hidden h-20 w-28 shrink-0 overflow-hidden rounded-2xl border border-white/60 bg-white/70 sm:block">
+                    @if (!string.IsNullOrWhiteSpace(Current.ImageUrl))
+                    {
+                        <img class="h-full w-full object-cover" src="@Current.ImageUrl" alt="@Current.Title" />
+                    }
+                    else
+                    {
+                        <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-100 to-slate-100 text-blue-700">
+                            <AppIcon Name="package" CssClass="h-8 w-8" />
+                        </div>
+                    }
+                </div>
+
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-slate-700 ring-1 ring-white/80">
+                            Kampanya
+                        </span>
+                        <span class="text-xs font-bold text-slate-500">@Current.DateRange</span>
+                    </div>
+                    <h2 class="mt-2 truncate text-xl font-black tracking-tight text-slate-950 sm:text-2xl">@Current.Title</h2>
+                    <p class="mt-1 line-clamp-2 max-w-3xl text-sm leading-5 text-slate-600">@Current.Description</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 sm:justify-end">
+                <a href="@Current.Href" class="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800">
+                    @Current.CtaText
+                </a>
+
+                <div class="flex items-center gap-1.5">
+                    <button class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/70 bg-white/70 text-slate-700 transition hover:bg-white"
+                            type="button"
+                            title="Önceki kampanya"
+                            @onclick="Previous">
+                        <span class="sr-only">Önceki</span>
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                    </button>
+
+                    <button class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/70 bg-white/70 text-slate-700 transition hover:bg-white"
+                            type="button"
+                            title="Sonraki kampanya"
+                            @onclick="Next">
+                        <span class="sr-only">Sonraki</span>
+                        <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center gap-2 px-5 pb-4">
+            @for (int i = 0; i < Campaigns.Count; i++)
+            {
+                int index = i;
+                <button class="@DotClass(index)"
+                        type="button"
+                        title="@($"{index + 1}. kampanya")"
+                        @onclick="() => GoTo(index)">
+                    <span class="sr-only">@($"{index + 1}. kampanya")</span>
+                </button>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private int _activeIndex;
+    private IReadOnlyList<Campaign> Campaigns { get; set; } = DefaultCampaigns;
+
+    private Campaign Current => Campaigns[Math.Clamp(_activeIndex, 0, Campaigns.Count - 1)];
+
+    private static readonly IReadOnlyList<Campaign> DefaultCampaigns =
+    [
+        new(
+            "Fren Sistemleri Kampanyası",
+            "Balata, disk ve servis bakım ürünlerinde öne çıkan fırsatları inceleyin.",
+            "/Images/Products/307dcd85dc7d408ea8b5329a1beae5ea.png",
+            "Kampanyayı İncele",
+            "/products",
+            "Bu hafta",
+            "bg-gradient-to-r from-blue-50 via-white to-slate-100"),
+        new(
+            "Hızlı Dönen Yedek Parçalar",
+            "Sık talep edilen parçaları hızlıca kontrol edip sipariş akışını hızlandırın.",
+            "/Images/Products/a403fcd2d3fb44448fc8538b5a86ee5d.jpg",
+            "Ürünlere Git",
+            "/products",
+            "Yeni",
+            "bg-gradient-to-r from-emerald-50 via-white to-blue-50"),
+        new(
+            "Servis Bakım Ürünleri",
+            "Filtre, yağ ve periyodik bakım ürünlerinde mağaza stoklarını güncel tutun.",
+            "/Images/Products/6811ae2b91314d18ac168beffd0afaa0.png",
+            "Ürünlere Git",
+            "/products",
+            "Aktif",
+            "bg-gradient-to-r from-amber-50 via-white to-slate-100")
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        StoreState.Changed += OnStoreChanged;
+        await LoadCampaignsAsync();
+        _ = RotateAsync(_cts.Token);
+    }
+
+    private async void OnStoreChanged()
+    {
+        await LoadCampaignsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadCampaignsAsync()
+    {
+        try
+        {
+            IReadOnlyList<DashboardCampaignDto> campaigns = await CampaignApi.GetActiveCampaignsAsync(StoreState.SelectedStoreId, _cts.Token);
+            Campaigns = campaigns
+                .OrderBy(campaign => campaign.Oncelik)
+                .Select(MapCampaign)
+                .ToArray();
+
+            if (Campaigns.Count == 0)
+                Campaigns = DefaultCampaigns;
+        }
+        catch
+        {
+            Campaigns = DefaultCampaigns;
+        }
+
+        _activeIndex = 0;
+    }
+
+    private static Campaign MapCampaign(DashboardCampaignDto campaign)
+    {
+        return new Campaign(
+            campaign.Baslik,
+            campaign.Aciklama,
+            campaign.GorselUrl,
+            string.IsNullOrWhiteSpace(campaign.CtaMetni) ? "Ürünlere Git" : campaign.CtaMetni,
+            string.IsNullOrWhiteSpace(campaign.HedefUrl) ? "/products" : campaign.HedefUrl,
+            DateRangeText(campaign),
+            ToneClass(campaign.Oncelik));
+    }
+
+    private async Task RotateAsync(CancellationToken cancellationToken)
+    {
+        using PeriodicTimer timer = new(TimeSpan.FromMilliseconds(4500));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                Next();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void Previous()
+    {
+        _activeIndex = (_activeIndex - 1 + Campaigns.Count) % Campaigns.Count;
+    }
+
+    private void Next()
+    {
+        _activeIndex = (_activeIndex + 1) % Campaigns.Count;
+    }
+
+    private void GoTo(int index)
+    {
+        _activeIndex = index;
+    }
+
+    private string DotClass(int index)
+    {
+        return index == _activeIndex
+            ? "h-2 w-7 rounded-full bg-slate-900 transition"
+            : "h-2 w-2 rounded-full bg-slate-300 transition hover:bg-slate-500";
+    }
+
+    private static string DateRangeText(DashboardCampaignDto campaign)
+    {
+        if (campaign.BaslangicTarihi.HasValue && campaign.BitisTarihi.HasValue)
+            return $"{campaign.BaslangicTarihi.Value:dd.MM} - {campaign.BitisTarihi.Value:dd.MM}";
+
+        return "Aktif";
+    }
+
+    private static string ToneClass(int priority)
+    {
+        return priority switch
+        {
+            <= 1 => "bg-gradient-to-r from-blue-50 via-white to-slate-100",
+            2 => "bg-gradient-to-r from-emerald-50 via-white to-blue-50",
+            _ => "bg-gradient-to-r from-amber-50 via-white to-slate-100"
+        };
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+    private sealed record Campaign(
+        string Title,
+        string Description,
+        string? ImageUrl,
+        string CtaText,
+        string Href,
+        string DateRange,
+        string BandClass);
+}

@@ -314,6 +314,16 @@ namespace eMarketing.AdminPanel.Services
             }), "Bayi stok hareketi");
         }
 
+        public Task IncreaseCentralStockAsync(int urunId, int miktar, string aciklama)
+        {
+            return SendJsonAsync(HttpMethod.Post, _baseUrl + "/bayi-stoklari/merkez-stok/artir", _serializer.Serialize(new
+            {
+                UrunId = urunId,
+                Miktar = miktar,
+                Aciklama = aciklama
+            }), "Merkez stok artırma");
+        }
+
         public Task<DataTable> GetPersonellerAsync(string arama, bool sadeceAktif, int? goruntuleyenKullaniciId, bool adminMi)
         {
             return GetPersonellerAsync(arama, sadeceAktif, null);

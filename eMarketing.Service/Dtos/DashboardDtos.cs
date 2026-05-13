@@ -44,3 +44,16 @@ public sealed class DashboardCriticalStockDto
     public int Stok { get; set; }
     public decimal Fiyat { get; set; }
 }
+
+public sealed class DashboardCampaignDto
+{
+    public int KampanyaId { get; set; }
+    public string Baslik { get; set; } = string.Empty;
+    public string Aciklama { get; set; } = string.Empty;
+    public string? GorselUrl { get; set; }
+    public string CtaMetni { get; set; } = "Ürünlere Git";
+    public string HedefUrl { get; set; } = "/products";
+    public int Oncelik { get; set; }
+    public DateTime? BaslangicTarihi { get; set; }
+    public DateTime? BitisTarihi { get; set; }
+}

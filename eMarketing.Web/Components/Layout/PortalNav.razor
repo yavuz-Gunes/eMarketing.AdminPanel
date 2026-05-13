@@ -1,9 +1,11 @@
-<nav class="@(Compact ? "flex gap-2 overflow-x-auto" : "space-y-2 px-4")">
+<nav class="@(Compact ? "flex gap-2 overflow-x-auto pb-1" : "space-y-1 px-4")">
     @foreach (NavItem item in Items)
     {
         <NavLink href="@item.Href" Match="@item.Match" class="@LinkClass">
-            <span class="@IconClass">@item.Icon</span>
-            <span>@item.Label</span>
+            <span class="@IconWrapClass">
+                <AppIcon Name="@item.Icon" CssClass="@IconClass" />
+            </span>
+            <span class="truncate">@item.Label</span>
         </NavLink>
     }
 </nav>
@@ -12,21 +14,23 @@
     [Parameter] public bool Compact { get; set; }
 
     private string LinkClass => Compact
-        ? "inline-flex min-w-max items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 [&.active]:bg-blue-600 [&.active]:text-white"
-        : "flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white [&.active]:bg-blue-600 [&.active]:text-white [&.active]:shadow-lg [&.active]:shadow-blue-950/30";
+        ? "inline-flex min-w-max items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-950 [&.active]:text-white"
+        : "flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-bold text-blue-100/70 transition hover:bg-white/10 hover:text-white [&.active]:bg-blue-500/15 [&.active]:text-white [&.active]:ring-1 [&.active]:ring-blue-300/30 [&.active]:shadow-lg [&.active]:shadow-black/20";
 
-    private string IconClass => Compact
-        ? "flex h-7 w-7 items-center justify-center text-base"
-        : "flex h-8 w-8 items-center justify-center text-lg";
+    private string IconWrapClass => Compact
+        ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"
+        : "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-blue-100/70";
+
+    private string IconClass => Compact ? "h-4 w-4" : "h-5 w-5";
 
     private static readonly NavItem[] Items =
     [
-        new("Dashboard", "/", "⌂", NavLinkMatch.All),
-        new("Mağaza Seçimi", "/stores", "▤", NavLinkMatch.Prefix),
-        new("Ürünler", "/products", "□", NavLinkMatch.Prefix),
-        new("Sepet", "/cart", "◫", NavLinkMatch.Prefix),
-        new("Siparişler", "/orders", "≡", NavLinkMatch.Prefix),
-        new("Ekibim", "/team", "◎", NavLinkMatch.Prefix)
+        new("Dashboard", "/", "chart", NavLinkMatch.All),
+        new("Mağazalar", "/stores", "store", NavLinkMatch.Prefix),
+        new("Ürünler", "/products", "package", NavLinkMatch.Prefix),
+        new("Sepet", "/cart", "cart", NavLinkMatch.Prefix),
+        new("Siparişler", "/orders", "clock", NavLinkMatch.Prefix),
+        new("Ekibim", "/team", "users", NavLinkMatch.Prefix)
     ];
 
     private sealed record NavItem(string Label, string Href, string Icon, NavLinkMatch Match);
