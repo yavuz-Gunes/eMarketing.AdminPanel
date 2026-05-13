@@ -1,0 +1,18 @@
+@if (!string.IsNullOrWhiteSpace(Member.ImageUrl))
+{
+    <img class="@ImageClass" src="@Member.ImageUrl.Replace("\\", "/")" alt="@Member.AdSoyad" />
+}
+else
+{
+    <div class="@FallbackClass">@Initials</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public StoreTeamMemberDto Member { get; set; } = new();
+    [Parameter] public string Size { get; set; } = "md";
+
+    private string SizeClass => Size == "lg" ? "h-14 w-14" : "h-10 w-10";
+    private string ImageClass => $"{SizeClass} shrink-0 rounded-full object-cover ring-2 ring-slate-100";
+    private string FallbackClass => $"{SizeClass} flex shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white ring-2 ring-slate-100";
+    private string Initials => string.Join("", Member.AdSoyad.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
+}

@@ -1,0 +1,9 @@
+<div class="rounded-2xl bg-white/[0.06] p-3">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">@Label</p>
+    <p class="mt-2 text-xl font-black text-white">@Value</p>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+}

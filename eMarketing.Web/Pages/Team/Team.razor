@@ -6,16 +6,26 @@
 <PageTitle>Ekibim - eMarketing</PageTitle>
 
 <AuthGate>
-    <section class="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <section class="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
-                <p class="text-sm font-bold uppercase text-slate-500">Ekibim</p>
+                <p class="text-sm font-bold uppercase tracking-wide text-slate-500">Ekibim</p>
                 <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Mağaza ekibi</h1>
-                <p class="mt-1 text-sm text-slate-500">Aktif mağaza: @(TeamResponse?.Context.MagazaAdi ?? StoreState.SelectedStore?.MagazaAdi ?? "-")</p>
+                <p class="mt-1 text-sm text-slate-500">
+                    Aktif mağaza: @(TeamResponse?.Context.MagazaAdi ?? StoreState.SelectedStore?.MagazaAdi ?? "-")
+                    @if (TeamResponse is not null)
+                    {
+                        <span class="mx-2 text-slate-300">/</span>
+                        <span>@FilteredMembers.Count() / @TeamResponse.Members.Count kişi</span>
+                    }
+                </p>
             </div>
             @if (TeamResponse?.Context.PersonelEkleyebilir == true)
             {
-                <button class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 hover:bg-blue-700" @onclick="() => ShowNewPersonnel = true">Yeni personel</button>
+                <button class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800" @onclick="() => ShowNewPersonnel = true">
+                    <AppIcon Name="user-plus" CssClass="h-5 w-5" />
+                    Yeni Personel
+                </button>
             }
         </div>
 
@@ -26,11 +36,52 @@
 
         @if (TeamResponse is not null)
         {
-            <div class="grid gap-4 md:grid-cols-4">
-                <MetricCard Title="Görevin" Value="@DutyName(TeamResponse.Context.KullaniciGorev)" Icon="◎" Tone="blue" />
-                <MetricCard Title="Ekip" Value="@($"{TeamResponse.Members.Count} kişi")" Icon="◌" Tone="violet" />
-                <MetricCard Title="Sipariş Yetkilisi" Value="@TeamResponse.Members.Count(x => x.SiparisYetkilisiMi).ToString(CultureInfo.InvariantCulture)" Icon="✓" Tone="emerald" />
-                <MetricCard Title="Yönetim" Value="@(TeamResponse.Context.SiparisYetkisiYonetebilir ? "Açık" : "Kapalı")" Icon="▤" Tone="amber" />
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60">
+                <div class="grid gap-3 xl:grid-cols-[1fr_190px_180px_190px]">
+                    <label class="relative block">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="search" CssClass="h-5 w-5" />
+                        </span>
+                        <input class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                               @bind="Search"
+                               @bind:event="oninput"
+                               placeholder="Ad, e-posta, kullanıcı adı veya telefon ara" />
+                    </label>
+
+                    <label class="relative block">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="briefcase" CssClass="h-5 w-5" />
+                        </span>
+                        <select class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="DutyFilter">
+                            <option value="all">Tüm görevler</option>
+                            <option value="Supervisor">Supervisor</option>
+                            <option value="MagazaMuduru">Mağaza Müdürü</option>
+                            <option value="Personel">Personel</option>
+                        </select>
+                    </label>
+
+                    <label class="relative block">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="filter" CssClass="h-5 w-5" />
+                        </span>
+                        <select class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="StatusFilter">
+                            <option value="all">Tüm durumlar</option>
+                            <option value="active">Aktif</option>
+                            <option value="passive">Pasif</option>
+                        </select>
+                    </label>
+
+                    <label class="relative block">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="shield" CssClass="h-5 w-5" />
+                        </span>
+                        <select class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="AuthorityFilter">
+                            <option value="all">Tüm yetkiler</option>
+                            <option value="authorized">Sipariş Yetkisi</option>
+                            <option value="viewer">Görüntüleme</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
             @if (ShowNewPersonnel)
@@ -38,10 +89,97 @@
                 <NewPersonnelForm StoreId="@TeamResponse.Context.MagazaId" OnSaved="LoadTeamAsync" OnCancel="() => ShowNewPersonnel = false" />
             }
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                @foreach (StoreTeamMemberDto member in TeamResponse.Members)
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+                <div class="hidden overflow-x-auto lg:block">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="bg-slate-800 text-xs font-bold uppercase tracking-wide text-slate-100">
+                            <tr>
+                                <th class="w-12 px-4 py-3">
+                                    <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" aria-label="Tüm personeli seç" />
+                                </th>
+                                <th class="min-w-64 px-4 py-3">Personel</th>
+                                <th class="min-w-56 px-4 py-3">E-posta</th>
+                                <th class="min-w-40 px-4 py-3">Kullanıcı adı</th>
+                                <th class="min-w-28 px-4 py-3">Durum</th>
+                                <th class="min-w-40 px-4 py-3">Mağaza görevi</th>
+                                <th class="min-w-40 px-4 py-3">Sipariş yetkisi</th>
+                                <th class="min-w-36 px-4 py-3">Telefon</th>
+                                <th class="w-20 px-4 py-3 text-right">Aksiyon</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach (StoreTeamMemberDto member in FilteredMembers)
+                            {
+                                <tr class="@RowClass(member)" @onclick="() => SelectMember(member)">
+                                    <td class="px-4 py-3" @onclick:stopPropagation="true">
+                                        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" aria-label="@($"{member.AdSoyad} seç")" />
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <Avatar Member="member" Size="md" />
+                                            <div class="min-w-0">
+                                                <p class="truncate font-semibold text-slate-950">@member.AdSoyad</p>
+                                                <p class="mt-0.5 truncate text-xs text-slate-500">@DutyName(member.MagazaGorev)</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-700">@EmptyText(member.Email)</td>
+                                    <td class="px-4 py-3 font-medium text-slate-700">@member.KullaniciAdi</td>
+                                    <td class="px-4 py-3"><StatusBadge Text="@StatusText(member)" Tone="@(member.AktifMi ? "success" : "slate")" /></td>
+                                    <td class="px-4 py-3"><StatusBadge Text="@DutyName(member.MagazaGorev)" Tone="@DutyTone(member.MagazaGorev)" /></td>
+                                    <td class="px-4 py-3"><StatusBadge Text="@AuthorityText(member)" Tone="@(member.SiparisYetkilisiMi ? "info" : "purple")" /></td>
+                                    <td class="px-4 py-3 text-slate-700">@EmptyText(member.Telefon)</td>
+                                    <td class="px-4 py-3 text-right">
+                                        <button class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-700" title="Detay">
+                                            <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="divide-y divide-slate-100 lg:hidden">
+                    @foreach (StoreTeamMemberDto member in FilteredMembers)
+                    {
+                        <button class="@MobileCardClass(member)" @onclick="() => SelectMember(member)">
+                            <div class="flex items-start gap-3 text-left">
+                                <Avatar Member="member" Size="lg" />
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <h3 class="truncate text-base font-semibold text-slate-950">@member.AdSoyad</h3>
+                                            <p class="mt-1 truncate text-sm text-slate-500">@member.KullaniciAdi</p>
+                                        </div>
+                                        <AppIcon Name="chevron-right" CssClass="h-5 w-5 shrink-0 text-slate-400" />
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        <StatusBadge Text="@StatusText(member)" Tone="@(member.AktifMi ? "success" : "slate")" />
+                                        <StatusBadge Text="@DutyName(member.MagazaGorev)" Tone="@DutyTone(member.MagazaGorev)" />
+                                        <StatusBadge Text="@AuthorityText(member)" Tone="@(member.SiparisYetkilisiMi ? "info" : "purple")" />
+                                    </div>
+                                    <div class="mt-3 space-y-1 text-sm text-slate-600">
+                                        <p>@EmptyText(member.Email)</p>
+                                        <p>@EmptyText(member.Telefon)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    }
+                </div>
+
+                @if (!FilteredMembers.Any())
                 {
-                    <TeamMemberCard Member="member" OnSelect="SelectMember" />
+                    <div class="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                            <AppIcon Name="users" CssClass="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h2 class="font-semibold text-slate-950">Sonuç bulunamadı</h2>
+                            <p class="mt-1 text-sm text-slate-500">Arama veya filtreleri değiştirerek tekrar deneyin.</p>
+                        </div>
+                    </div>
                 }
             </div>
 
@@ -59,6 +197,16 @@
     private StoreTeamMemberDto? SelectedMember { get; set; }
     private string Message { get; set; } = string.Empty;
     private bool ShowNewPersonnel { get; set; }
+    private string Search { get; set; } = string.Empty;
+    private string DutyFilter { get; set; } = "all";
+    private string StatusFilter { get; set; } = "all";
+    private string AuthorityFilter { get; set; } = "all";
+
+    private IEnumerable<StoreTeamMemberDto> FilteredMembers => (TeamResponse?.Members ?? Array.Empty<StoreTeamMemberDto>())
+        .Where(MatchesSearch)
+        .Where(MatchesDuty)
+        .Where(MatchesStatus)
+        .Where(MatchesAuthority);
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,6 +231,7 @@
         try
         {
             TeamResponse = await TeamApi.GetTeamAsync(storeId);
+            ShowNewPersonnel = false;
         }
         catch (Exception ex)
         {
@@ -94,10 +243,51 @@
     private void SelectMember(StoreTeamMemberDto member) => SelectedMember = member;
     private void CloseDrawer() => SelectedMember = null;
 
+    private bool MatchesSearch(StoreTeamMemberDto member)
+    {
+        if (string.IsNullOrWhiteSpace(Search))
+            return true;
+
+        string text = $"{member.AdSoyad} {member.KullaniciAdi} {member.Email} {member.Telefon}";
+        return text.Contains(Search, StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    private bool MatchesDuty(StoreTeamMemberDto member) =>
+        DutyFilter == "all" || string.Equals(member.MagazaGorev, DutyFilter, StringComparison.OrdinalIgnoreCase);
+
+    private bool MatchesStatus(StoreTeamMemberDto member) =>
+        StatusFilter == "all" || (StatusFilter == "active" ? member.AktifMi : !member.AktifMi);
+
+    private bool MatchesAuthority(StoreTeamMemberDto member) =>
+        AuthorityFilter == "all" || (AuthorityFilter == "authorized" ? member.SiparisYetkilisiMi : !member.SiparisYetkilisiMi);
+
+    private string RowClass(StoreTeamMemberDto member)
+    {
+        string selected = SelectedMember?.KullaniciMagazaId == member.KullaniciMagazaId ? "bg-blue-50/70" : "hover:bg-blue-50/40";
+        return $"cursor-pointer transition {selected}";
+    }
+
+    private string MobileCardClass(StoreTeamMemberDto member)
+    {
+        string selected = SelectedMember?.KullaniciMagazaId == member.KullaniciMagazaId ? "bg-blue-50/70" : "bg-white";
+        return $"block w-full p-4 transition hover:bg-blue-50/40 {selected}";
+    }
+
+    private static string EmptyText(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+    private static string StatusText(StoreTeamMemberDto member) => member.AktifMi ? "Aktif" : "Pasif";
+    private static string AuthorityText(StoreTeamMemberDto member) => member.SiparisYetkilisiMi ? "Sipariş Yetkisi" : "Görüntüleme";
+
     private static string DutyName(string duty) => duty switch
     {
         "Supervisor" => "Supervisor",
         "MagazaMuduru" => "Mağaza Müdürü",
         _ => "Personel"
+    };
+
+    private static string DutyTone(string duty) => duty switch
+    {
+        "Supervisor" => "supervisor",
+        "MagazaMuduru" => "manager",
+        _ => "slate"
     };
 }

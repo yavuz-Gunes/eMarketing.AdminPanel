@@ -6,21 +6,19 @@
     <aside class="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-slate-200 bg-white shadow-2xl">
         <header class="border-b border-slate-200 p-6">
             <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    @if (!string.IsNullOrWhiteSpace(Member.ImageUrl))
-                    {
-                        <img class="h-16 w-16 rounded-full object-cover ring-4 ring-slate-100" src="@Member.ImageUrl.Replace("\\", "/")" alt="@Member.AdSoyad" />
-                    }
-                    else
-                    {
-                        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-lg font-bold text-white ring-4 ring-slate-100">@Initials</div>
-                    }
-                    <div>
-                        <h2 class="text-xl font-bold text-slate-950">@Member.AdSoyad</h2>
-                        <p class="mt-1 text-sm text-slate-500">@Member.MagazaGorevGorunenAd · @(Member.SiparisYetkilisiMi ? "Sipariş Yetkisi" : "Görüntüleme")</p>
+                <div class="flex min-w-0 items-center gap-4">
+                    <Avatar Member="Member" Size="lg" />
+                    <div class="min-w-0">
+                        <h2 class="truncate text-xl font-bold text-slate-950">@Member.AdSoyad</h2>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <StatusBadge Text="@DutyName(Member.MagazaGorev)" Tone="@DutyTone(Member.MagazaGorev)" />
+                            <StatusBadge Text="@(Member.SiparisYetkilisiMi ? "Sipariş Yetkisi" : "Görüntüleme")" Tone="@(Member.SiparisYetkilisiMi ? "info" : "purple")" />
+                        </div>
                     </div>
                 </div>
-                <button class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-xl text-slate-500 hover:bg-slate-50" @onclick="Close">×</button>
+                <button class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900" @onclick="Close" title="Kapat">
+                    <AppIcon Name="x" CssClass="h-5 w-5" />
+                </button>
             </div>
         </header>
 
@@ -32,43 +30,54 @@
 
             <section class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm">
                 <InfoRow Label="Kullanıcı adı" Value="@Member.KullaniciAdi" />
-                <InfoRow Label="E-posta" Value="@Member.Email" />
-                <InfoRow Label="Telefon" Value="@Member.Telefon" />
-                <InfoRow Label="Mağaza görevi" Value="@Member.MagazaGorevGorunenAd" />
+                <InfoRow Label="E-posta" Value="@EmptyText(Member.Email)" />
+                <InfoRow Label="Telefon" Value="@EmptyText(Member.Telefon)" />
+                <InfoRow Label="Mağaza görevi" Value="@DutyName(Member.MagazaGorev)" />
+                <InfoRow Label="Durum" Value="@(Member.AktifMi ? "Aktif" : "Pasif")" />
                 <InfoRow Label="Sipariş yetkisi" Value="@(Member.SiparisYetkilisiMi ? "Var" : "Yok")" />
             </section>
 
             @if (Context?.SiparisYetkisiYonetebilir == true)
             {
                 <section class="space-y-3">
-                    <ActionButton Icon="🛡" Title="Sipariş Yetkisini Düzenle" OnClick="() => SetAuthority(!Member.SiparisYetkilisiMi)" />
-                    <textarea class="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="Notes" placeholder="İsteğe bağlı not"></textarea>
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wide text-slate-500">Sipariş yetkisi</h3>
+                        <p class="mt-1 text-sm text-slate-500">Aktif mağaza bağlamında sipariş yetkisini düzenleyin.</p>
+                    </div>
+                    <ActionButton Icon="shield" Title="Sipariş Yetkisini Düzenle" OnClick="() => SetAuthority(!Member.SiparisYetkilisiMi)" />
+                    <textarea class="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="Notes" placeholder="İsteğe bağlı not"></textarea>
                 </section>
             }
 
             @if (Context?.GorevYonetebilir == true)
             {
                 <section class="space-y-3">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wide text-slate-500">Görev yönetimi</h3>
+                        <p class="mt-1 text-sm text-slate-500">Bu aksiyonlar yalnızca aktif mağazada uygulanır.</p>
+                    </div>
                     <label class="block space-y-2 text-sm font-semibold text-slate-700">
                         <span>Görevi değiştir</span>
-                        <select class="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="SelectedDuty">
+                        <select class="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="SelectedDuty">
                             <option value="Personel">Personel</option>
                             <option value="MagazaMuduru">Mağaza Müdürü</option>
                             <option value="Supervisor">Supervisor</option>
                         </select>
                     </label>
-                    <ActionButton Icon="♙" Title="Görevi Kaydet" OnClick="UpdateDuty" />
-                    <ActionButton Icon="♕" Title="Mağaza Müdürü Ata" OnClick="MakeManager" Tone="amber" />
-                    <ActionButton Icon="⊘" Title="Mağazadan Çıkar" OnClick="Remove" Tone="danger" />
+                    <ActionButton Icon="briefcase" Title="Görevi Kaydet" OnClick="UpdateDuty" />
+                    <ActionButton Icon="crown" Title="Mağaza Müdürü Ata" OnClick="MakeManager" Tone="amber" />
+                    <ActionButton Icon="user-x" Title="Mağazadan Çıkar" OnClick="Remove" Tone="danger" />
                 </section>
             }
 
             <section class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <div class="flex gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">◇</div>
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                        <AppIcon Name="shield" CssClass="h-5 w-5" />
+                    </div>
                     <div>
                         <h3 class="font-semibold text-amber-950">Güvenlik Notu</h3>
-                        <p class="mt-2 text-sm leading-6 text-amber-900">Tek aktif supervisor korunur. Başka bir kullanıcı supervisor yapılırsa mevcut supervisor yetkisi kontrollü yönetilir.</p>
+                        <p class="mt-2 text-sm leading-6 text-amber-900">Tek aktif Supervisor korunur. Mağaza dışı işlemler API katmanında engellenir.</p>
                     </div>
                 </div>
             </section>
@@ -87,7 +96,6 @@
     private string Notes { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
     private bool IsError { get; set; }
-    private string Initials => Member is null ? "-" : string.Join("", Member.AdSoyad.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
     private string MessageClass => IsError
         ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
         : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700";
@@ -155,4 +163,20 @@
         Message = string.Empty;
         await OnClose.InvokeAsync();
     }
+
+    private static string EmptyText(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    private static string DutyName(string duty) => duty switch
+    {
+        "Supervisor" => "Supervisor",
+        "MagazaMuduru" => "Mağaza Müdürü",
+        _ => "Personel"
+    };
+
+    private static string DutyTone(string duty) => duty switch
+    {
+        "Supervisor" => "supervisor",
+        "MagazaMuduru" => "manager",
+        _ => "slate"
+    };
 }
