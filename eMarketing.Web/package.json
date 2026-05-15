@@ -1,10 +1,15 @@
 {
   "scripts": {
+    "vendor:cropper": "node ./scripts/copy-cropper.mjs",
+    "postinstall": "npm run vendor:cropper",
     "css:build": "npx @tailwindcss/cli -i ./wwwroot/css/input.css -o ./wwwroot/css/app.css",
     "css:watch": "npx @tailwindcss/cli -i ./wwwroot/css/input.css -o ./wwwroot/css/app.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.0",
     "tailwindcss": "^4.1.0"
+  },
+  "dependencies": {
+    "cropperjs": "^1.6.2"
   }
 }

@@ -19,69 +19,97 @@ function readCampaignFile(inputId, maxBytes) {
   const file = input?.files?.[0];
 
   if (!file) {
-    throw new Error("Görsel dosyası seçilmedi.");
+    throw new Error("Gorsel dosyasi secilmedi.");
   }
 
   if (file.size > maxBytes) {
-    throw new Error("Görsel en fazla 5 MB olabilir.");
+    throw new Error("Gorsel en fazla 5 MB olabilir.");
   }
 
   return file;
-}
-
-function loadImageFromDataUrl(dataUrl) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Görsel okunamadı."));
-    image.src = dataUrl;
-  });
 }
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("Görsel okunamadı."));
+    reader.onerror = () => reject(new Error("Gorsel okunamadi."));
     reader.readAsDataURL(file);
   });
 }
 
-function getCropValue(crop, camelName, pascalName, fallback) {
-  const value = crop?.[camelName] ?? crop?.[pascalName] ?? fallback;
-  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+let activeCampaignCropper;
+
+function destroyCampaignCropper() {
+  if (activeCampaignCropper) {
+    activeCampaignCropper.destroy();
+    activeCampaignCropper = undefined;
+  }
 }
 
-async function cropCampaignImage(inputId, crop, maxBytes) {
+async function loadCampaignCropper(inputId, imageId, previewSelector, maxBytes) {
+  if (!window.Cropper) {
+    throw new Error("Gorsel kirpma araci yuklenemedi. Sayfayi yenileyip tekrar deneyin.");
+  }
+
   const file = readCampaignFile(inputId, maxBytes);
   const dataUrl = await readFileAsDataUrl(file);
-  const image = await loadImageFromDataUrl(dataUrl);
-  const canvas = document.createElement("canvas");
-  const width = 1600;
-  const height = 220;
-  const zoom = Math.max(1, getCropValue(crop, "zoom", "Zoom", 1));
-  const offsetX = Math.max(-100, Math.min(100, getCropValue(crop, "offsetX", "OffsetX", 0)));
-  const offsetY = Math.max(-100, Math.min(100, getCropValue(crop, "offsetY", "OffsetY", 0)));
+  const image = document.getElementById(imageId);
 
-  canvas.width = width;
-  canvas.height = height;
+  if (!image) {
+    throw new Error("Gorsel onizleme alani bulunamadi.");
+  }
 
-  const context = canvas.getContext("2d");
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = "high";
-  context.fillStyle = "#f8fafc";
-  context.fillRect(0, 0, width, height);
+  destroyCampaignCropper();
+  image.src = dataUrl;
 
-  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight) * zoom;
-  const drawWidth = image.naturalWidth * scale;
-  const drawHeight = image.naturalHeight * scale;
-  const maxPanX = Math.max(0, (drawWidth - width) / 2);
-  const maxPanY = Math.max(0, (drawHeight - height) / 2);
-  const drawX = (width - drawWidth) / 2 + (offsetX / 100) * maxPanX;
-  const drawY = (height - drawHeight) / 2 + (offsetY / 100) * maxPanY;
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("Gorsel okunamadi."));
+  });
 
-  context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
-  return canvas.toDataURL("image/jpeg", 0.92);
+  activeCampaignCropper = new window.Cropper(image, {
+    aspectRatio: 1600 / 220,
+    viewMode: 1,
+    dragMode: "move",
+    autoCropArea: 0.92,
+    background: false,
+    responsive: true,
+    restore: false,
+    checkOrientation: true,
+    guides: true,
+    center: true,
+    highlight: true,
+    cropBoxMovable: true,
+    cropBoxResizable: true,
+    toggleDragModeOnDblclick: false,
+    preview: previewSelector
+  });
+
+  return {
+    dataUrl,
+    fileName: file.name
+  };
+}
+
+function cropCampaignImage(width, height, quality) {
+  if (!activeCampaignCropper) {
+    throw new Error("Kaydetmeden once gorsel secip kirpma alanini belirleyin.");
+  }
+
+  const canvas = activeCampaignCropper.getCroppedCanvas({
+    width,
+    height,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: "high",
+    fillColor: "#ffffff"
+  });
+
+  if (!canvas) {
+    throw new Error("Kirpilmis gorsel hazirlanamadi.");
+  }
+
+  return canvas.toDataURL("image/jpeg", quality ?? 0.92);
 }
 
 window.eMarketing = {
@@ -104,18 +132,8 @@ window.eMarketing = {
     }
   },
   campaignCrop: {
-    load: async (inputId, maxBytes) => {
-      const file = readCampaignFile(inputId, maxBytes);
-      const dataUrl = await readFileAsDataUrl(file);
-      const image = await loadImageFromDataUrl(dataUrl);
-
-      return {
-        dataUrl,
-        fileName: file.name,
-        width: image.naturalWidth,
-        height: image.naturalHeight
-      };
-    },
-    cropToDataUrl: cropCampaignImage
+    load: loadCampaignCropper,
+    cropToDataUrl: cropCampaignImage,
+    destroy: destroyCampaignCropper
   }
 };

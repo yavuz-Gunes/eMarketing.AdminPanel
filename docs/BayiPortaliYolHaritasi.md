@@ -18,14 +18,15 @@ Bu dosya, web bayi portalı ve AdminPanel tarafında sırayla ele alınacak oper
 
 ## 3. Kampanya ve Carousel Yönetimi
 
-- `Kampanyalar` tablosu eklenecek.
-- Web Admin üzerinde kampanya CRUD yapılacak; AdminPanel kampanya yönetim kapsamından çıkarıldı.
-- Kampanya görseli yükleme, hedef URL/ürün/kategori seçimi, öncelik ve tarih aralığı yönetilecek.
-- Web dashboard carousel API verisiyle beslenecek; veri yoksa fallback çalışmaya devam edecek.
-- Carousel görseline veya CTA butonuna tıklanınca ayrı bir kampanya detay sayfası açılacak.
-- Kampanya detay sayfasında başlık, açıklama, büyük görsel, geçerlilik tarihleri, hedef ürün/kategori, katılım şartları ve admin notları gösterilecek.
-- Kampanyaya katılma şartları yapılandırılabilir olacak; örnek: minimum sipariş tutarı, belirli ürün/kategori zorunluluğu, mağaza/bayi kapsamı, stokla sınırlı kampanya.
-- Kampanya hedefi ürün/kategori ise detay sayfasından ilgili ürün listesine yönlendirme yapılacak.
+- `Kampanyalar` tablosu, kampanya kapsam tabloları ve stored procedure seti eklendi.
+- Kampanya CRUD Web Admin üzerinde yapılır; AdminPanel kampanya yönetim kapsamından çıkarıldı.
+- Web Admin kampanya görseli yükleme, cropper ile banner kırpma, başlık/açıklama/detay/katılım şartı, aktiflik ve tarih aralığı yönetir.
+- Web Admin kampanya hedefini `Yok`, `URL`, `Ürün` veya `Kategori` olarak yönetir.
+- Web dashboard carousel sadece API verisiyle beslenir; veri yoksa eski statik fallback gösterilmez.
+- Carousel görseline tıklanınca kampanya detay sayfası açılır.
+- Kampanya detay sayfasında görsel, başlık, açıklama, geçerlilik tarihleri, detay metni, katılım şartları ve varsa hedefe git aksiyonu gösterilir.
+- Admin notları kullanıcı detayında gösterilmez; ileride admin iç notu olarak kalabilir.
+- Kampanya hedefi ürün/kategori ise detay sayfasından ilgili ürün listesine yönlendirme yapılır.
 
 ## 4. Bildirim ve Mesajlaşma
 
@@ -38,4 +39,4 @@ Bu dosya, web bayi portalı ve AdminPanel tarafında sırayla ele alınacak oper
 
 - AdminPanel formlarında adminin tam yetkileri görünür ve kullanılabilir olacak.
 - Bayi/personel/sipariş/stok/kampanya formlarında rol bazlı aksiyon görünürlüğü netleştirilecek.
-- UI’da görünen tüm aksiyonlar backend policy/service katmanında da doğrulanacak.
+- UI'da görünen tüm aksiyonlar backend policy/service katmanında da doğrulanacak.

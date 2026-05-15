@@ -13,11 +13,11 @@
             <div>
                 <p class="text-sm font-bold uppercase text-slate-500">Web Admin</p>
                 <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Kampanya Görselleri</h1>
-                <p class="mt-1 text-sm text-slate-500">Görseli yatay banner olarak kırpın, yayın tarihini belirleyin.</p>
+                <p class="mt-1 text-sm text-slate-500">Görseli kırpın, detay yazılarını ve yayın süresini belirleyin.</p>
             </div>
             <button class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 hover:bg-blue-700"
                     type="button"
-                    @onclick="NewCampaign">
+                    @onclick="NewCampaignAsync">
                 Yeni Görsel
             </button>
         </div>
@@ -27,7 +27,7 @@
             <div class="@MessageClass">@Message</div>
         }
 
-        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_460px]">
             <div class="space-y-4">
                 @if (IsLoading)
                 {
@@ -45,7 +45,7 @@
                             <button class="block h-[120px] w-full bg-slate-100 text-left sm:h-[190px]"
                                     type="button"
                                     title="Görseli düzenle"
-                                    @onclick="() => EditCampaign(campaign)">
+                                    @onclick="() => EditCampaignAsync(campaign)">
                                 @if (!string.IsNullOrWhiteSpace(campaign.GorselUrl))
                                 {
                                     <img class="h-full w-full object-cover" src="@NormalizeImageUrl(campaign.GorselUrl)" alt="Kampanya görseli" />
@@ -56,14 +56,17 @@
                                 }
                             </button>
                             <div class="flex flex-wrap items-center justify-between gap-3 p-4">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="@StatusBadgeClass(campaign.AktifMi)">@(campaign.AktifMi ? "Aktif" : "Pasif")</span>
-                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">@DateRangeText(campaign)</span>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-black text-slate-950">@DisplayTitle(campaign)</p>
+                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                        <span class="@StatusBadgeClass(campaign.AktifMi)">@(campaign.AktifMi ? "Aktif" : "Pasif")</span>
+                                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">@DateRangeText(campaign)</span>
+                                    </div>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
                                             type="button"
-                                            @onclick="() => EditCampaign(campaign)">
+                                            @onclick="() => EditCampaignAsync(campaign)">
                                         Düzenle
                                     </button>
                                     <button class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-50"
@@ -82,12 +85,12 @@
                 <DataAnnotationsValidator />
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <h2 class="text-lg font-black text-slate-950">@(EditingCampaignId.HasValue ? "Görseli Düzenle" : "Yeni Görsel")</h2>
-                        <p class="mt-1 text-xs font-semibold text-slate-500">Önizleme dashboard carousel ölçüsüdür.</p>
+                        <h2 class="text-lg font-black text-slate-950">@(EditingCampaignId.HasValue ? "Kampanyayı Düzenle" : "Yeni Kampanya")</h2>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">Görsel dashboard için, yazılar detay sayfası için kullanılır.</p>
                     </div>
                     @if (EditingCampaignId.HasValue)
                     {
-                        <button type="button" class="text-xs font-black text-blue-700 hover:text-blue-900" @onclick="NewCampaign">Yeni</button>
+                        <button type="button" class="text-xs font-black text-blue-700 hover:text-blue-900" @onclick="NewCampaignAsync">Yeni</button>
                     }
                 </div>
 
@@ -101,41 +104,119 @@
                     </label>
 
                     <div class="space-y-3">
-                        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                            @if (!string.IsNullOrWhiteSpace(PreviewImageUrl))
-                            {
-                                <div class="relative h-[120px] w-full overflow-hidden bg-slate-100 sm:h-[190px]">
-                                    <img class="h-full w-full object-cover"
-                                         src="@PreviewImageUrl"
-                                         alt="Kampanya önizleme"
-                                         style="@PreviewImageStyle" />
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="flex h-[120px] items-center justify-center text-sm font-bold text-slate-400 sm:h-[190px]">
-                                    Önizleme için görsel seçin
-                                </div>
-                            }
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(PreviewImageUrl))
+                        @if (IsCropperVisible)
                         {
-                            <div class="grid gap-3">
-                                <label class="space-y-1 text-xs font-black text-slate-600">
-                                    <span>Yakınlaştır</span>
-                                    <InputNumber class="sr-only" @bind-Value="Crop.Zoom" />
-                                    <input class="w-full accent-blue-600" type="range" min="1" max="3" step="0.01" @bind="Crop.Zoom" @bind:event="oninput" />
-                                </label>
-                                <label class="space-y-1 text-xs font-black text-slate-600">
-                                    <span>Yatay konum</span>
-                                    <input class="w-full accent-blue-600" type="range" min="-100" max="100" step="1" @bind="Crop.OffsetX" @bind:event="oninput" />
-                                </label>
-                                <label class="space-y-1 text-xs font-black text-slate-600">
-                                    <span>Dikey konum</span>
-                                    <input class="w-full accent-blue-600" type="range" min="-100" max="100" step="1" @bind="Crop.OffsetY" @bind:event="oninput" />
-                                </label>
+                            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+                                <img id="@CropImageId"
+                                     class="block max-h-[360px] w-full"
+                                     alt="Kırpılacak kampanya görseli" />
                             </div>
+                            <p class="text-xs font-semibold text-slate-500">
+                                Kutu alanını sürükleyin veya kenarlarından boyutlandırın. Görseli tekerlek ile yakınlaştırabilirsiniz.
+                            </p>
+                            <div class="space-y-2">
+                                <p class="text-xs font-black uppercase text-slate-500">Dashboard önizleme</p>
+                                <div class="campaign-crop-preview h-[72px] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:h-[96px]"></div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                                @if (!string.IsNullOrWhiteSpace(PreviewImageUrl))
+                                {
+                                    <div class="relative h-[120px] w-full overflow-hidden bg-slate-100 sm:h-[190px]">
+                                        <img class="h-full w-full object-cover"
+                                             src="@PreviewImageUrl"
+                                             alt="Kampanya önizleme" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="flex h-[120px] items-center justify-center text-sm font-bold text-slate-400 sm:h-[190px]">
+                                        Önizleme için görsel seçin
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Başlık</span>
+                            <InputText class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                       @bind-Value="Form.Baslik"
+                                       maxlength="200" />
+                        </label>
+
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Kısa açıklama</span>
+                            <InputTextArea class="min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                           @bind-Value="Form.Aciklama"
+                                           maxlength="500" />
+                        </label>
+
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Detay metni</span>
+                            <InputTextArea class="min-h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                           @bind-Value="Form.DetayMetni" />
+                        </label>
+
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Katılım şartları</span>
+                            <InputTextArea class="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                           @bind-Value="Form.KatilimSartlari" />
+                        </label>
+                    </div>
+
+                    <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Tıklanınca gidilecek yer</span>
+                            <InputSelect class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                         @bind-Value="TargetType">
+                                <option value="@CampaignTargetType.None">Yok</option>
+                                <option value="@CampaignTargetType.Url">URL</option>
+                                <option value="@CampaignTargetType.Product">Ürün</option>
+                                <option value="@CampaignTargetType.Category">Kategori</option>
+                            </InputSelect>
+                        </label>
+
+                        @if (TargetType == CampaignTargetType.Url)
+                        {
+                            <label class="space-y-2 text-sm font-bold text-slate-700">
+                                <span>Hedef URL</span>
+                                <InputText class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                           @bind-Value="Form.HedefUrl"
+                                           maxlength="500"
+                                           placeholder="/products veya https://..." />
+                            </label>
+                        }
+                        else if (TargetType == CampaignTargetType.Product)
+                        {
+                            <label class="space-y-2 text-sm font-bold text-slate-700">
+                                <span>Hedef ürün</span>
+                                <InputSelect class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                             @bind-Value="Form.HedefUrunId">
+                                    <option value="">Ürün seçin</option>
+                                    @foreach (ProductDto product in Products)
+                                    {
+                                        <option value="@product.UrunId">@product.UrunAdi</option>
+                                    }
+                                </InputSelect>
+                            </label>
+                        }
+                        else if (TargetType == CampaignTargetType.Category)
+                        {
+                            <label class="space-y-2 text-sm font-bold text-slate-700">
+                                <span>Hedef kategori</span>
+                                <InputSelect class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                             @bind-Value="Form.HedefKategoriId">
+                                    <option value="">Kategori seçin</option>
+                                    @foreach (CategoryDto category in Categories)
+                                    {
+                                        <option value="@category.KategoriId">@category.KategoriAdi</option>
+                                    }
+                                </InputSelect>
+                            </label>
                         }
                     </div>
 
@@ -171,25 +252,28 @@
 @code {
     private const long MaxImageBytes = 5 * 1024 * 1024;
     private const string ImageInputId = "campaignImageInput";
+    private const string CropImageId = "campaignCropImage";
+    private const string CropPreviewSelector = ".campaign-crop-preview";
     private const string DefaultCampaignTitle = "Kampanya Görseli";
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
 
     private IReadOnlyList<CampaignDto> Campaigns { get; set; } = Array.Empty<CampaignDto>();
+    private IReadOnlyList<ProductDto> Products { get; set; } = Array.Empty<ProductDto>();
+    private IReadOnlyList<CategoryDto> Categories { get; set; } = Array.Empty<CategoryDto>();
     private CampaignSaveRequest Form { get; set; } = NewForm();
     private IBrowserFile? SelectedImage { get; set; }
-    private CropSettings Crop { get; set; } = new();
     private string PreviewImageUrl { get; set; } = string.Empty;
     private int? EditingCampaignId { get; set; }
     private string Message { get; set; } = string.Empty;
     private bool IsError { get; set; }
     private bool IsLoading { get; set; }
     private bool IsSaving { get; set; }
+    private bool IsCropperVisible { get; set; }
+    private CampaignTargetType TargetType { get; set; }
 
     private string MessageClass => IsError
         ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700"
         : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700";
-
-    private string PreviewImageStyle => $"transform: scale({Crop.Zoom.ToString("0.00", CultureInfo.InvariantCulture)}) translate({Crop.OffsetX.ToString("0", CultureInfo.InvariantCulture)}%, {Crop.OffsetY.ToString("0", CultureInfo.InvariantCulture)}%); transform-origin: center;";
 
     protected override async Task OnInitializedAsync()
     {
@@ -205,7 +289,17 @@
             return;
         }
 
-        await RunSafelyAsync(LoadCampaignsAsync);
+        await RunSafelyAsync(async () =>
+        {
+            await LoadReferenceDataAsync();
+            await LoadCampaignsAsync();
+        });
+    }
+
+    private async Task LoadReferenceDataAsync()
+    {
+        Products = await CampaignApi.GetProductsAsync();
+        Categories = await CampaignApi.GetCategoriesAsync();
     }
 
     private async Task LoadCampaignsAsync()
@@ -221,36 +315,46 @@
         }
     }
 
-    private void NewCampaign()
+    private async Task NewCampaignAsync()
     {
+        await DestroyCropperAsync();
         EditingCampaignId = null;
         Form = NewForm();
         SelectedImage = null;
-        Crop = new CropSettings();
         PreviewImageUrl = string.Empty;
+        IsCropperVisible = false;
+        TargetType = CampaignTargetType.None;
         Message = string.Empty;
         IsError = false;
     }
 
-    private void EditCampaign(CampaignDto campaign)
+    private async Task EditCampaignAsync(CampaignDto campaign)
     {
+        await DestroyCropperAsync();
         EditingCampaignId = campaign.KampanyaId;
         Form = new CampaignSaveRequest
         {
-            Baslik = DefaultCampaignTitle,
+            Baslik = string.IsNullOrWhiteSpace(campaign.Baslik) ? DefaultCampaignTitle : campaign.Baslik,
+            Aciklama = campaign.Aciklama,
+            DetayMetni = campaign.DetayMetni,
+            KatilimSartlari = campaign.KatilimSartlari,
+            AdminNotlari = campaign.AdminNotlari,
             GorselUrl = campaign.GorselUrl,
-            CtaMetni = "Detaya Git",
-            HedefUrl = "/products",
+            CtaMetni = string.IsNullOrWhiteSpace(campaign.CtaMetni) ? "Detaya Git" : campaign.CtaMetni,
+            HedefUrl = string.IsNullOrWhiteSpace(campaign.HedefUrl) ? "/products" : campaign.HedefUrl,
+            HedefUrunId = campaign.HedefUrunId,
+            HedefKategoriId = campaign.HedefKategoriId,
             Oncelik = campaign.Oncelik <= 0 ? 10 : campaign.Oncelik,
             AktifMi = campaign.AktifMi,
-            GlobalMi = true,
+            GlobalMi = campaign.GlobalMi,
             BaslangicTarihi = campaign.BaslangicTarihi,
             BitisTarihi = campaign.BitisTarihi
         };
 
         SelectedImage = null;
-        Crop = new CropSettings();
         PreviewImageUrl = NormalizeImageUrl(campaign.GorselUrl);
+        IsCropperVisible = false;
+        TargetType = DetermineTargetType(Form);
         Message = string.Empty;
         IsError = false;
     }
@@ -262,10 +366,11 @@
             SelectedImage = eventArgs.File;
             ValidateSelectedImage(SelectedImage);
 
-            Crop = new CropSettings();
-            CampaignCropInfo info = await JS.InvokeAsync<CampaignCropInfo>("eMarketing.campaignCrop.load", ImageInputId, MaxImageBytes);
-            PreviewImageUrl = info.DataUrl;
-            Form.Baslik = DefaultCampaignTitle;
+            IsCropperVisible = true;
+            PreviewImageUrl = string.Empty;
+            await InvokeAsync(StateHasChanged);
+
+            await JS.InvokeAsync<CampaignCropInfo>("eMarketing.campaignCrop.load", ImageInputId, CropImageId, CropPreviewSelector, MaxImageBytes);
         });
     }
 
@@ -289,15 +394,13 @@
                     Form.GorselUrl = savedImage.Url;
                 }
 
-                Form.Baslik = DefaultCampaignTitle;
-                Form.Aciklama = string.Empty;
-                Form.DetayMetni = string.Empty;
-                Form.KatilimSartlari = string.Empty;
-                Form.AdminNotlari = string.Empty;
+                Form.Baslik = string.IsNullOrWhiteSpace(Form.Baslik) ? DefaultCampaignTitle : Form.Baslik.Trim();
+                Form.Aciklama = Form.Aciklama?.Trim() ?? string.Empty;
+                Form.DetayMetni = Form.DetayMetni?.Trim() ?? string.Empty;
+                Form.KatilimSartlari = Form.KatilimSartlari?.Trim() ?? string.Empty;
+                Form.AdminNotlari = Form.AdminNotlari?.Trim() ?? string.Empty;
                 Form.CtaMetni = "Detaya Git";
-                Form.HedefUrl = "/products";
-                Form.HedefUrunId = null;
-                Form.HedefKategoriId = null;
+                ApplyTargetSelection();
                 Form.Oncelik = 10;
                 Form.GlobalMi = true;
                 Form.BayiIds = Array.Empty<int>();
@@ -306,18 +409,19 @@
                 if (EditingCampaignId.HasValue)
                 {
                     await CampaignApi.UpdateCampaignAsync(EditingCampaignId.Value, Form);
-                    Message = "Kampanya görseli güncellendi.";
+                    Message = "Kampanya güncellendi.";
                 }
                 else
                 {
                     EditingCampaignId = await CampaignApi.CreateCampaignAsync(Form);
-                    Message = "Kampanya görseli eklendi.";
+                    Message = "Kampanya eklendi.";
                 }
 
                 IsError = false;
                 SelectedImage = null;
-                Crop = new CropSettings();
                 PreviewImageUrl = NormalizeImageUrl(Form.GorselUrl);
+                IsCropperVisible = false;
+                await DestroyCropperAsync();
                 await LoadCampaignsAsync();
             }
             catch
@@ -341,7 +445,7 @@
 
         ValidateSelectedImage(SelectedImage);
 
-        string dataUrl = await JS.InvokeAsync<string>("eMarketing.campaignCrop.cropToDataUrl", ImageInputId, Crop, MaxImageBytes);
+        string dataUrl = await JS.InvokeAsync<string>("eMarketing.campaignCrop.cropToDataUrl", 1600, 220, 0.92);
         const string prefix = "data:image/jpeg;base64,";
         if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Kırpılmış görsel hazırlanamadı.");
@@ -359,21 +463,32 @@
 
     private async Task DeleteCampaignAsync(CampaignDto campaign)
     {
-        bool confirmed = await JS.InvokeAsync<bool>("confirm", "Kampanya görseli silinsin mi?");
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", "Kampanya silinsin mi?");
         if (!confirmed)
             return;
 
         await RunSafelyAsync(async () =>
         {
             await CampaignApi.DeleteCampaignAsync(campaign.KampanyaId);
-            Message = "Kampanya görseli silindi.";
+            Message = "Kampanya silindi.";
             IsError = false;
 
             if (EditingCampaignId == campaign.KampanyaId)
-                NewCampaign();
+                await NewCampaignAsync();
 
             await LoadCampaignsAsync();
         });
+    }
+
+    private async Task DestroyCropperAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eMarketing.campaignCrop.destroy");
+        }
+        catch
+        {
+        }
     }
 
     private async Task RunSafelyAsync(Func<Task> action)
@@ -410,7 +525,7 @@
         {
             Baslik = DefaultCampaignTitle,
             CtaMetni = "Detaya Git",
-            HedefUrl = "/products",
+            HedefUrl = string.Empty,
             Oncelik = 10,
             AktifMi = true,
             GlobalMi = true
@@ -426,6 +541,13 @@
         return normalized.StartsWith("http", StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("/")
             ? normalized
             : "/" + normalized;
+    }
+
+    private static string DisplayTitle(CampaignDto campaign)
+    {
+        return string.IsNullOrWhiteSpace(campaign.Baslik)
+            ? DefaultCampaignTitle
+            : campaign.Baslik;
     }
 
     private static string StatusBadgeClass(bool active)
@@ -449,19 +571,71 @@
         return "Süresiz";
     }
 
-    private sealed class CropSettings
+    private void ApplyTargetSelection()
     {
-        public double Zoom { get; set; } = 1;
-        public int OffsetX { get; set; }
-        public int OffsetY { get; set; }
+        if (TargetType == CampaignTargetType.None)
+        {
+            Form.HedefUrl = string.Empty;
+            Form.HedefUrunId = null;
+            Form.HedefKategoriId = null;
+            return;
+        }
+
+        if (TargetType == CampaignTargetType.Url)
+        {
+            Form.HedefUrl = Form.HedefUrl?.Trim() ?? string.Empty;
+            Form.HedefUrunId = null;
+            Form.HedefKategoriId = null;
+
+            if (string.IsNullOrWhiteSpace(Form.HedefUrl))
+                throw new InvalidOperationException("URL hedefi için hedef URL girin.");
+
+            return;
+        }
+
+        if (TargetType == CampaignTargetType.Product)
+        {
+            Form.HedefUrl = string.Empty;
+            Form.HedefKategoriId = null;
+
+            if (!Form.HedefUrunId.HasValue)
+                throw new InvalidOperationException("Ürün hedefi için ürün seçin.");
+
+            return;
+        }
+
+        Form.HedefUrl = string.Empty;
+        Form.HedefUrunId = null;
+
+        if (!Form.HedefKategoriId.HasValue)
+            throw new InvalidOperationException("Kategori hedefi için kategori seçin.");
+    }
+
+    private static CampaignTargetType DetermineTargetType(CampaignSaveRequest form)
+    {
+        if (form.HedefUrunId.HasValue)
+            return CampaignTargetType.Product;
+
+        if (form.HedefKategoriId.HasValue)
+            return CampaignTargetType.Category;
+
+        return string.IsNullOrWhiteSpace(form.HedefUrl)
+            ? CampaignTargetType.None
+            : CampaignTargetType.Url;
+    }
+
+    private enum CampaignTargetType
+    {
+        None,
+        Url,
+        Product,
+        Category
     }
 
     private sealed class CampaignCropInfo
     {
         public string DataUrl { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
-        public int Width { get; set; }
-        public int Height { get; set; }
     }
 
     private sealed record SavedCampaignImage(string Url, string FullPath);

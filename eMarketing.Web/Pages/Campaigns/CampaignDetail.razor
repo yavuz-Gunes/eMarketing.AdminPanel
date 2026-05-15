@@ -4,7 +4,7 @@
 @inject AuthSession Auth
 @inject NavigationManager Navigation
 
-<PageTitle>Kampanya Detayı</PageTitle>
+<PageTitle>@(Campaign is null ? "Kampanya Detayı" : DisplayTitle) - eMarketing</PageTitle>
 
 <AuthGate>
 <div class="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
@@ -30,17 +30,69 @@
             @(string.IsNullOrWhiteSpace(ErrorMessage) ? "Kampanya bulunamadı veya bu mağaza için geçerli değil." : ErrorMessage)
         </div>
     }
-    else if (!string.IsNullOrWhiteSpace(ImageUrl))
-    {
-        <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <img class="h-[120px] w-full bg-slate-100 object-cover sm:h-[190px]" src="@ImageUrl" alt="Kampanya görseli" />
-        </section>
-    }
     else
     {
-        <div class="rounded-3xl border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500 shadow-sm">
-            Kampanya görseli bulunamadı.
-        </div>
+        @if (!string.IsNullOrWhiteSpace(ImageUrl))
+        {
+            <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <img class="h-[120px] w-full bg-slate-100 object-cover sm:h-[190px]" src="@ImageUrl" alt="Kampanya görseli" />
+            </section>
+        }
+        else
+        {
+            <div class="rounded-3xl border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500 shadow-sm">
+                Kampanya görseli bulunamadı.
+            </div>
+        }
+
+        @if (HasCampaignInfo)
+        {
+            <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        @if (!string.IsNullOrWhiteSpace(DisplayTitle))
+                        {
+                            <h1 class="text-2xl font-black tracking-normal text-slate-950">@DisplayTitle</h1>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(Campaign.Aciklama))
+                        {
+                            <p class="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">@Campaign.Aciklama</p>
+                        }
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
+                            @ValidityText(Campaign)
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(TargetUrl))
+                        {
+                            <a class="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-black text-white shadow-sm transition hover:bg-slate-800"
+                               href="@TargetUrl">
+                                @TargetButtonText
+                            </a>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Campaign.DetayMetni))
+                {
+                    <div class="mt-6 border-t border-slate-100 pt-5">
+                        <h2 class="text-sm font-black uppercase text-slate-500">Detay</h2>
+                        <p class="mt-2 whitespace-pre-line text-sm font-medium leading-7 text-slate-700">@Campaign.DetayMetni</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Campaign.KatilimSartlari))
+                {
+                    <div class="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                        <h2 class="text-sm font-black uppercase text-amber-800">Katılım şartları</h2>
+                        <p class="mt-2 whitespace-pre-line text-sm font-semibold leading-7 text-amber-900">@Campaign.KatilimSartlari</p>
+                    </div>
+                }
+            </section>
+        }
     }
 </div>
 </AuthGate>
@@ -52,6 +104,20 @@
     private CampaignDto? Campaign { get; set; }
     private string ErrorMessage { get; set; } = string.Empty;
     private string? ImageUrl => NormalizeImageUrl(Campaign?.GorselUrl);
+    private string DisplayTitle => Campaign is null || string.IsNullOrWhiteSpace(Campaign.Baslik) ? string.Empty : Campaign.Baslik;
+    private string TargetUrl => BuildTargetUrl(Campaign);
+    private string TargetButtonText => Campaign?.HedefUrunId.HasValue == true
+        ? "Ürüne Git"
+        : Campaign?.HedefKategoriId.HasValue == true
+            ? "Kategoriye Git"
+            : "Hedefe Git";
+    private bool HasCampaignInfo => Campaign is not null &&
+        (!string.IsNullOrWhiteSpace(DisplayTitle) ||
+         !string.IsNullOrWhiteSpace(Campaign.Aciklama) ||
+         !string.IsNullOrWhiteSpace(Campaign.DetayMetni) ||
+         !string.IsNullOrWhiteSpace(Campaign.KatilimSartlari) ||
+         Campaign.BaslangicTarihi.HasValue ||
+         Campaign.BitisTarihi.HasValue);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -93,6 +159,20 @@
         Navigation.NavigateTo("/");
     }
 
+    private static string ValidityText(CampaignDto campaign)
+    {
+        if (campaign.BaslangicTarihi.HasValue && campaign.BitisTarihi.HasValue)
+            return $"{campaign.BaslangicTarihi.Value:dd.MM.yyyy} - {campaign.BitisTarihi.Value:dd.MM.yyyy}";
+
+        if (campaign.BaslangicTarihi.HasValue)
+            return $"{campaign.BaslangicTarihi.Value:dd.MM.yyyy} sonrası";
+
+        if (campaign.BitisTarihi.HasValue)
+            return $"{campaign.BitisTarihi.Value:dd.MM.yyyy} bitiş";
+
+        return "Süresiz";
+    }
+
     private static string? NormalizeImageUrl(string? imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))
@@ -102,5 +182,22 @@
         return normalized.StartsWith("http", StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("/")
             ? normalized
             : "/" + normalized;
+    }
+
+    private static string BuildTargetUrl(CampaignDto? campaign)
+    {
+        if (campaign is null)
+            return string.Empty;
+
+        if (campaign.HedefUrunId.HasValue)
+            return $"/products?urunId={campaign.HedefUrunId.Value}";
+
+        if (campaign.HedefKategoriId.HasValue)
+            return $"/products?kategoriId={campaign.HedefKategoriId.Value}";
+
+        if (string.IsNullOrWhiteSpace(campaign.HedefUrl))
+            return string.Empty;
+
+        return campaign.HedefUrl.Trim();
     }
 }
