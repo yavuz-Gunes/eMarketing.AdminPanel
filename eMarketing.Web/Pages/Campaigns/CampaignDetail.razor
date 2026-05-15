@@ -1,0 +1,106 @@
+@page "/campaigns/{CampaignId:int}"
+@inject CampaignApiClient CampaignApi
+@inject ActiveStoreState StoreState
+@inject AuthSession Auth
+@inject NavigationManager Navigation
+
+<PageTitle>Kampanya Detayı</PageTitle>
+
+<AuthGate>
+<div class="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs font-black uppercase tracking-[0.2em] text-blue-700">Kampanya Detayı</p>
+
+        <button class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
+                type="button"
+                @onclick="GoBack">
+            Dashboard'a Dön
+        </button>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500 shadow-sm">
+            Kampanya görseli yükleniyor...
+        </div>
+    }
+    else if (Campaign is null)
+    {
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500 shadow-sm">
+            @(string.IsNullOrWhiteSpace(ErrorMessage) ? "Kampanya bulunamadı veya bu mağaza için geçerli değil." : ErrorMessage)
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(ImageUrl))
+    {
+        <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <img class="h-[120px] w-full bg-slate-100 object-cover sm:h-[190px]" src="@ImageUrl" alt="Kampanya görseli" />
+        </section>
+    }
+    else
+    {
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500 shadow-sm">
+            Kampanya görseli bulunamadı.
+        </div>
+    }
+</div>
+</AuthGate>
+
+@code {
+    [Parameter] public int CampaignId { get; set; }
+
+    private bool IsLoading { get; set; } = true;
+    private CampaignDto? Campaign { get; set; }
+    private string ErrorMessage { get; set; } = string.Empty;
+    private string? ImageUrl => NormalizeImageUrl(Campaign?.GorselUrl);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Auth.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = string.Empty;
+        try
+        {
+            Campaign = await CampaignApi.GetCampaignAsync(CampaignId, StoreState.SelectedStoreId);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Auth.Clear();
+            Navigation.NavigateTo("/login", replace: true);
+            return;
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("HTTP 401", StringComparison.OrdinalIgnoreCase))
+        {
+            Auth.Clear();
+            Navigation.NavigateTo("/login", replace: true);
+            return;
+        }
+        catch (Exception ex)
+        {
+            Campaign = null;
+            ErrorMessage = "Kampanya görseli yüklenemedi: " + ex.Message;
+        }
+
+        IsLoading = false;
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private static string? NormalizeImageUrl(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            return null;
+
+        string normalized = imageUrl.Replace("\\", "/").Trim();
+        return normalized.StartsWith("http", StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("/")
+            ? normalized
+            : "/" + normalized;
+    }
+}

@@ -166,6 +166,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanManageReports", policy => policy.RequireRole(managers));
     options.AddPolicy("CanViewDealers", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageDealers", policy => policy.RequireRole(managers));
+    options.AddPolicy("CanManageCampaigns", policy => policy.RequireRole(managers));
     options.AddPolicy("CanManageCatalog", policy => policy.RequireRole(managers));
 });
 builder.Services.AddDataProtection()

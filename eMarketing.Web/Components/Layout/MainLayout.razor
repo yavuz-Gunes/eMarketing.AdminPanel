@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthSession Auth
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <div class="min-h-screen bg-slate-100 text-slate-950">
     @if (Auth.IsAuthenticated)
@@ -108,9 +109,10 @@
                 .Select(x => x[0]))
         .ToUpper(new CultureInfo("tr-TR"));
 
-    private void Logout()
+    private async Task Logout()
     {
         Auth.Clear();
+        await JS.InvokeVoidAsync("eMarketing.auth.clear");
         Navigation.NavigateTo("/login", true);
     }
 }

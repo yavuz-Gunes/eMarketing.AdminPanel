@@ -43,13 +43,20 @@
 </AuthGate>
 
 @code {
+    [SupplyParameterFromQuery(Name = "kategoriId")]
+    public int? CategoryId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "urunId")]
+    public int? ProductId { get; set; }
+
     private IReadOnlyList<ProductDto> ProductList { get; set; } = Array.Empty<ProductDto>();
     private string Search { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
 
     private IEnumerable<ProductDto> FilteredProducts => ProductList.Where(product =>
-        string.IsNullOrWhiteSpace(Search)
-        || $"{product.UrunAdi} {product.KategoriAdi} {product.Aciklama}".Contains(Search, StringComparison.CurrentCultureIgnoreCase));
+        (!ProductId.HasValue || product.UrunId == ProductId.Value)
+        && (string.IsNullOrWhiteSpace(Search)
+            || $"{product.UrunAdi} {product.KategoriAdi} {product.Aciklama}".Contains(Search, StringComparison.CurrentCultureIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,7 +66,7 @@
 
     private async Task LoadProductsAsync()
     {
-        ProductList = await ProductsApi.GetProductsAsync();
+        ProductList = await ProductsApi.GetProductsAsync(categoryId: CategoryId.GetValueOrDefault());
     }
 
     private void AddToCart(ProductDto product)

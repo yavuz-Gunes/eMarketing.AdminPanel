@@ -19,7 +19,7 @@ Bu dosya, web bayi portalı ve AdminPanel tarafında sırayla ele alınacak oper
 ## 3. Kampanya ve Carousel Yönetimi
 
 - `Kampanyalar` tablosu eklenecek.
-- AdminPanel üzerinde kampanya CRUD yapılacak.
+- Web Admin üzerinde kampanya CRUD yapılacak; AdminPanel kampanya yönetim kapsamından çıkarıldı.
 - Kampanya görseli yükleme, hedef URL/ürün/kategori seçimi, öncelik ve tarih aralığı yönetilecek.
 - Web dashboard carousel API verisiyle beslenecek; veri yoksa fallback çalışmaya devam edecek.
 - Carousel görseline veya CTA butonuna tıklanınca ayrı bir kampanya detay sayfası açılacak.

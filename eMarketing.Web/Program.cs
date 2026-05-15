@@ -16,6 +16,10 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
+});
 
 builder.Services.AddHttpClient("Api", client =>
 {
@@ -23,6 +27,7 @@ builder.Services.AddHttpClient("Api", client =>
     client.BaseAddress = new Uri(apiBaseUrl.EndsWith('/') ? apiBaseUrl : $"{apiBaseUrl}/");
 });
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthSession>();
 builder.Services.AddScoped<ActiveStoreState>();
 builder.Services.AddScoped<CartState>();

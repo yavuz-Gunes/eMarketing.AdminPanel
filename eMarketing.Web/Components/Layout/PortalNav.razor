@@ -1,5 +1,7 @@
+@inject AuthSession Auth
+
 <nav class="@(Compact ? "flex gap-2 overflow-x-auto pb-1" : "space-y-1 px-4")">
-    @foreach (NavItem item in Items)
+    @foreach (NavItem item in VisibleItems)
     {
         <NavLink href="@item.Href" Match="@item.Match" class="@LinkClass">
             <span class="@IconWrapClass">
@@ -23,6 +25,10 @@
 
     private string IconClass => Compact ? "h-4 w-4" : "h-5 w-5";
 
+    private IEnumerable<NavItem> VisibleItems => Auth.CanManageCampaigns
+        ? Items
+        : Items.Where(item => !item.AdminOnly);
+
     private static readonly NavItem[] Items =
     [
         new("Dashboard", "/", "chart", NavLinkMatch.All),
@@ -30,8 +36,9 @@
         new("Ürünler", "/products", "package", NavLinkMatch.Prefix),
         new("Sepet", "/cart", "cart", NavLinkMatch.Prefix),
         new("Siparişler", "/orders", "clock", NavLinkMatch.Prefix),
-        new("Ekibim", "/team", "users", NavLinkMatch.Prefix)
+        new("Ekibim", "/team", "users", NavLinkMatch.Prefix),
+        new("Kampanyalar", "/admin/campaigns", "megaphone", NavLinkMatch.Prefix, true)
     ];
 
-    private sealed record NavItem(string Label, string Href, string Icon, NavLinkMatch Match);
+    private sealed record NavItem(string Label, string Href, string Icon, NavLinkMatch Match, bool AdminOnly = false);
 }

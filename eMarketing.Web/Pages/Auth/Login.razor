@@ -3,6 +3,7 @@
 @inject AuthSession Auth
 @inject ActiveStoreState Stores
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Giriş - eMarketing</PageTitle>
 
@@ -66,6 +67,7 @@
         try
         {
             await AuthApi.LoginAsync(Model.KullaniciAdi, Model.Sifre);
+            await JS.InvokeVoidAsync("eMarketing.auth.save", Auth.ToStoredSession());
             Stores.Clear();
             Navigation.NavigateTo("/");
         }

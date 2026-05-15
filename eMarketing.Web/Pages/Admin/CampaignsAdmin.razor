@@ -1,0 +1,468 @@
+@page "/admin/campaigns"
+@inject AuthSession Auth
+@inject CampaignApiClient CampaignApi
+@inject NavigationManager Navigation
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JS
+
+<PageTitle>Kampanya Görselleri - eMarketing</PageTitle>
+
+<AuthGate>
+    <section class="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <p class="text-sm font-bold uppercase text-slate-500">Web Admin</p>
+                <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Kampanya Görselleri</h1>
+                <p class="mt-1 text-sm text-slate-500">Görseli yatay banner olarak kırpın, yayın tarihini belirleyin.</p>
+            </div>
+            <button class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 hover:bg-blue-700"
+                    type="button"
+                    @onclick="NewCampaign">
+                Yeni Görsel
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="@MessageClass">@Message</div>
+        }
+
+        <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div class="space-y-4">
+                @if (IsLoading)
+                {
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500 shadow-sm">Görseller yükleniyor...</div>
+                }
+                else if (Campaigns.Count == 0)
+                {
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500 shadow-sm">Kampanya görseli bulunamadı.</div>
+                }
+                else
+                {
+                    @foreach (CampaignDto campaign in Campaigns)
+                    {
+                        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+                            <button class="block h-[120px] w-full bg-slate-100 text-left sm:h-[190px]"
+                                    type="button"
+                                    title="Görseli düzenle"
+                                    @onclick="() => EditCampaign(campaign)">
+                                @if (!string.IsNullOrWhiteSpace(campaign.GorselUrl))
+                                {
+                                    <img class="h-full w-full object-cover" src="@NormalizeImageUrl(campaign.GorselUrl)" alt="Kampanya görseli" />
+                                }
+                                else
+                                {
+                                    <div class="flex h-full items-center justify-center text-sm font-bold text-slate-400">Görsel yok</div>
+                                }
+                            </button>
+                            <div class="flex flex-wrap items-center justify-between gap-3 p-4">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="@StatusBadgeClass(campaign.AktifMi)">@(campaign.AktifMi ? "Aktif" : "Pasif")</span>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">@DateRangeText(campaign)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                                            type="button"
+                                            @onclick="() => EditCampaign(campaign)">
+                                        Düzenle
+                                    </button>
+                                    <button class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-50"
+                                            type="button"
+                                            @onclick="() => DeleteCampaignAsync(campaign)">
+                                        Sil
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+
+            <EditForm Model="Form" OnValidSubmit="SaveCampaignAsync" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+                <DataAnnotationsValidator />
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-950">@(EditingCampaignId.HasValue ? "Görseli Düzenle" : "Yeni Görsel")</h2>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">Önizleme dashboard carousel ölçüsüdür.</p>
+                    </div>
+                    @if (EditingCampaignId.HasValue)
+                    {
+                        <button type="button" class="text-xs font-black text-blue-700 hover:text-blue-900" @onclick="NewCampaign">Yeni</button>
+                    }
+                </div>
+
+                <div class="mt-5 space-y-5">
+                    <label class="block space-y-2 text-sm font-bold text-slate-700">
+                        <span>Fotoğraf</span>
+                        <InputFile id="@ImageInputId"
+                                   class="block w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-semibold text-slate-600"
+                                   OnChange="OnImageSelected"
+                                   accept=".jpg,.jpeg,.png,.webp" />
+                    </label>
+
+                    <div class="space-y-3">
+                        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                            @if (!string.IsNullOrWhiteSpace(PreviewImageUrl))
+                            {
+                                <div class="relative h-[120px] w-full overflow-hidden bg-slate-100 sm:h-[190px]">
+                                    <img class="h-full w-full object-cover"
+                                         src="@PreviewImageUrl"
+                                         alt="Kampanya önizleme"
+                                         style="@PreviewImageStyle" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="flex h-[120px] items-center justify-center text-sm font-bold text-slate-400 sm:h-[190px]">
+                                    Önizleme için görsel seçin
+                                </div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(PreviewImageUrl))
+                        {
+                            <div class="grid gap-3">
+                                <label class="space-y-1 text-xs font-black text-slate-600">
+                                    <span>Yakınlaştır</span>
+                                    <InputNumber class="sr-only" @bind-Value="Crop.Zoom" />
+                                    <input class="w-full accent-blue-600" type="range" min="1" max="3" step="0.01" @bind="Crop.Zoom" @bind:event="oninput" />
+                                </label>
+                                <label class="space-y-1 text-xs font-black text-slate-600">
+                                    <span>Yatay konum</span>
+                                    <input class="w-full accent-blue-600" type="range" min="-100" max="100" step="1" @bind="Crop.OffsetX" @bind:event="oninput" />
+                                </label>
+                                <label class="space-y-1 text-xs font-black text-slate-600">
+                                    <span>Dikey konum</span>
+                                    <input class="w-full accent-blue-600" type="range" min="-100" max="100" step="1" @bind="Crop.OffsetY" @bind:event="oninput" />
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Başlangıç</span>
+                            <InputDate class="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                       @bind-Value="Form.BaslangicTarihi" />
+                        </label>
+                        <label class="space-y-2 text-sm font-bold text-slate-700">
+                            <span>Bitiş</span>
+                            <InputDate class="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                       @bind-Value="Form.BitisTarihi" />
+                        </label>
+                    </div>
+
+                    <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+                        <span>Yayında</span>
+                        <InputCheckbox class="h-5 w-5 accent-blue-600" @bind-Value="Form.AktifMi" />
+                    </label>
+
+                    <ValidationSummary class="text-sm text-rose-700" />
+                    <button class="h-11 w-full rounded-xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-slate-800 disabled:bg-slate-300"
+                            disabled="@IsSaving">
+                        @(IsSaving ? "Kaydediliyor..." : "Kaydet")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </section>
+</AuthGate>
+
+@code {
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+    private const string ImageInputId = "campaignImageInput";
+    private const string DefaultCampaignTitle = "Kampanya Görseli";
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
+
+    private IReadOnlyList<CampaignDto> Campaigns { get; set; } = Array.Empty<CampaignDto>();
+    private CampaignSaveRequest Form { get; set; } = NewForm();
+    private IBrowserFile? SelectedImage { get; set; }
+    private CropSettings Crop { get; set; } = new();
+    private string PreviewImageUrl { get; set; } = string.Empty;
+    private int? EditingCampaignId { get; set; }
+    private string Message { get; set; } = string.Empty;
+    private bool IsError { get; set; }
+    private bool IsLoading { get; set; }
+    private bool IsSaving { get; set; }
+
+    private string MessageClass => IsError
+        ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700"
+        : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700";
+
+    private string PreviewImageStyle => $"transform: scale({Crop.Zoom.ToString("0.00", CultureInfo.InvariantCulture)}) translate({Crop.OffsetX.ToString("0", CultureInfo.InvariantCulture)}%, {Crop.OffsetY.ToString("0", CultureInfo.InvariantCulture)}%); transform-origin: center;";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        if (!Auth.CanManageCampaigns)
+        {
+            Navigation.NavigateTo("/", replace: true);
+            return;
+        }
+
+        await RunSafelyAsync(LoadCampaignsAsync);
+    }
+
+    private async Task LoadCampaignsAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            Campaigns = await CampaignApi.GetAdminCampaignsAsync("", -1);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void NewCampaign()
+    {
+        EditingCampaignId = null;
+        Form = NewForm();
+        SelectedImage = null;
+        Crop = new CropSettings();
+        PreviewImageUrl = string.Empty;
+        Message = string.Empty;
+        IsError = false;
+    }
+
+    private void EditCampaign(CampaignDto campaign)
+    {
+        EditingCampaignId = campaign.KampanyaId;
+        Form = new CampaignSaveRequest
+        {
+            Baslik = DefaultCampaignTitle,
+            GorselUrl = campaign.GorselUrl,
+            CtaMetni = "Detaya Git",
+            HedefUrl = "/products",
+            Oncelik = campaign.Oncelik <= 0 ? 10 : campaign.Oncelik,
+            AktifMi = campaign.AktifMi,
+            GlobalMi = true,
+            BaslangicTarihi = campaign.BaslangicTarihi,
+            BitisTarihi = campaign.BitisTarihi
+        };
+
+        SelectedImage = null;
+        Crop = new CropSettings();
+        PreviewImageUrl = NormalizeImageUrl(campaign.GorselUrl);
+        Message = string.Empty;
+        IsError = false;
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs eventArgs)
+    {
+        await RunSafelyAsync(async () =>
+        {
+            SelectedImage = eventArgs.File;
+            ValidateSelectedImage(SelectedImage);
+
+            Crop = new CropSettings();
+            CampaignCropInfo info = await JS.InvokeAsync<CampaignCropInfo>("eMarketing.campaignCrop.load", ImageInputId, MaxImageBytes);
+            PreviewImageUrl = info.DataUrl;
+            Form.Baslik = DefaultCampaignTitle;
+        });
+    }
+
+    private async Task SaveCampaignAsync()
+    {
+        await RunSafelyAsync(async () =>
+        {
+            IsSaving = true;
+            SavedCampaignImage? savedImage = null;
+            try
+            {
+                if (!EditingCampaignId.HasValue && SelectedImage is null)
+                    throw new InvalidOperationException("Kaydetmek için görsel seçin.");
+
+                if (Form.BitisTarihi.HasValue && Form.BaslangicTarihi.HasValue && Form.BitisTarihi.Value < Form.BaslangicTarihi.Value)
+                    throw new InvalidOperationException("Bitiş tarihi başlangıç tarihinden önce olamaz.");
+
+                if (SelectedImage is not null)
+                {
+                    savedImage = await SaveCroppedImageAsync();
+                    Form.GorselUrl = savedImage.Url;
+                }
+
+                Form.Baslik = DefaultCampaignTitle;
+                Form.Aciklama = string.Empty;
+                Form.DetayMetni = string.Empty;
+                Form.KatilimSartlari = string.Empty;
+                Form.AdminNotlari = string.Empty;
+                Form.CtaMetni = "Detaya Git";
+                Form.HedefUrl = "/products";
+                Form.HedefUrunId = null;
+                Form.HedefKategoriId = null;
+                Form.Oncelik = 10;
+                Form.GlobalMi = true;
+                Form.BayiIds = Array.Empty<int>();
+                Form.MagazaIds = Array.Empty<int>();
+
+                if (EditingCampaignId.HasValue)
+                {
+                    await CampaignApi.UpdateCampaignAsync(EditingCampaignId.Value, Form);
+                    Message = "Kampanya görseli güncellendi.";
+                }
+                else
+                {
+                    EditingCampaignId = await CampaignApi.CreateCampaignAsync(Form);
+                    Message = "Kampanya görseli eklendi.";
+                }
+
+                IsError = false;
+                SelectedImage = null;
+                Crop = new CropSettings();
+                PreviewImageUrl = NormalizeImageUrl(Form.GorselUrl);
+                await LoadCampaignsAsync();
+            }
+            catch
+            {
+                if (savedImage is not null && File.Exists(savedImage.FullPath))
+                    File.Delete(savedImage.FullPath);
+
+                throw;
+            }
+            finally
+            {
+                IsSaving = false;
+            }
+        });
+    }
+
+    private async Task<SavedCampaignImage> SaveCroppedImageAsync()
+    {
+        if (SelectedImage is null)
+            throw new InvalidOperationException("Kaydetmek için görsel seçin.");
+
+        ValidateSelectedImage(SelectedImage);
+
+        string dataUrl = await JS.InvokeAsync<string>("eMarketing.campaignCrop.cropToDataUrl", ImageInputId, Crop, MaxImageBytes);
+        const string prefix = "data:image/jpeg;base64,";
+        if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Kırpılmış görsel hazırlanamadı.");
+
+        byte[] bytes = Convert.FromBase64String(dataUrl[prefix.Length..]);
+        string folder = Path.Combine(Environment.WebRootPath, "Images", "Campaigns");
+        Directory.CreateDirectory(folder);
+
+        string fileName = Guid.NewGuid().ToString("N") + ".jpg";
+        string fullPath = Path.Combine(folder, fileName);
+        await File.WriteAllBytesAsync(fullPath, bytes);
+
+        return new SavedCampaignImage("/Images/Campaigns/" + fileName, fullPath);
+    }
+
+    private async Task DeleteCampaignAsync(CampaignDto campaign)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", "Kampanya görseli silinsin mi?");
+        if (!confirmed)
+            return;
+
+        await RunSafelyAsync(async () =>
+        {
+            await CampaignApi.DeleteCampaignAsync(campaign.KampanyaId);
+            Message = "Kampanya görseli silindi.";
+            IsError = false;
+
+            if (EditingCampaignId == campaign.KampanyaId)
+                NewCampaign();
+
+            await LoadCampaignsAsync();
+        });
+    }
+
+    private async Task RunSafelyAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            IsError = true;
+            Message = "Oturum doğrulanamadı. Sayfadan çıkmadan tekrar giriş yapıp deneyin.";
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = ex.Message;
+        }
+    }
+
+    private static void ValidateSelectedImage(IBrowserFile image)
+    {
+        string extension = Path.GetExtension(image.Name);
+        if (!AllowedExtensions.Contains(extension))
+            throw new InvalidOperationException("Sadece JPG, PNG veya WebP görsel yüklenebilir.");
+
+        if (image.Size > MaxImageBytes)
+            throw new InvalidOperationException("Görsel en fazla 5 MB olabilir.");
+    }
+
+    private static CampaignSaveRequest NewForm()
+    {
+        return new CampaignSaveRequest
+        {
+            Baslik = DefaultCampaignTitle,
+            CtaMetni = "Detaya Git",
+            HedefUrl = "/products",
+            Oncelik = 10,
+            AktifMi = true,
+            GlobalMi = true
+        };
+    }
+
+    private static string NormalizeImageUrl(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            return string.Empty;
+
+        string normalized = imageUrl.Replace("\\", "/").Trim();
+        return normalized.StartsWith("http", StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("/")
+            ? normalized
+            : "/" + normalized;
+    }
+
+    private static string StatusBadgeClass(bool active)
+    {
+        return active
+            ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100"
+            : "rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500 ring-1 ring-slate-200";
+    }
+
+    private static string DateRangeText(CampaignDto campaign)
+    {
+        if (campaign.BaslangicTarihi.HasValue && campaign.BitisTarihi.HasValue)
+            return $"{campaign.BaslangicTarihi.Value:dd.MM.yyyy} - {campaign.BitisTarihi.Value:dd.MM.yyyy}";
+
+        if (campaign.BaslangicTarihi.HasValue)
+            return $"{campaign.BaslangicTarihi.Value:dd.MM.yyyy} sonrası";
+
+        if (campaign.BitisTarihi.HasValue)
+            return $"{campaign.BitisTarihi.Value:dd.MM.yyyy} bitiş";
+
+        return "Süresiz";
+    }
+
+    private sealed class CropSettings
+    {
+        public double Zoom { get; set; } = 1;
+        public int OffsetX { get; set; }
+        public int OffsetY { get; set; }
+    }
+
+    private sealed class CampaignCropInfo
+    {
+        public string DataUrl { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public int Width { get; set; }
+        public int Height { get; set; }
+    }
+
+    private sealed record SavedCampaignImage(string Url, string FullPath);
+}
