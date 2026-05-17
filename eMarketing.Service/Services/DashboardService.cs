@@ -15,18 +15,25 @@ public sealed class DashboardService : IDashboardService
 {
     private readonly IDashboardRepository _repository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly INotificationService _notificationService;
 
-    public DashboardService(IDashboardRepository repository, ICurrentUserService currentUserService)
+    public DashboardService(IDashboardRepository repository, ICurrentUserService currentUserService, INotificationService notificationService)
     {
         _repository = repository;
         _currentUserService = currentUserService;
+        _notificationService = notificationService;
     }
 
     public async Task<DashboardSummaryDto> GetSummaryAsync(int? storeId, bool allStores, CancellationToken cancellationToken = default)
     {
         CurrentUser currentUser = _currentUserService.CurrentUser;
-        return await _repository.GetSummaryAsync(storeId, allStores, currentUser.UserId, currentUser.CanSeeAllStores, cancellationToken)
+        DashboardSummaryDto summary = await _repository.GetSummaryAsync(storeId, allStores, currentUser.UserId, currentUser.CanSeeAllStores, cancellationToken)
             ?? new DashboardSummaryDto();
+
+        if (summary.KritikStok > 0)
+            await _notificationService.CreateCriticalStockNotificationsAsync(storeId, allStores, cancellationToken);
+
+        return summary;
     }
 
     public Task<IReadOnlyList<DashboardRecentOrderDto>> GetRecentOrdersAsync(int? storeId, bool allStores, CancellationToken cancellationToken = default)

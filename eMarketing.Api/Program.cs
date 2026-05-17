@@ -115,6 +115,7 @@ builder.Services.AddScoped<IPersonnelService, PersonnelService>();
 builder.Services.AddScoped<IBayiYetkiliService, BayiYetkiliService>();
 builder.Services.AddScoped<IDealerService, DealerService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IStoreService, StoreService>();
@@ -167,6 +168,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanViewDealers", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageDealers", policy => policy.RequireRole(managers));
     options.AddPolicy("CanManageCampaigns", policy => policy.RequireRole(managers));
+    options.AddPolicy("CanManageNotifications", policy => policy.RequireRole(managers));
     options.AddPolicy("CanManageCatalog", policy => policy.RequireRole(managers));
 });
 builder.Services.AddDataProtection()

@@ -12,6 +12,7 @@
 :r .\MagazaStokBackend.sql
 :r .\DashboardBackend.sql
 :r .\KampanyaBackend.sql
+:r .\BildirimBackend.sql
 :r .\04_AuthSecurity.sql
 :r .\PersonelYetki.sql
 :r .\03_StoredProcedures_Eksikler.sql

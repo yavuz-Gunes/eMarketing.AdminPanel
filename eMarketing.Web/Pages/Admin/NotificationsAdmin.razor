@@ -1,0 +1,519 @@
+@page "/admin/notifications"
+@implements IDisposable
+@inject AuthSession Auth
+@inject ActiveStoreState StoreState
+@inject StoreApiClient StoreApi
+@inject CampaignApiClient CampaignApi
+@inject NotificationApiClient NotificationApi
+@inject NavigationManager Navigation
+
+<PageTitle>Bildirim Yönetimi - eMarketing</PageTitle>
+
+<AuthGate>
+    <section class="mx-auto max-w-[1440px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-black uppercase tracking-wide text-blue-700">Web Admin</p>
+                <h1 class="mt-2 text-3xl font-black text-slate-950">Bildirimler</h1>
+                <p class="mt-1 text-sm text-slate-600">Seçili mağazanın kampanya, stok ve özel mesaj bildirimlerini yönetin.</p>
+                <div class="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                    <AppIcon Name="store" CssClass="h-4 w-4 shrink-0" />
+                    <span class="truncate">Aktif mağaza: @SelectedStoreName</span>
+                </div>
+            </div>
+        </div>
+
+        @if (!Auth.CanManageNotifications)
+        {
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+                Bu ekran için yetkiniz yok.
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(Message))
+            {
+                <div class="rounded-2xl border @(Success ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700") p-4 text-sm font-bold">
+                    @Message
+                </div>
+            }
+
+            <section class="grid gap-5 xl:grid-cols-[1fr_420px]">
+                <div class="space-y-4">
+                    <div class="grid gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px]">
+                        <input class="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                               placeholder="Bildirim ara"
+                               value="@Search"
+                               @oninput="OnSearchChanged" />
+                        <select class="h-12 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                value="@TypeFilter"
+                                @onchange="OnTypeFilterChanged">
+                            <option value="">Tüm tipler</option>
+                            <option value="Kampanya">Kampanya</option>
+                            <option value="KritikStok">Kritik stok</option>
+                            <option value="OzelMesaj">Özel mesaj</option>
+                            <option value="Sistem">Sistem</option>
+                        </select>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <button type="button" class="@SummaryCardClass("Kampanya")" @onclick='() => SetTypeFilter("Kampanya")'>
+                            <span class="text-xs font-black uppercase tracking-wide text-blue-700">Kampanya</span>
+                            <span class="text-2xl font-black text-slate-950">@CountByType("Kampanya")</span>
+                        </button>
+                        <button type="button" class="@SummaryCardClass("KritikStok")" @onclick='() => SetTypeFilter("KritikStok")'>
+                            <span class="text-xs font-black uppercase tracking-wide text-rose-700">Kritik stok</span>
+                            <span class="text-2xl font-black text-slate-950">@CountByType("KritikStok")</span>
+                        </button>
+                        <button type="button" class="@SummaryCardClass("OzelMesaj")" @onclick='() => SetTypeFilter("OzelMesaj")'>
+                            <span class="text-xs font-black uppercase tracking-wide text-emerald-700">Özel mesaj</span>
+                            <span class="text-2xl font-black text-slate-950">@CountByType("OzelMesaj")</span>
+                        </button>
+                    </div>
+
+                    <section class="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+                        @if (!VisibleNotifications.Any())
+                        {
+                            <div class="p-8 text-sm font-bold text-slate-500">Bu mağaza için bildirim bulunamadı.</div>
+                        }
+                        else
+                        {
+                            <div class="divide-y divide-slate-100">
+                                @foreach (NotificationDto notification in VisibleNotifications)
+                                {
+                                    <article class="grid cursor-pointer gap-3 p-4 transition hover:bg-blue-50/30 lg:grid-cols-[auto_1fr_auto] lg:items-center"
+                                             role="button"
+                                             tabindex="0"
+                                             title="Bildirimin hedef sayfasına git"
+                                             @onclick="() => OpenNotification(notification)">
+                                        <span class="flex h-11 w-11 items-center justify-center rounded-2xl @NotificationIconClass(notification.Tip)">
+                                            <AppIcon Name="@NotificationIcon(notification.Tip)" CssClass="h-5 w-5" />
+                                        </span>
+
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <h2 class="truncate text-base font-black text-slate-950">@notification.Baslik</h2>
+                                                <StatusBadge Text="@DisplayType(notification.Tip)" Tone="@NotificationTone(notification.Tip)" />
+                                                <StatusBadge Text="@(notification.AktifMi ? "Aktif" : "Pasif")" Tone="@(notification.AktifMi ? "success" : "slate")" />
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(notification.Mesaj))
+                                            {
+                                                <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@notification.Mesaj</p>
+                                            }
+                                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                <span class="inline-flex max-w-full rounded-full px-2.5 py-1 text-[11px] font-black @TargetBadgeClass(notification)">
+                                                    @TargetStoreSummary(notification)
+                                                </span>
+                                                <span class="text-xs font-bold text-slate-400">@FormatDate(notification.OlusturmaTarihi)</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex gap-2 lg:justify-end">
+                                            <button type="button"
+                                                    class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ToggleStatus(notification)">
+                                                @(notification.AktifMi ? "Pasife Al" : "Aktif Yap")
+                                            </button>
+                                            <button type="button"
+                                                    class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => DeleteNotification(notification.BildirimId)">
+                                                Sil
+                                            </button>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </section>
+                </div>
+
+                <aside class="space-y-5">
+                    <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-xl font-black text-slate-950">Sistem Bildirimleri</h2>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">Günlük kampanya özeti ve kritik stok uyarıları aktif mağaza için kontrol edilir.</p>
+                        <button type="button"
+                                class="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                                @onclick="GenerateSystemAsync">
+                            Şimdi Kontrol Et
+                        </button>
+                    </section>
+
+                    <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                        <h2 class="text-xl font-black text-slate-950">Manuel Mesaj</h2>
+                        <p class="mt-1 text-sm text-slate-500">Hedefi URL yazarak değil, sistemden seçerek gönderin.</p>
+
+                        <div class="mt-5 space-y-4">
+                            <label class="block">
+                                <span class="text-sm font-black text-slate-800">Başlık</span>
+                                <input class="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                       @bind="Form.Baslik" />
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-black text-slate-800">Mesaj</span>
+                                <textarea class="mt-2 min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                          @bind="Form.Mesaj"></textarea>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-black text-slate-800">Hedef tipi</span>
+                                <select class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                                        @bind="TargetType">
+                                    <option value="Yok">Yok</option>
+                                    <option value="Urun">Ürün</option>
+                                    <option value="Kategori">Kategori</option>
+                                    <option value="Kampanya">Kampanya</option>
+                                    <option value="Sayfa">Sayfa</option>
+                                </select>
+                            </label>
+
+                            @if (TargetType == "Urun")
+                            {
+                                <label class="block">
+                                    <span class="text-sm font-black text-slate-800">Ürün</span>
+                                    <select class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                                            value="@TargetIdText"
+                                            @onchange="args => SetTargetId(args.Value?.ToString() ?? string.Empty)">
+                                        <option value="">Seçin</option>
+                                        @foreach (ProductDto product in Products)
+                                        {
+                                            <option value="@product.UrunId">@product.UrunAdi</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+                            else if (TargetType == "Kategori")
+                            {
+                                <label class="block">
+                                    <span class="text-sm font-black text-slate-800">Kategori</span>
+                                    <select class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                                            value="@TargetIdText"
+                                            @onchange="args => SetTargetId(args.Value?.ToString() ?? string.Empty)">
+                                        <option value="">Seçin</option>
+                                        @foreach (CategoryDto category in Categories)
+                                        {
+                                            <option value="@category.KategoriId">@category.KategoriAdi</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+                            else if (TargetType == "Kampanya")
+                            {
+                                <label class="block">
+                                    <span class="text-sm font-black text-slate-800">Kampanya</span>
+                                    <select class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                                            value="@TargetIdText"
+                                            @onchange="args => SetTargetId(args.Value?.ToString() ?? string.Empty)">
+                                        <option value="">Seçin</option>
+                                        @foreach (CampaignDto campaign in Campaigns)
+                                        {
+                                            <option value="@campaign.KampanyaId">@campaign.Baslik</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+                            else if (TargetType == "Sayfa")
+                            {
+                                <label class="block">
+                                    <span class="text-sm font-black text-slate-800">Sayfa</span>
+                                    <select class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none"
+                                            @bind="Form.HedefUrl">
+                                        <option value="/notifications">Bildirimler</option>
+                                        <option value="/products">Ürünler</option>
+                                        <option value="/orders">Siparişler</option>
+                                        <option value="/admin/campaigns">Kampanyalar</option>
+                                    </select>
+                                </label>
+                            }
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="block">
+                                    <span class="text-sm font-black text-slate-800">Başlangıç</span>
+                                    <input type="date" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none"
+                                           @bind="Form.BaslangicTarihi" />
+                                </label>
+                                <label class="block">
+                                    <span class="text-sm font-black text-slate-800">Bitiş</span>
+                                    <input type="date" class="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none"
+                                           @bind="Form.BitisTarihi" />
+                                </label>
+                            </div>
+
+                            <div class="flex flex-wrap gap-4">
+                                <label class="inline-flex items-center gap-2 text-sm font-black text-slate-700">
+                                    <input type="checkbox" class="h-4 w-4 rounded border-slate-300" @bind="Form.GlobalMi" />
+                                    Tüm mağazalar
+                                </label>
+                                <label class="inline-flex items-center gap-2 text-sm font-black text-slate-700">
+                                    <input type="checkbox" class="h-4 w-4 rounded border-slate-300" @bind="Form.AktifMi" />
+                                    Aktif
+                                </label>
+                            </div>
+
+                            @if (!Form.GlobalMi)
+                            {
+                                <div>
+                                    <p class="text-sm font-black text-slate-800">Mağazalar</p>
+                                    <div class="mt-2 max-h-52 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 p-3">
+                                        @foreach (StoreDto store in Stores)
+                                        {
+                                            <label class="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                                                <input type="checkbox"
+                                                       class="h-4 w-4 rounded border-slate-300"
+                                                       checked="@SelectedStoreIds.Contains(store.MagazaId)"
+                                                       @onchange="args => ToggleStore(store.MagazaId, args)" />
+                                                <span class="truncate">@store.MagazaAdi</span>
+                                            </label>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <button type="button"
+                                    class="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+                                    @onclick="SaveAsync">
+                                Gönder
+                            </button>
+                        </div>
+                    </section>
+                </aside>
+            </section>
+        }
+    </section>
+</AuthGate>
+
+@code {
+    private IReadOnlyList<NotificationDto> Notifications { get; set; } = Array.Empty<NotificationDto>();
+    private IReadOnlyList<StoreDto> Stores { get; set; } = Array.Empty<StoreDto>();
+    private IReadOnlyList<ProductDto> Products { get; set; } = Array.Empty<ProductDto>();
+    private IReadOnlyList<CategoryDto> Categories { get; set; } = Array.Empty<CategoryDto>();
+    private IReadOnlyList<CampaignDto> Campaigns { get; set; } = Array.Empty<CampaignDto>();
+    private NotificationSaveRequest Form { get; set; } = new() { Tip = "OzelMesaj", AktifMi = true, GlobalMi = true };
+    private HashSet<int> SelectedStoreIds { get; set; } = new();
+    private string Search { get; set; } = string.Empty;
+    private string TypeFilter { get; set; } = string.Empty;
+    private string TargetType { get; set; } = "Yok";
+    private string Message { get; set; } = string.Empty;
+    private bool Success { get; set; }
+
+    private string TargetIdText => Form.HedefId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+    private string SelectedStoreName => StoreState.SelectedStore?.MagazaAdi ?? "Mağaza seçilmedi";
+    private IEnumerable<NotificationDto> VisibleNotifications => string.IsNullOrWhiteSpace(TypeFilter)
+        ? Notifications
+        : Notifications.Where(x => string.Equals(x.Tip, TypeFilter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.CanManageNotifications)
+            return;
+
+        await StoreState.LoadAsync(StoreApi);
+        StoreState.Changed += OnStoreChanged;
+        Stores = StoreState.Stores;
+        Products = await CampaignApi.GetProductsAsync();
+        Categories = await CampaignApi.GetCategoriesAsync();
+        Campaigns = await CampaignApi.GetAdminCampaignsAsync(status: 1);
+        await LoadNotificationsAsync();
+    }
+
+    private async void OnStoreChanged()
+    {
+        Stores = StoreState.Stores;
+        await LoadNotificationsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs args)
+    {
+        Search = args.Value?.ToString() ?? string.Empty;
+        await LoadNotificationsAsync();
+    }
+
+    private async Task OnTypeFilterChanged(ChangeEventArgs args)
+    {
+        TypeFilter = args.Value?.ToString() ?? string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SetTypeFilter(string type)
+    {
+        TypeFilter = TypeFilter == type ? string.Empty : type;
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        Notifications = await NotificationApi.GetAdminNotificationsAsync(Search, string.Empty, -1, StoreState.SelectedStoreId);
+    }
+
+    private async Task GenerateSystemAsync()
+    {
+        try
+        {
+            await NotificationApi.GenerateSystemNotificationsAsync(StoreState.SelectedStoreId, allStores: false);
+            Message = "Sistem bildirimleri aktif mağaza için kontrol edildi.";
+            Success = true;
+            await LoadNotificationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            Success = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            Form.Tip = "OzelMesaj";
+            Form.HedefTipi = TargetType;
+            Form.MagazaIds = SelectedStoreIds.ToArray();
+            await NotificationApi.CreateNotificationAsync(Form);
+
+            Message = "Bildirim gönderildi.";
+            Success = true;
+            ResetForm();
+            await LoadNotificationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            Success = false;
+        }
+    }
+
+    private async Task ToggleStatus(NotificationDto notification)
+    {
+        await NotificationApi.SetStatusAsync(notification.BildirimId, !notification.AktifMi);
+        await LoadNotificationsAsync();
+    }
+
+    private async Task DeleteNotification(int notificationId)
+    {
+        await NotificationApi.DeleteNotificationAsync(notificationId);
+        await LoadNotificationsAsync();
+    }
+
+    private void OpenNotification(NotificationDto notification)
+    {
+        string targetUrl = string.IsNullOrWhiteSpace(notification.HedefUrl)
+            ? "/notifications"
+            : notification.HedefUrl;
+
+        Navigation.NavigateTo(targetUrl);
+    }
+
+    private void ToggleStore(int storeId, ChangeEventArgs args)
+    {
+        bool selected = args.Value is bool value && value;
+        if (selected)
+            SelectedStoreIds.Add(storeId);
+        else
+            SelectedStoreIds.Remove(storeId);
+    }
+
+    private void SetTargetId(string value)
+    {
+        Form.HedefId = int.TryParse(value, out int id) && id > 0 ? id : null;
+    }
+
+    private void ResetForm()
+    {
+        Form = new NotificationSaveRequest { Tip = "OzelMesaj", AktifMi = true, GlobalMi = true, HedefUrl = "/notifications" };
+        TargetType = "Yok";
+        SelectedStoreIds.Clear();
+    }
+
+    private int CountByType(string type)
+    {
+        return Notifications.Count(x => string.Equals(x.Tip, type, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string SummaryCardClass(string type)
+    {
+        string active = TypeFilter == type ? "border-blue-300 bg-blue-50 ring-4 ring-blue-100" : "border-slate-200 bg-white hover:bg-slate-50";
+        return $"flex min-h-24 flex-col items-start justify-between rounded-2xl border p-4 text-left shadow-sm transition {active}";
+    }
+
+    private static string DisplayType(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "Kampanya",
+            "KritikStok" => "Kritik Stok",
+            "OzelMesaj" => "Özel Mesaj",
+            _ => "Sistem"
+        };
+    }
+
+    private static string TargetStoreSummary(NotificationDto notification)
+    {
+        if (notification.GlobalMi)
+            return "Tüm mağazalar";
+
+        string[] stores = notification.MagazaAdlari
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return stores.Length switch
+        {
+            0 => "Hedef mağaza belirtilmemiş",
+            1 => stores[0],
+            _ => $"{stores[0]} +{stores.Length - 1} mağaza"
+        };
+    }
+
+    private static string TargetBadgeClass(NotificationDto notification)
+    {
+        if (notification.GlobalMi)
+            return "bg-blue-50 text-blue-700";
+
+        return string.IsNullOrWhiteSpace(notification.MagazaAdlari)
+            ? "bg-rose-50 text-rose-700"
+            : "bg-amber-50 text-amber-700";
+    }
+
+    private static string NotificationTone(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "info",
+            "KritikStok" => "danger",
+            "OzelMesaj" => "success",
+            _ => "slate"
+        };
+    }
+
+    private static string NotificationIcon(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "megaphone",
+            "KritikStok" => "alert",
+            "OzelMesaj" => "message",
+            _ => "shield"
+        };
+    }
+
+    private static string NotificationIconClass(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "bg-blue-50 text-blue-700",
+            "KritikStok" => "bg-rose-50 text-rose-700",
+            "OzelMesaj" => "bg-emerald-50 text-emerald-700",
+            _ => "bg-slate-100 text-slate-700"
+        };
+    }
+
+    private static string FormatDate(DateTime? date)
+    {
+        return date.HasValue ? date.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) : "-";
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+    }
+}

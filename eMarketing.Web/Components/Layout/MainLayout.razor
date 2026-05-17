@@ -1,9 +1,12 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject AuthSession Auth
+@inject ActiveStoreState StoreState
+@inject NotificationApiClient NotificationApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<div class="min-h-screen bg-slate-100 text-slate-950">
+<div class="min-h-screen bg-slate-100 text-slate-950" @onclick="CloseNotificationsFromPage">
     @if (Auth.IsAuthenticated)
     {
         <aside class="fixed inset-y-0 left-0 z-30 hidden w-72 bg-[#102033] text-white shadow-2xl lg:flex lg:flex-col">
@@ -59,9 +62,14 @@
                     <div class="ml-auto flex shrink-0 items-center gap-3">
                         <button class="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
                                 title="Bildirimler"
-                                type="button">
+                                type="button"
+                                @onclick:stopPropagation="true"
+                                @onclick="ToggleNotifications">
                             <AppIcon Name="alert" CssClass="h-5 w-5" />
-                            <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[11px] font-black text-white">3</span>
+                            @if (UnreadCount > 0)
+                            {
+                                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">@DisplayUnreadCount</span>
+                            }
                         </button>
 
                         <div class="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
@@ -86,6 +94,73 @@
                     <PortalNav Compact="true" />
                 </div>
             </header>
+
+            @if (NotificationsOpen)
+            {
+                <button type="button"
+                        class="fixed inset-0 z-40 cursor-default bg-transparent"
+                        aria-label="Bildirimleri kapat"
+                        @onclick="CloseNotifications"></button>
+
+                <section class="fixed right-4 top-24 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:right-28"
+                         @onclick:stopPropagation="true">
+                    <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-black text-slate-950">Bildirimler</p>
+                            <p class="truncate text-xs text-slate-500">Seçili mağaza: @SelectedStoreName</p>
+                            <p class="mt-0.5 text-xs font-bold text-rose-600">@UnreadCount okunmamış</p>
+                        </div>
+                        <button type="button"
+                                class="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-blue-700 hover:bg-blue-50"
+                                @onclick="MarkAllNotificationsRead">
+                            Tümü okundu
+                        </button>
+                    </div>
+
+                    @if (HeaderNotifications.Count == 0)
+                    {
+                        <div class="p-5 text-sm font-semibold text-slate-500">Yeni bildirim yok.</div>
+                    }
+                    else
+                    {
+                        <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                            @foreach (NotificationDto notification in HeaderNotifications)
+                            {
+                                <button type="button"
+                                        class="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+                                        @onclick="() => OpenNotification(notification)">
+                                    <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl @NotificationIconClass(notification.Tip)">
+                                        <AppIcon Name="@NotificationIcon(notification.Tip)" CssClass="h-4 w-4" />
+                                    </span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="flex items-center gap-2">
+                                            <span class="truncate text-sm font-black text-slate-950">@notification.Baslik</span>
+                                            @if (!notification.OkunduMu)
+                                            {
+                                                <span class="h-2 w-2 shrink-0 rounded-full bg-rose-500"></span>
+                                            }
+                                        </span>
+                                        @if (!string.IsNullOrWhiteSpace(notification.Mesaj))
+                                        {
+                                            <span class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">@notification.Mesaj</span>
+                                        }
+                                        <span class="mt-2 flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-black @StoreScopeClass(notification)">
+                                                @StoreScopeLabel(notification)
+                                            </span>
+                                            <span class="text-[11px] font-bold text-slate-400">@FormatDate(notification.OlusturmaTarihi)</span>
+                                        </span>
+                                    </span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    <a href="/notifications" class="block border-t border-slate-100 px-4 py-3 text-center text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        Tüm bildirimleri gör
+                    </a>
+                </section>
+            }
         }
 
         <main class="min-h-[calc(100vh-5rem)]">
@@ -100,6 +175,11 @@
         : Auth.User?.KullaniciAdi ?? "-";
 
     private string DisplayRole => Auth.User?.Rol ?? "-";
+    private IReadOnlyList<NotificationDto> HeaderNotifications { get; set; } = Array.Empty<NotificationDto>();
+    private int UnreadCount { get; set; }
+    private bool NotificationsOpen { get; set; }
+    private string DisplayUnreadCount => UnreadCount > 99 ? "99+" : UnreadCount.ToString(CultureInfo.InvariantCulture);
+    private string SelectedStoreName => StoreState.SelectedStore?.MagazaAdi ?? "Mağaza seçilmedi";
 
     private string UserInitials => string.Join(
             "",
@@ -109,10 +189,145 @@
                 .Select(x => x[0]))
         .ToUpper(new CultureInfo("tr-TR"));
 
+    protected override async Task OnInitializedAsync()
+    {
+        StoreState.Changed += OnStoreChanged;
+        Auth.Changed += OnAuthChanged;
+
+        if (Auth.IsAuthenticated)
+            await LoadNotificationsAsync();
+    }
+
     private async Task Logout()
     {
         Auth.Clear();
         await JS.InvokeVoidAsync("eMarketing.auth.clear");
         Navigation.NavigateTo("/login", true);
+    }
+
+    private async void OnStoreChanged()
+    {
+        NotificationsOpen = false;
+        await LoadNotificationsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnAuthChanged()
+    {
+        await LoadNotificationsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleNotifications()
+    {
+        NotificationsOpen = !NotificationsOpen;
+        if (NotificationsOpen)
+            await LoadNotificationsAsync();
+    }
+
+    private void CloseNotifications()
+    {
+        NotificationsOpen = false;
+    }
+
+    private void CloseNotificationsFromPage()
+    {
+        if (NotificationsOpen)
+            NotificationsOpen = false;
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        if (!Auth.IsAuthenticated)
+        {
+            HeaderNotifications = Array.Empty<NotificationDto>();
+            UnreadCount = 0;
+            return;
+        }
+
+        try
+        {
+            int? storeId = StoreState.SelectedStoreId;
+            if (!storeId.HasValue)
+            {
+                HeaderNotifications = Array.Empty<NotificationDto>();
+                UnreadCount = 0;
+                return;
+            }
+
+            HeaderNotifications = await NotificationApi.GetNotificationsAsync(storeId, false, 6);
+            UnreadCount = await NotificationApi.GetUnreadCountAsync(storeId);
+        }
+        catch
+        {
+            HeaderNotifications = Array.Empty<NotificationDto>();
+            UnreadCount = 0;
+        }
+    }
+
+    private async Task OpenNotification(NotificationDto notification)
+    {
+        await NotificationApi.MarkAsReadAsync(notification.BildirimId);
+        NotificationsOpen = false;
+        await LoadNotificationsAsync();
+
+        if (!string.IsNullOrWhiteSpace(notification.HedefUrl))
+            Navigation.NavigateTo(notification.HedefUrl);
+        else
+            Navigation.NavigateTo("/notifications");
+    }
+
+    private async Task MarkAllNotificationsRead()
+    {
+        if (!StoreState.SelectedStoreId.HasValue)
+            return;
+
+        await NotificationApi.MarkAllAsReadAsync(StoreState.SelectedStoreId);
+        await LoadNotificationsAsync();
+    }
+
+    private static string NotificationIcon(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "megaphone",
+            "KritikStok" => "alert",
+            "OzelMesaj" => "message",
+            _ => "shield"
+        };
+    }
+
+    private static string NotificationIconClass(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "bg-blue-50 text-blue-700",
+            "KritikStok" => "bg-rose-50 text-rose-700",
+            "OzelMesaj" => "bg-emerald-50 text-emerald-700",
+            _ => "bg-slate-100 text-slate-700"
+        };
+    }
+
+    private static string StoreScopeLabel(NotificationDto notification)
+    {
+        return notification.GlobalMi ? "Tüm mağazalar" : "Bu mağaza";
+    }
+
+    private static string StoreScopeClass(NotificationDto notification)
+    {
+        return notification.GlobalMi
+            ? "bg-blue-50 text-blue-700"
+            : "bg-rose-50 text-rose-700";
+    }
+
+    private static string FormatDate(DateTime? date)
+    {
+        return date.HasValue ? date.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) : "-";
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+        Auth.Changed -= OnAuthChanged;
     }
 }

@@ -30,10 +30,13 @@ Bu dosya, web bayi portalı ve AdminPanel tarafında sırayla ele alınacak oper
 
 ## 4. Bildirim ve Mesajlaşma
 
-- `Bildirimler` ve `BildirimOkumalari` tabloları eklenecek.
-- Admin mağazalara kampanya, kritik stok ve özel mesaj bildirimi gönderebilecek.
-- `MagazaMesajlari` veya `EkipMesajlari` ile ekip içi not/mesaj akışı kurulacak.
-- İlk etap gerçek zamanlı chat değil, bildirim tabanlı mağaza mesajları olacak.
+- `Bildirimler`, `BildirimMagazalari` ve `BildirimOkumalari` tabloları Web/API altyapısına eklendi.
+- Header bildirim rozeti, bildirim dropdown'ı ve `/notifications` kullanıcı bildirim merkezi eklendi.
+- Web Admin `/admin/notifications` üzerinden mağaza hedefli özel mesaj bildirimi gönderebilir.
+- Manuel bildirimlerde serbest URL yerine ürün, kategori, kampanya veya güvenli sistem sayfası hedefi seçilir.
+- Kampanyalar mağazalara günlük özet bildirimi olarak otomatik düşer.
+- Kritik stok bildirimi ürün kritik eşiğe ilk düştüğünde üretilir; aynı kritik durumda tekrar tekrar gönderilmez.
+- İlk etap gerçek zamanlı chat değil, bildirim tabanlı mağaza mesajları olarak tutulur.
 
 ## 5. Admin Yetki Tamamlama
 

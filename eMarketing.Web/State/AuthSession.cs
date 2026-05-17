@@ -20,6 +20,8 @@ public sealed class AuthSession
          string.Equals(User?.Rol, "Yönetici", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(User?.Rol, "StoreManager", StringComparison.OrdinalIgnoreCase));
 
+    public bool CanManageNotifications => CanManageCampaigns;
+
     public event Action? Changed;
 
     public AuthSession(IHttpContextAccessor httpContextAccessor)

@@ -4,6 +4,7 @@
 @inject StoreApiClient StoreApi
 @inject DashboardApiClient DashboardApi
 @inject TeamApiClient TeamApi
+@inject NotificationApiClient NotificationApi
 
 <PageTitle>Dashboard - eMarketing</PageTitle>
 
@@ -182,10 +183,21 @@
                             <AppIcon Name="alert" CssClass="h-5 w-5" />
                         </div>
                         <div>
-                            <h3 class="text-lg font-black text-slate-950">Bildirim Merkezi Hazır</h3>
+                            <h3 class="text-lg font-black text-slate-950">Bildirimler</h3>
                             <p class="mt-2 text-sm leading-6 text-slate-700">
-                                Admin mesajları, yeni kampanyalar ve kritik stok uyarıları bu alanda duyuru akışına bağlanacak.
+                                Kampanya, mesaj ve kritik stok uyarıları burada görünür.
                             </p>
+                            @if (LatestNotifications.Count > 0)
+                            {
+                                <div class="mt-4 space-y-2">
+                                    @foreach (NotificationDto notification in LatestNotifications.Take(3))
+                                    {
+                                        <a href="@NotificationHref(notification)" class="block rounded-xl bg-white/70 px-3 py-2 text-sm font-bold text-slate-800 transition hover:bg-white">
+                                            @notification.Baslik
+                                        </a>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 </section>
@@ -246,6 +258,7 @@
 @code {
     private DashboardSummaryDto Summary { get; set; } = new();
     private IReadOnlyList<DashboardRecentOrderDto> RecentOrders { get; set; } = Array.Empty<DashboardRecentOrderDto>();
+    private IReadOnlyList<NotificationDto> LatestNotifications { get; set; } = Array.Empty<NotificationDto>();
     private StoreTeamResponseDto? TeamResponse { get; set; }
     private StoreTeamMemberDto? SelectedMember { get; set; }
     private string Message { get; set; } = string.Empty;
@@ -261,6 +274,7 @@
         StoreState.Changed += OnStoreChanged;
         await LoadDashboardAsync();
         await LoadTeamAsync();
+        await LoadNotificationsAsync();
     }
 
     private async void OnStoreChanged()
@@ -268,6 +282,7 @@
         PriorityPopupDismissed = false;
         await LoadDashboardAsync();
         await LoadTeamAsync();
+        await LoadNotificationsAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -300,9 +315,22 @@
         }
     }
 
+    private async Task LoadNotificationsAsync()
+    {
+        try
+        {
+            LatestNotifications = await NotificationApi.GetNotificationsAsync(StoreState.SelectedStoreId, false, 3);
+        }
+        catch
+        {
+            LatestNotifications = Array.Empty<NotificationDto>();
+        }
+    }
+
     private void SelectMember(StoreTeamMemberDto member) => SelectedMember = member;
     private void CloseDrawer() => SelectedMember = null;
     private void DismissPriorityPopup() => PriorityPopupDismissed = true;
+    private static string NotificationHref(NotificationDto notification) => string.IsNullOrWhiteSpace(notification.HedefUrl) ? "/notifications" : notification.HedefUrl;
 
     private static string DisplayStatus(string status)
     {

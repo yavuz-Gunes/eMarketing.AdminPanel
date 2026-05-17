@@ -1,0 +1,269 @@
+@page "/notifications"
+@implements IDisposable
+@inject ActiveStoreState StoreState
+@inject StoreApiClient StoreApi
+@inject NotificationApiClient NotificationApi
+@inject NavigationManager Navigation
+
+<PageTitle>Bildirimler - eMarketing</PageTitle>
+
+<AuthGate>
+    <section class="mx-auto max-w-[1120px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-sm font-black uppercase tracking-wide text-blue-700">Bildirim Merkezi</p>
+                <h1 class="mt-2 text-3xl font-black text-slate-950">Bildirimler</h1>
+                <p class="mt-1 text-sm text-slate-600">Kampanya, kritik stok ve mağaza mesajlarını buradan takip edin.</p>
+                <div class="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                    <AppIcon Name="store" CssClass="h-4 w-4 shrink-0" />
+                    <span class="truncate">Seçili mağaza: @SelectedStoreName</span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <select class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                        value="@ReadFilter"
+                        @onchange="OnReadFilterChanged">
+                    <option value="all">Tümü</option>
+                    <option value="unread">Okunmamış</option>
+                </select>
+                <button type="button"
+                        class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                        @onclick="MarkAllRead">
+                    Tümünü Okundu Yap
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">@Message</div>
+        }
+
+        <div class="grid gap-3 sm:grid-cols-4">
+            <button type="button" class="@TypeCardClass("")" @onclick='() => SetTypeFilter("")'>
+                <span class="text-xs font-black uppercase tracking-wide text-slate-500">Tümü</span>
+                <span class="text-2xl font-black text-slate-950">@NotificationItems.Count</span>
+            </button>
+            <button type="button" class="@TypeCardClass("Kampanya")" @onclick='() => SetTypeFilter("Kampanya")'>
+                <span class="text-xs font-black uppercase tracking-wide text-blue-700">Kampanya</span>
+                <span class="text-2xl font-black text-slate-950">@CountByType("Kampanya")</span>
+            </button>
+            <button type="button" class="@TypeCardClass("KritikStok")" @onclick='() => SetTypeFilter("KritikStok")'>
+                <span class="text-xs font-black uppercase tracking-wide text-rose-700">Kritik stok</span>
+                <span class="text-2xl font-black text-slate-950">@CountByType("KritikStok")</span>
+            </button>
+            <button type="button" class="@TypeCardClass("OzelMesaj")" @onclick='() => SetTypeFilter("OzelMesaj")'>
+                <span class="text-xs font-black uppercase tracking-wide text-emerald-700">Mesaj</span>
+                <span class="text-2xl font-black text-slate-950">@CountByType("OzelMesaj")</span>
+            </button>
+        </div>
+
+        <section class="space-y-3">
+            @if (Loading)
+            {
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-8 text-sm font-bold text-slate-500 shadow-sm">Bildirimler yükleniyor...</div>
+            }
+            else if (!VisibleNotifications.Any())
+            {
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-8 text-center shadow-sm">
+                    <p class="font-black text-slate-950">Bildirim yok</p>
+                    <p class="mt-1 text-sm text-slate-500">Seçili mağaza ve filtre için yeni duyuru bulunmuyor.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (NotificationDto notification in VisibleNotifications)
+                {
+                    <button type="button"
+                            class="grid w-full gap-3 rounded-[1.5rem] border border-slate-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-blue-200 hover:bg-blue-50/30 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+                            @onclick="() => OpenNotification(notification)">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl @NotificationIconClass(notification.Tip)">
+                            <AppIcon Name="@NotificationIcon(notification.Tip)" CssClass="h-5 w-5" />
+                        </span>
+
+                        <span class="min-w-0">
+                            <span class="flex flex-wrap items-center gap-2">
+                                <span class="truncate text-base font-black text-slate-950">@notification.Baslik</span>
+                                <span class="rounded-full px-2 py-0.5 text-[11px] font-black @TypeBadgeClass(notification.Tip)">@DisplayType(notification.Tip)</span>
+                                @if (!notification.OkunduMu)
+                                {
+                                    <span class="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-black uppercase text-rose-700">Yeni</span>
+                                }
+                            </span>
+                            @if (!string.IsNullOrWhiteSpace(notification.Mesaj))
+                            {
+                                <span class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@notification.Mesaj</span>
+                            }
+                            <span class="mt-2 flex flex-wrap items-center gap-2">
+                                <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-black @StoreScopeClass(notification)">
+                                    @StoreScopeLabel(notification)
+                                </span>
+                                <span class="text-xs font-bold text-slate-400">@FormatDate(notification.OlusturmaTarihi)</span>
+                            </span>
+                        </span>
+
+                        <span class="hidden text-xs font-bold text-slate-400 sm:block">@FormatDate(notification.OlusturmaTarihi)</span>
+                    </button>
+                }
+            }
+        </section>
+    </section>
+</AuthGate>
+
+@code {
+    private IReadOnlyList<NotificationDto> NotificationItems { get; set; } = Array.Empty<NotificationDto>();
+    private string ReadFilter { get; set; } = "all";
+    private string TypeFilter { get; set; } = string.Empty;
+    private string Message { get; set; } = string.Empty;
+    private bool Loading { get; set; }
+    private string SelectedStoreName => StoreState.SelectedStore?.MagazaAdi ?? "Mağaza seçilmedi";
+
+    private IEnumerable<NotificationDto> VisibleNotifications => string.IsNullOrWhiteSpace(TypeFilter)
+        ? NotificationItems
+        : NotificationItems.Where(x => string.Equals(x.Tip, TypeFilter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StoreState.LoadAsync(StoreApi);
+        StoreState.Changed += OnStoreChanged;
+        await LoadAsync();
+    }
+
+    private async void OnStoreChanged()
+    {
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnReadFilterChanged(ChangeEventArgs args)
+    {
+        ReadFilter = args.Value?.ToString() ?? "all";
+        await LoadAsync();
+    }
+
+    private void SetTypeFilter(string type)
+    {
+        TypeFilter = type;
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            Loading = true;
+            Message = string.Empty;
+            if (!StoreState.SelectedStoreId.HasValue)
+            {
+                NotificationItems = Array.Empty<NotificationDto>();
+                return;
+            }
+
+            NotificationItems = await NotificationApi.GetNotificationsAsync(StoreState.SelectedStoreId, ReadFilter == "unread", 80);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+        }
+    }
+
+    private async Task MarkAllRead()
+    {
+        if (!StoreState.SelectedStoreId.HasValue)
+            return;
+
+        await NotificationApi.MarkAllAsReadAsync(StoreState.SelectedStoreId);
+        await LoadAsync();
+    }
+
+    private async Task OpenNotification(NotificationDto notification)
+    {
+        await NotificationApi.MarkAsReadAsync(notification.BildirimId);
+        if (!string.IsNullOrWhiteSpace(notification.HedefUrl))
+            Navigation.NavigateTo(notification.HedefUrl);
+        else
+            await LoadAsync();
+    }
+
+    private int CountByType(string type)
+    {
+        return NotificationItems.Count(x => string.Equals(x.Tip, type, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string TypeCardClass(string type)
+    {
+        bool active = string.Equals(TypeFilter, type, StringComparison.OrdinalIgnoreCase);
+        string state = active ? "border-blue-300 bg-blue-50 ring-4 ring-blue-100" : "border-slate-200 bg-white hover:bg-slate-50";
+        return $"flex min-h-24 flex-col items-start justify-between rounded-2xl border p-4 text-left shadow-sm transition {state}";
+    }
+
+    private static string FormatDate(DateTime? date)
+    {
+        return date.HasValue ? date.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) : "-";
+    }
+
+    private static string DisplayType(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "Kampanya",
+            "KritikStok" => "Kritik Stok",
+            "OzelMesaj" => "Mesaj",
+            _ => "Sistem"
+        };
+    }
+
+    private static string NotificationIcon(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "megaphone",
+            "KritikStok" => "alert",
+            "OzelMesaj" => "message",
+            _ => "shield"
+        };
+    }
+
+    private static string NotificationIconClass(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "bg-blue-50 text-blue-700",
+            "KritikStok" => "bg-rose-50 text-rose-700",
+            "OzelMesaj" => "bg-emerald-50 text-emerald-700",
+            _ => "bg-slate-100 text-slate-700"
+        };
+    }
+
+    private static string TypeBadgeClass(string type)
+    {
+        return type switch
+        {
+            "Kampanya" => "bg-blue-50 text-blue-700",
+            "KritikStok" => "bg-rose-50 text-rose-700",
+            "OzelMesaj" => "bg-emerald-50 text-emerald-700",
+            _ => "bg-slate-100 text-slate-700"
+        };
+    }
+
+    private static string StoreScopeLabel(NotificationDto notification)
+    {
+        return notification.GlobalMi ? "Tüm mağazalar" : "Bu mağaza";
+    }
+
+    private static string StoreScopeClass(NotificationDto notification)
+    {
+        return notification.GlobalMi
+            ? "bg-blue-50 text-blue-700"
+            : "bg-rose-50 text-rose-700";
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+    }
+}

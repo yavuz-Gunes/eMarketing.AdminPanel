@@ -21,15 +21,18 @@ public sealed class CampaignService : ICampaignService
     private readonly IStoreAuthorizationService _storeAuthorizationService;
     private readonly ICurrentUserService _currentUserService;
     private readonly ISqlExecutor _sqlExecutor;
+    private readonly INotificationService _notificationService;
 
     public CampaignService(
         IStoreAuthorizationService storeAuthorizationService,
         ICurrentUserService currentUserService,
-        ISqlExecutor sqlExecutor)
+        ISqlExecutor sqlExecutor,
+        INotificationService notificationService)
     {
         _storeAuthorizationService = storeAuthorizationService;
         _currentUserService = currentUserService;
         _sqlExecutor = sqlExecutor;
+        _notificationService = notificationService;
     }
 
     public async Task<IReadOnlyList<DashboardCampaignDto>> GetActiveCampaignsAsync(int? storeId, CancellationToken cancellationToken = default)
@@ -91,25 +94,31 @@ public sealed class CampaignService : ICampaignService
         }, MapCampaign, cancellationToken);
     }
 
-    public Task<int> CreateCampaignAsync(CampaignSaveRequest request, CancellationToken cancellationToken = default)
+    public async Task<int> CreateCampaignAsync(CampaignSaveRequest request, CancellationToken cancellationToken = default)
     {
         Validate(request);
-        return _sqlExecutor.ExecuteScalarIntAsync("sp_Kampanya_Ekle", CampaignParameters(request), cancellationToken);
+        int campaignId = await _sqlExecutor.ExecuteScalarIntAsync("sp_Kampanya_Ekle", CampaignParameters(request), cancellationToken);
+        await _notificationService.CreateCampaignChangedNotificationAsync(campaignId, cancellationToken);
+        return campaignId;
     }
 
-    public Task UpdateCampaignAsync(int campaignId, CampaignSaveRequest request, CancellationToken cancellationToken = default)
+    public async Task UpdateCampaignAsync(int campaignId, CampaignSaveRequest request, CancellationToken cancellationToken = default)
     {
         Validate(request);
-        return _sqlExecutor.ExecuteAsync("sp_Kampanya_Guncelle", WithId(campaignId, CampaignParameters(request)), cancellationToken);
+        await _sqlExecutor.ExecuteAsync("sp_Kampanya_Guncelle", WithId(campaignId, CampaignParameters(request)), cancellationToken);
+        await _notificationService.CreateCampaignChangedNotificationAsync(campaignId, cancellationToken);
     }
 
-    public Task SetCampaignStatusAsync(int campaignId, bool active, CancellationToken cancellationToken = default)
+    public async Task SetCampaignStatusAsync(int campaignId, bool active, CancellationToken cancellationToken = default)
     {
-        return _sqlExecutor.ExecuteAsync("sp_Kampanya_DurumGuncelle", new[]
+        await _sqlExecutor.ExecuteAsync("sp_Kampanya_DurumGuncelle", new[]
         {
             SqlParameterFactory.Param("@KampanyaId", SqlDbType.Int, campaignId),
             SqlParameterFactory.Param("@AktifMi", SqlDbType.Bit, active)
         }, cancellationToken);
+
+        if (active)
+            await _notificationService.CreateCampaignChangedNotificationAsync(campaignId, cancellationToken);
     }
 
     public Task DeleteCampaignAsync(int campaignId, CancellationToken cancellationToken = default)

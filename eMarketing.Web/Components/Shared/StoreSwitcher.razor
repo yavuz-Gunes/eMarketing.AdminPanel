@@ -8,7 +8,9 @@
 else
 {
     <label class="relative block">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600">▤</span>
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600">
+            <AppIcon Name="store" CssClass="h-4 w-4" />
+        </span>
         <select class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
                 value="@StoreState.SelectedStoreId"
                 @onchange="OnStoreChanged">
