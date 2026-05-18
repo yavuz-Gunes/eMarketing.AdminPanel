@@ -3,115 +3,294 @@
 
 @if (OrderId.HasValue)
 {
-    <div class="fixed inset-0 z-40 bg-slate-950/25 backdrop-blur-sm" @onclick="Close"></div>
-    <aside class="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l border-slate-200 bg-white shadow-2xl">
-        <header class="border-b border-slate-200 p-6">
+    @if (!Inline)
+    {
+        <div class="fixed inset-0 z-40 bg-slate-950/25 backdrop-blur-sm" @onclick="Close"></div>
+    }
+
+    <aside class="@PanelClass">
+        <header class="border-b border-slate-200 bg-white px-3.5 py-2.5">
             <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold uppercase text-slate-500">Sipariş Detayı</p>
-                    <h2 class="mt-1 text-2xl font-bold text-slate-950">@(Detail?.Order.OrderNo ?? "Yükleniyor")</h2>
+                <div class="min-w-0">
+                    <p class="text-xs font-black uppercase tracking-wide text-blue-700">Sipariş detayı</p>
+                    <h2 class="mt-1 truncate text-lg font-black text-slate-950">@(Detail?.Order.OrderNo ?? "Yükleniyor")</h2>
                     @if (Detail is not null)
                     {
-                        <p class="mt-1 text-sm text-slate-500">@Detail.Order.MagazaAdi · @Detail.Order.YetkiliAdi</p>
+                        <p class="mt-1 truncate text-sm font-semibold text-slate-500">@Detail.Order.MagazaAdi · @DisplayAuthority(Detail.Order)</p>
                     }
                 </div>
-                <button class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-xl text-slate-500 hover:bg-slate-50" @onclick="Close">×</button>
+                <button class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
+                        type="button"
+                        @onclick="Close">
+                    <AppIcon Name="x" CssClass="h-5 w-5" />
+                </button>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="space-y-2.5 p-2.5">
             @if (!string.IsNullOrWhiteSpace(Message))
             {
-                <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
+                <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700">@Message</div>
             }
-            else if (Detail is null)
+
+            @if (Detail is null && string.IsNullOrWhiteSpace(Message))
             {
-                <div class="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">Sipariş yükleniyor...</div>
+                <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500 shadow-sm">Sipariş yükleniyor...</div>
             }
-            else
+            else if (Detail is not null)
             {
-                <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm">
-                    <InfoRow Label="Durum" Value="@DisplayStatus(Detail.Order.SiparisDurumu)" />
-                    <InfoRow Label="Tarih" Value="@DateText" />
-                    <InfoRow Label="Sipariş türü" Value="@Detail.Order.OrderType" />
-                    <InfoRow Label="Kaynak" Value="@Detail.Order.OrderSource" />
-                    <InfoRow Label="Toplam" Value="@Detail.Order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))" />
-                </div>
+                <section class="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+                    <div class="relative px-2 pb-2 pt-1">
+                        <div class="absolute left-[17%] right-[17%] top-3.5 h-0.5 bg-slate-200"></div>
+                        <div class="@ProgressLineClass"></div>
+                        <div class="relative grid grid-cols-3 gap-2 text-center">
+                            <StepBubble Number="1" Label="Hazırlanıyor" Active="@StepActive("Hazirlaniyor")" Complete="@StepComplete("Hazirlaniyor")" />
+                            <StepBubble Number="2" Label="Kargoda" Active="@StepActive("Kargoda")" Complete="@StepComplete("Kargoda")" />
+                            <StepBubble Number="3" Label="Teslim Edildi" Active="@StepActive("Teslim Edildi")" Complete="@StepComplete("Teslim Edildi")" />
+                        </div>
+                    </div>
+
+                    <div class="mt-2 rounded-lg border border-slate-200 p-2.5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <StatusBadge Text="@DisplayStatus(Detail.Order.SiparisDurumu)" Tone="@StatusTone(Detail.Order.SiparisDurumu)" />
+                                <p class="mt-3 text-xs font-black uppercase tracking-wide text-slate-400">Toplam</p>
+                                <p class="text-xl font-black text-slate-950">@Detail.Order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</p>
+                            </div>
+                            <div class="grid gap-2 text-right text-sm">
+                                <span>
+                                    <span class="block text-xs font-black uppercase tracking-wide text-slate-400">Tarih</span>
+                                    <span class="font-bold text-slate-700">@DateText</span>
+                                </span>
+                                <span>
+                                    <span class="block text-xs font-black uppercase tracking-wide text-slate-400">Kaynak</span>
+                                    <span class="font-bold text-slate-700">@Detail.Order.OrderSource</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <h3 class="text-sm font-black uppercase tracking-wide text-slate-500">Ürünler (@Detail.Items.Count)</h3>
+                            @if (HiddenItemCount > 0)
+                            {
+                                <span class="rounded-lg bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">+@HiddenItemCount ürün</span>
+                            }
+                        </div>
+                        <button type="button"
+                                class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 text-xs font-black text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+                                @onclick="OpenDetailsModal">
+                            <AppIcon Name="eye" CssClass="h-4 w-4" />
+                            Detay
+                        </button>
+                    </div>
+
+                    <div class="mt-2 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-100">
+                        @foreach (OrderDetailItemDto item in VisibleItems)
+                        {
+                            <article class="flex items-center gap-3 bg-white p-2">
+                                @if (!string.IsNullOrWhiteSpace(item.GorselUrl))
+                                {
+                                    <img class="h-10 w-10 shrink-0 rounded-lg object-cover" src="@item.GorselUrl.Replace("\\", "/")" alt="@item.UrunAdi" />
+                                }
+                                else
+                                {
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-400">@Initials(item.UrunAdi)</div>
+                                }
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-black text-slate-950">@item.UrunAdi</p>
+                                    <p class="mt-0.5 text-xs font-semibold text-slate-500">@item.Quantity adet · @item.KategoriAdi</p>
+                                </div>
+                                <p class="shrink-0 text-sm font-black text-slate-950">@item.LineTotal.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</p>
+                            </article>
+                        }
+                    </div>
+
+                    <div class="mt-2 space-y-1 border-t border-slate-100 pt-2 text-sm">
+                        <div class="flex items-center justify-between text-slate-500">
+                            <span>Ara toplam</span>
+                            <span class="font-bold text-slate-700">@Detail.Items.Sum(item => item.LineTotal).ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                        </div>
+                        <div class="flex items-center justify-between text-slate-950">
+                            <span class="font-black">Toplam</span>
+                            <span class="font-black">@Detail.Order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                        </div>
+                    </div>
+                </section>
 
                 @if (CanManageOrders)
                 {
-                    <section class="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <div class="flex flex-wrap items-end gap-3">
-                            <label class="min-w-52 flex-1">
-                                <span class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Sipariş Durumu</span>
-                                <select class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-                                        @bind="SelectedStatus">
-                                    <option value="Hazirlaniyor">Hazırlanıyor</option>
-                                    <option value="Kargoda">Kargoda</option>
-                                    <option value="Teslim Edildi">Teslim Edildi</option>
-                                    <option value="Iptal">İptal</option>
-                                </select>
-                            </label>
-
-                            <button type="button"
-                                    class="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled="@Saving"
-                                    @onclick="SaveStatusAsync">
-                                Kaydet
-                            </button>
-                        </div>
-
-                        <p class="mt-3 text-xs leading-5 text-slate-500">
-                            “Teslim Edildi” seçildiğinde mevcut backend akışı sipariş kalemlerini bayi stoğuna işler. “İptal” seçimi merkez stok iadesi kurallarını çalıştırır.
-                        </p>
+                <section class="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+                        <p class="text-xs font-black uppercase tracking-wide text-slate-500">Durum işlemleri</p>
+                        @if (IsCancelled)
+                        {
+                            <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700">
+                                Bu sipariş iptal edildi. Yeni durum işlemi yapılamaz.
+                            </div>
+                        }
+                        else if (IsDelivered)
+                        {
+                            <div class="mt-3 grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
+                                <span>Bu sipariş teslim edildi. Bayi stok girişi tamamlandı.</span>
+                                <button type="button"
+                                        class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-rose-50 px-3 text-xs font-black text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled='@(!CanSetStatus("Iptal") || Saving)'
+                                        @onclick='() => SaveStatusAsync("Iptal")'>
+                                    <AppIcon Name="x" CssClass="h-4 w-4" />
+                                    İptal Et
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                                <button type="button"
+                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled='@(!CanSetStatus("Kargoda") || Saving)'
+                                        @onclick='() => SaveStatusAsync("Kargoda")'>
+                                    <AppIcon Name="truck" CssClass="h-4 w-4" />
+                                    Kargoda Yap
+                                </button>
+                                <button type="button"
+                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled='@(!CanSetStatus("Teslim Edildi") || Saving)'
+                                        @onclick='() => SaveStatusAsync("Teslim Edildi")'>
+                                    <AppIcon Name="check-circle" CssClass="h-4 w-4" />
+                                    Teslim Edildi
+                                </button>
+                                <button type="button"
+                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-rose-50 px-3 text-sm font-black text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled='@(!CanSetStatus("Iptal") || Saving)'
+                                        @onclick='() => SaveStatusAsync("Iptal")'>
+                                    <AppIcon Name="x" CssClass="h-4 w-4" />
+                                    İptal Et
+                                </button>
+                            </div>
+                        }
                     </section>
                 }
-
-                <section class="mt-6 space-y-3">
-                    <div class="flex items-center justify-between gap-3">
-                        <h3 class="text-lg font-bold text-slate-950">Ürün Kalemleri</h3>
-                        <StatusBadge Text="@($"{Detail.Items.Count} ürün")" Tone="info" />
-                    </div>
-                    @foreach (OrderDetailItemDto item in Detail.Items)
-                    {
-                        <article class="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60">
-                            @if (!string.IsNullOrWhiteSpace(item.GorselUrl))
-                            {
-                                <img class="h-20 w-20 shrink-0 rounded-xl object-cover" src="@item.GorselUrl.Replace("\\", "/")" alt="@item.UrunAdi" />
-                            }
-                            else
-                            {
-                                <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold text-slate-400">@Initials(item.UrunAdi)</div>
-                            }
-                            <div class="min-w-0 flex-1">
-                                <p class="font-semibold text-slate-950">@item.UrunAdi</p>
-                                <p class="mt-1 text-sm text-slate-500">@item.KategoriAdi</p>
-                                <div class="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                                    <span class="rounded-lg bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">@item.Quantity adet</span>
-                                    <span class="text-slate-500">Birim: @item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
-                                    <span class="ml-auto font-bold text-slate-950">@item.LineTotal.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
-                                </div>
-                            </div>
-                        </article>
-                    }
-                </section>
             }
         </div>
     </aside>
+
+    @if (DetailsModalOpen && Detail is not null)
+    {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm" @onclick="CloseDetailsModal">
+            <section class="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl" @onclick:stopPropagation="true">
+                <header class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div class="min-w-0">
+                        <p class="text-xs font-black uppercase tracking-wide text-blue-700">Sipariş detayları</p>
+                        <h3 class="mt-1 truncate text-xl font-black text-slate-950">@Detail.Order.OrderNo</h3>
+                        <p class="mt-1 truncate text-sm font-semibold text-slate-500">@Detail.Order.MagazaAdi · @DisplayAuthority(Detail.Order)</p>
+                    </div>
+                    <button type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
+                            @onclick="CloseDetailsModal">
+                        <AppIcon Name="x" CssClass="h-5 w-5" />
+                    </button>
+                </header>
+
+                <div class="grid gap-4 overflow-y-auto p-5 lg:grid-cols-[minmax(0,1fr)_15rem]">
+                    <div class="overflow-hidden rounded-lg border border-slate-200">
+                        <div class="grid grid-cols-[3rem_minmax(0,1fr)_5rem_7rem] gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
+                            <span>Görsel</span>
+                            <span>Ürün</span>
+                            <span>Adet</span>
+                            <span class="text-right">Tutar</span>
+                        </div>
+                        <div class="divide-y divide-slate-100">
+                            @foreach (OrderDetailItemDto item in Detail.Items)
+                            {
+                                <article class="grid grid-cols-[3rem_minmax(0,1fr)_5rem_7rem] items-center gap-3 px-3 py-2.5">
+                                    @if (!string.IsNullOrWhiteSpace(item.GorselUrl))
+                                    {
+                                        <img class="h-11 w-11 rounded-lg object-cover" src="@item.GorselUrl.Replace("\\", "/")" alt="@item.UrunAdi" />
+                                    }
+                                    else
+                                    {
+                                        <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-400">@Initials(item.UrunAdi)</div>
+                                    }
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-black text-slate-950">@item.UrunAdi</p>
+                                        <p class="mt-0.5 truncate text-xs font-semibold text-slate-500">@item.KategoriAdi</p>
+                                    </div>
+                                    <p class="text-sm font-bold text-slate-600">@item.Quantity adet</p>
+                                    <p class="text-right text-sm font-black text-slate-950">@item.LineTotal.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</p>
+                                </article>
+                            }
+                        </div>
+                    </div>
+
+                    <aside class="space-y-3">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p class="text-xs font-black uppercase tracking-wide text-slate-500">Durum</p>
+                            <div class="mt-2">
+                                <StatusBadge Text="@DisplayStatus(Detail.Order.SiparisDurumu)" Tone="@StatusTone(Detail.Order.SiparisDurumu)" />
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                            <div class="flex justify-between gap-3 text-slate-500">
+                                <span>Ara toplam</span>
+                                <span class="font-bold text-slate-700">@Detail.Items.Sum(item => item.LineTotal).ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                            </div>
+                            <div class="mt-2 flex justify-between gap-3 border-t border-slate-100 pt-2 text-slate-950">
+                                <span class="font-black">Toplam</span>
+                                <span class="font-black">@Detail.Order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                            <p class="text-xs font-black uppercase tracking-wide text-slate-500">Tarih</p>
+                            <p class="mt-1 font-bold text-slate-700">@DateText</p>
+                            <p class="mt-3 text-xs font-black uppercase tracking-wide text-slate-500">Kaynak</p>
+                            <p class="mt-1 font-bold text-slate-700">@Detail.Order.OrderSource</p>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </div>
+    }
 }
 
 @code {
     [Parameter] public int? OrderId { get; set; }
+    [Parameter] public bool Inline { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
 
+    private const int MaxVisibleItems = 3;
     private OrderDetailResponseDto? Detail { get; set; }
     private string Message { get; set; } = string.Empty;
     private int? LoadedOrderId { get; set; }
-    private string SelectedStatus { get; set; } = "Hazirlaniyor";
     private bool Saving { get; set; }
-    private string DateText => Detail?.Order.SiparisTarihi?.ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) ?? "-";
-    private bool CanManageOrders => Auth.User?.Rol is "Admin" or "Yonetici" or "StoreManager";
+    private bool DetailsModalOpen { get; set; }
+    private string DateText => Detail?.Order.SiparisTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) ?? "-";
+    private bool CanManageOrders => Auth.IsAuthenticated && Auth.User?.Rol is not null && IsManagerRole(Auth.User.Rol);
+    private bool IsCancelled => Detail is not null && NormalizeStatus(Detail.Order.SiparisDurumu) == "Iptal";
+    private bool IsDelivered => Detail is not null && NormalizeStatus(Detail.Order.SiparisDurumu) == "Teslim Edildi";
+    private IEnumerable<OrderDetailItemDto> VisibleItems => Detail?.Items.Take(MaxVisibleItems) ?? Array.Empty<OrderDetailItemDto>();
+    private int HiddenItemCount => Detail is null ? 0 : Math.Max(0, Detail.Items.Count - MaxVisibleItems);
+    private string PanelClass => Inline
+        ? "sticky top-20 self-start overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm"
+        : "fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col overflow-hidden border-l border-slate-200 bg-slate-50 shadow-2xl";
+
+    private string ProgressLineClass
+    {
+        get
+        {
+            int index = Detail is null ? 0 : Math.Max(0, StatusIndex(NormalizeStatus(Detail.Order.SiparisDurumu)));
+            string width = index switch
+            {
+                >= 2 => "w-[66%]",
+                1 => "w-[33%]",
+                _ => "w-0"
+            };
+
+            return $"absolute left-[17%] top-3.5 h-0.5 bg-orange-400 {width}";
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -120,6 +299,7 @@
             Detail = null;
             LoadedOrderId = null;
             Message = string.Empty;
+            DetailsModalOpen = false;
             return;
         }
 
@@ -134,24 +314,26 @@
         LoadedOrderId = orderId;
         Detail = null;
         Message = string.Empty;
+        DetailsModalOpen = false;
 
         try
         {
             Detail = await OrdersApi.GetOrderDetailAsync(orderId);
-            SelectedStatus = NormalizeStatus(Detail.Order.SiparisDurumu);
         }
         catch (Exception ex)
         {
-            Message = ex.Message;
+            Message = UserFriendlyError(ex, "Sipariş detayı yüklenemedi. Mağaza erişimini veya oturumunuzu kontrol edin.");
         }
     }
 
-    private async Task SaveStatusAsync()
+    private bool CanSetStatus(string nextStatus)
     {
-        if (Detail is null || Saving)
-            return;
+        return Detail is not null && CanTransition(Detail.Order.SiparisDurumu, nextStatus);
+    }
 
-        if (!CanTransition(Detail.Order.SiparisDurumu, SelectedStatus))
+    private async Task SaveStatusAsync(string nextStatus)
+    {
+        if (Detail is null || Saving || !CanTransition(Detail.Order.SiparisDurumu, nextStatus))
             return;
 
         try
@@ -159,17 +341,17 @@
             Saving = true;
             Message = string.Empty;
 
-            if (SelectedStatus == "Iptal")
+            if (nextStatus == "Iptal")
                 await OrdersApi.CancelOrderAsync(Detail.Order.SiparisId);
             else
-                await OrdersApi.UpdateOrderStatusAsync(Detail.Order.SiparisId, SelectedStatus);
+                await OrdersApi.UpdateOrderStatusAsync(Detail.Order.SiparisId, nextStatus);
 
             await LoadOrderAsync(Detail.Order.SiparisId);
             await OnChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
-            Message = ex.Message;
+            Message = UserFriendlyError(ex, "Durum güncellenemedi. Sipariş mağaza erişimini veya mevcut durumunu kontrol edin.");
         }
         finally
         {
@@ -179,23 +361,66 @@
 
     private Task Close() => OnClose.InvokeAsync();
 
+    private void OpenDetailsModal()
+    {
+        DetailsModalOpen = Detail is not null;
+    }
+
+    private void CloseDetailsModal()
+    {
+        DetailsModalOpen = false;
+    }
+
+    private bool StepActive(string status)
+    {
+        return Detail is not null && NormalizeStatus(Detail.Order.SiparisDurumu) == status;
+    }
+
+    private bool StepComplete(string status)
+    {
+        if (Detail is null)
+            return false;
+
+        int current = StatusIndex(NormalizeStatus(Detail.Order.SiparisDurumu));
+        int target = StatusIndex(status);
+        return current >= target && current >= 0 && target >= 0;
+    }
+
+    private static int StatusIndex(string status)
+    {
+        return status switch
+        {
+            "Hazirlaniyor" => 0,
+            "Kargoda" => 1,
+            "Teslim Edildi" => 2,
+            _ => -1
+        };
+    }
+
     private static bool CanTransition(string currentStatus, string nextStatus)
     {
         currentStatus = NormalizeStatus(currentStatus);
+        nextStatus = NormalizeStatus(nextStatus);
 
-        if (currentStatus == nextStatus)
-            return true;
+        return currentStatus switch
+        {
+            "Hazirlaniyor" => nextStatus is "Kargoda" or "Iptal",
+            "Kargoda" => nextStatus is "Teslim Edildi" or "Iptal",
+            "Teslim Edildi" => nextStatus is "Iptal",
+            _ => false
+        };
+    }
 
-        if (currentStatus == "Iptal")
-            return false;
+    private static string UserFriendlyError(Exception ex, string fallback)
+    {
+        string message = ex.Message?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
 
-        if (currentStatus == "Kargoda" && nextStatus == "Hazirlaniyor")
-            return false;
+        if (message.StartsWith("API isteği başarısız oldu", StringComparison.OrdinalIgnoreCase))
+            return fallback;
 
-        if (currentStatus == "Teslim Edildi" && nextStatus != "Iptal")
-            return false;
-
-        return true;
+        return message.Length > 220 ? $"{message[..220]}..." : message;
     }
 
     private static string NormalizeStatus(string status)
@@ -216,6 +441,31 @@
             "Iptal" => "İptal",
             var value => value
         };
+    }
+
+    private static string StatusTone(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "Teslim Edildi" => "success",
+            "Hazirlaniyor" => "info",
+            "Kargoda" => "warning",
+            "Iptal" => "danger",
+            _ => "slate"
+        };
+    }
+
+    private static bool IsManagerRole(string role)
+    {
+        return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, "Yonetici", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, "Yönetici", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(role, "StoreManager", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string DisplayAuthority(OrderDto order)
+    {
+        return string.IsNullOrWhiteSpace(order.YetkiliAdi) ? "-" : order.YetkiliAdi;
     }
 
     private static string Initials(string text)

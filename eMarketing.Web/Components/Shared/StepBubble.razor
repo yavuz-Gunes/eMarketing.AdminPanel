@@ -1,0 +1,25 @@
+<div class="flex flex-col items-center gap-1">
+    <span class="@CircleClass">@Number</span>
+    <span class="@LabelClass">@Label</span>
+</div>
+
+@code {
+    [Parameter] public string Number { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool Complete { get; set; }
+
+    private string CircleClass => "relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-black shadow-sm "
+        + (Active
+            ? "bg-orange-500 text-white"
+            : Complete
+                ? "bg-orange-100 text-orange-700"
+                : "bg-slate-200 text-slate-500");
+
+    private string LabelClass => "text-[10px] font-black "
+        + (Active
+            ? "text-orange-600"
+            : Complete
+                ? "text-orange-700"
+                : "text-slate-500");
+}

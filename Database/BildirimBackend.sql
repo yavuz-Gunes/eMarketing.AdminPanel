@@ -120,6 +120,68 @@ SET HedefUrl = N'/campaigns',
 FROM dbo.Bildirimler b
 WHERE b.Tip = N'Kampanya'
   AND b.KaynakAnahtari LIKE N'kampanya-ozet:%';
+
+IF OBJECT_ID('tempdb..#TekrarliKampanyaOzetleri') IS NOT NULL DROP TABLE #TekrarliKampanyaOzetleri;
+
+;WITH SiraliKampanyaOzetleri AS
+(
+    SELECT
+        b.BildirimId,
+        ROW_NUMBER() OVER
+        (
+            PARTITION BY b.KaynakAnahtari, bm.MagazaId
+            ORDER BY b.OlusturmaTarihi DESC, b.BildirimId DESC
+        ) AS Sira
+    FROM dbo.Bildirimler b
+    INNER JOIN dbo.BildirimMagazalari bm ON bm.BildirimId = b.BildirimId
+    WHERE b.Tip = N'Kampanya'
+      AND b.KaynakAnahtari LIKE N'kampanya-ozet:%'
+)
+SELECT DISTINCT BildirimId
+INTO #TekrarliKampanyaOzetleri
+FROM SiraliKampanyaOzetleri
+WHERE Sira > 1;
+
+DELETE bo
+FROM dbo.BildirimOkumalari bo
+INNER JOIN #TekrarliKampanyaOzetleri t ON t.BildirimId = bo.BildirimId;
+
+DELETE bm
+FROM dbo.BildirimMagazalari bm
+INNER JOIN #TekrarliKampanyaOzetleri t ON t.BildirimId = bm.BildirimId;
+
+DELETE b
+FROM dbo.Bildirimler b
+INNER JOIN #TekrarliKampanyaOzetleri t ON t.BildirimId = b.BildirimId;
+
+UPDATE b
+SET HedefId = COALESCE(b.HedefId, parsed.UrunId),
+    HedefTipi = N'Urun',
+    HedefUrl = CASE
+        WHEN COALESCE(b.HedefId, parsed.UrunId) IS NULL THEN N'/notifications'
+        ELSE CONCAT(N'/products?urunId=', COALESCE(b.HedefId, parsed.UrunId))
+    END
+FROM dbo.Bildirimler b
+OUTER APPLY
+(
+    SELECT
+        TRY_CONVERT(INT,
+            SUBSTRING(
+                rest.Kalan,
+                CHARINDEX(N':', rest.Kalan) + 1,
+                NULLIF(CHARINDEX(N':', rest.Kalan, CHARINDEX(N':', rest.Kalan) + 1), 0) - CHARINDEX(N':', rest.Kalan) - 1
+            )
+        ) AS UrunId
+    FROM (SELECT SUBSTRING(ISNULL(b.KaynakAnahtari, N''), LEN(N'kritik-stok:') + 1, 4000) AS Kalan) rest
+    WHERE b.KaynakAnahtari LIKE N'kritik-stok:%:%'
+) parsed
+WHERE b.Tip = N'KritikStok'
+  AND
+  (
+      ISNULL(b.HedefUrl, N'') = N''
+      OR b.HedefUrl = N'/notifications'
+      OR ISNULL(b.HedefTipi, N'') <> N'Urun'
+  );
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Bildirim_Ekle

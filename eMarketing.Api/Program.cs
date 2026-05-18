@@ -154,7 +154,7 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("CanViewDashboard", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanViewOrders", policy => policy.RequireRole(storeUsers));
-    options.AddPolicy("CanManageOrders", policy => policy.RequireRole(storeUsers));
+    options.AddPolicy("CanManageOrders", policy => policy.RequireRole(managers));
     options.AddPolicy("CanViewProducts", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageProducts", policy => policy.RequireRole(managers));
     options.AddPolicy("CanViewStocks", policy => policy.RequireRole(storeUsers));

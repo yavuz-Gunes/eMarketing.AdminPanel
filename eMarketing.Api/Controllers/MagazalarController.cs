@@ -20,14 +20,14 @@ public sealed class MagazalarController : ControllerBase
     }
 
     [HttpGet("secim")]
-    [Authorize(Policy = "CanManageOrders")]
+    [Authorize(Policy = "CanViewOrders")]
     public async Task<ActionResult<IReadOnlyList<StoreDto>>> GetSecim([FromQuery] string arama = "", [FromQuery] bool sadeceAktif = true, CancellationToken cancellationToken = default)
     {
         return Ok(await _storeService.GetStoresAsync(arama, sadeceAktif, cancellationToken));
     }
 
     [HttpGet("secim/{id:int}")]
-    [Authorize(Policy = "CanManageOrders")]
+    [Authorize(Policy = "CanViewOrders")]
     public async Task<ActionResult<StoreDto>> GetById(int id, CancellationToken cancellationToken = default)
     {
         StoreDto? row = await _storeService.GetStoreAsync(id, cancellationToken);

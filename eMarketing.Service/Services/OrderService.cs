@@ -212,12 +212,15 @@ public sealed class OrderService : IOrderService
     public async Task UpdateOrderStatusAsync(int orderId, string status, CancellationToken cancellationToken = default)
     {
         await using SqlConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await EnsureOrderStoreAccessAsync(connection, orderId, cancellationToken);
+
         await using SqlCommand command = new("sp_Siparis_Durum_Guncelle", connection);
         command.CommandType = CommandType.StoredProcedure;
         command.Parameters.Add("@SiparisId", SqlDbType.Int).Value = orderId;
         command.Parameters.Add("@SiparisDurumu", SqlDbType.NVarChar, 50).Value = status.Trim();
 
-        await connection.OpenAsync(cancellationToken);
         await command.ExecuteNonQueryAsync(cancellationToken);
         _logger.LogInformation("Order status updated. OrderId: {OrderId}, Status: {Status}", orderId, status);
     }
@@ -225,13 +228,29 @@ public sealed class OrderService : IOrderService
     public async Task CancelOrderAsync(int orderId, CancellationToken cancellationToken = default)
     {
         await using SqlConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await EnsureOrderStoreAccessAsync(connection, orderId, cancellationToken);
+
         await using SqlCommand command = new("sp_Siparis_IptalEt", connection);
         command.CommandType = CommandType.StoredProcedure;
         command.Parameters.Add("@SiparisId", SqlDbType.Int).Value = orderId;
 
-        await connection.OpenAsync(cancellationToken);
         await command.ExecuteNonQueryAsync(cancellationToken);
         _logger.LogInformation("Order cancelled. OrderId: {OrderId}", orderId);
+    }
+
+    private async Task EnsureOrderStoreAccessAsync(SqlConnection connection, int orderId, CancellationToken cancellationToken)
+    {
+        await using SqlCommand command = new("SELECT CustomerStoreId FROM dbo.Orders WHERE OrderId = @OrderId AND IsArchived = 0;", connection);
+        command.CommandType = CommandType.Text;
+        command.Parameters.Add("@OrderId", SqlDbType.Int).Value = orderId;
+
+        object? result = await command.ExecuteScalarAsync(cancellationToken);
+        if (result == null || result == DBNull.Value)
+            throw new UnauthorizedAccessException("Sipariş bulunamadı veya mağaza bilgisi yok.");
+
+        await _storeAuthorizationService.EnsureStoreAccessAsync(Convert.ToInt32(result), cancellationToken);
     }
 
     private static object GetNullableText(string value)

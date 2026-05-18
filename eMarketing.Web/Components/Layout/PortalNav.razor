@@ -1,6 +1,6 @@
 @inject AuthSession Auth
 
-<nav class="@(Compact ? "flex gap-2 overflow-x-auto pb-1" : "space-y-1 px-4")">
+<nav class="@(Compact ? "flex gap-2 overflow-x-auto pb-1" : "space-y-1 px-3")">
     @foreach (NavItem item in VisibleItems)
     {
         <NavLink href="@item.Href" Match="@item.Match" class="@LinkClass">
@@ -17,11 +17,11 @@
 
     private string LinkClass => Compact
         ? "inline-flex min-w-max items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 [&.active]:bg-slate-950 [&.active]:text-white"
-        : "flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-bold text-blue-100/70 transition hover:bg-white/10 hover:text-white [&.active]:bg-blue-500/15 [&.active]:text-white [&.active]:ring-1 [&.active]:ring-blue-300/30 [&.active]:shadow-lg [&.active]:shadow-black/20";
+        : "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-bold text-blue-100/70 transition hover:bg-white/10 hover:text-white [&.active]:bg-blue-500/15 [&.active]:text-white [&.active]:ring-1 [&.active]:ring-blue-300/30";
 
     private string IconWrapClass => Compact
         ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"
-        : "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-blue-100/70";
+        : "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-blue-100/70";
 
     private string IconClass => Compact ? "h-4 w-4" : "h-5 w-5";
 

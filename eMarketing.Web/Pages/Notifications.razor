@@ -186,7 +186,7 @@
         if (!string.IsNullOrWhiteSpace(notification.HedefUrl))
             Navigation.NavigateTo(notification.HedefUrl);
         else
-            await LoadAsync();
+            Navigation.NavigateTo("/notifications");
     }
 
     private int CountByType(string type)

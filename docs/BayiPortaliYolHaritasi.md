@@ -2,6 +2,13 @@
 
 Bu dosya, web bayi portalı ve AdminPanel tarafında sırayla ele alınacak operasyon başlıklarını takip etmek için tutulur.
 
+## Mimari Kural: Dinamik Sistem
+
+- Uygulamadaki dashboard, carousel, bildirim, stok, sipariş ve admin ekranları kalıcı olarak DB/API kaynaklı çalışacak.
+- Statik demo/fallback veri kalıcı çözüm olarak kullanılmayacak.
+- Geçici fallback gerekiyorsa açıkça geçici olarak işaretlenecek ve kaldırma maddesi yol haritasına eklenecek.
+- UI'da görünen tüm aksiyonlar backend policy/service katmanında da doğrulanacak.
+
 ## 1. Sipariş Yönetimi
 
 - Web `/orders` ekranında sipariş detay drawer üzerinden durum yönetimi.
@@ -35,7 +42,10 @@ Bu dosya, web bayi portalı ve AdminPanel tarafında sırayla ele alınacak oper
 - Web Admin `/admin/notifications` üzerinden mağaza hedefli özel mesaj bildirimi gönderebilir.
 - Manuel bildirimlerde serbest URL yerine ürün, kategori, kampanya veya güvenli sistem sayfası hedefi seçilir.
 - Kampanyalar mağazalara günlük özet bildirimi olarak otomatik düşer.
+- Kampanya özeti tek kampanya ise kampanya detayına, birden fazla kampanya varsa `/campaigns` listesine gider.
 - Kritik stok bildirimi ürün kritik eşiğe ilk düştüğünde üretilir; aynı kritik durumda tekrar tekrar gönderilmez.
+- Kritik stok bildirimi hedef ürün biliniyorsa `/products?urunId=...` adresine gider.
+- Bildirim sayıları seçili mağazadaki tüm bildirim dağılımını gösterir; filtreler sadece listeyi süzer.
 - İlk etap gerçek zamanlı chat değil, bildirim tabanlı mağaza mesajları olarak tutulur.
 
 ## 5. Admin Yetki Tamamlama

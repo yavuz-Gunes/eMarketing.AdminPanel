@@ -7,64 +7,174 @@
 <PageTitle>Siparişler - eMarketing</PageTitle>
 
 <AuthGate>
-    <section class="mx-auto max-w-[1440px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-            <div>
-                <p class="text-sm font-bold uppercase text-slate-500">Siparişler</p>
-                <h1 class="mt-1 text-3xl font-black tracking-tight text-slate-950">Mağaza siparişleri</h1>
-                <p class="mt-1 text-sm text-slate-500">Aktif mağaza: @(StoreState.SelectedStore?.MagazaAdi ?? "-")</p>
-            </div>
-            <button class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50" @onclick="LoadAsync">Yenile</button>
-        </div>
+    <section class="mx-auto max-w-[1420px] px-3 py-3 sm:px-4 lg:px-5">
+        <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_26rem] 2xl:grid-cols-[minmax(0,1fr)_27rem]">
+            <div class="space-y-3">
+                <div class="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-wide text-slate-500">Siparişler</p>
+                        <h1 class="mt-0.5 text-[1.65rem] font-black tracking-tight text-slate-950">Mağaza siparişleri</h1>
+                        <p class="mt-1 text-sm text-slate-500">Aktif mağaza: @(StoreState.SelectedStore?.MagazaAdi ?? "-")</p>
+                    </div>
+                    <button class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            type="button"
+                            @onclick="LoadAsync">
+                        Yenile
+                    </button>
+                </div>
 
-        @if (!string.IsNullOrWhiteSpace(Message))
-        {
-            <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
-        }
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700">@Message</div>
+                }
 
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50 text-left text-xs font-bold uppercase text-slate-500">
-                    <tr>
-                        <th class="px-5 py-4">Sipariş No</th>
-                        <th class="px-5 py-4">Ürün</th>
-                        <th class="px-5 py-4">Yetkili</th>
-                        <th class="px-5 py-4">Durum</th>
-                        <th class="px-5 py-4 text-right">Toplam</th>
-                        <th class="w-12 px-5 py-4"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @if (OrderList.Count == 0)
+                <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                    <button type="button" class="@SummaryCardClass("open")" @onclick='() => SetStatusFilter("open")'>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                            <AppIcon Name="cart" CssClass="h-5 w-5" />
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-[11px] font-black uppercase tracking-wide text-slate-500">Açık Sipariş</span>
+                            <span class="mt-0.5 block text-xl font-black text-slate-950">@OpenOrderCount</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="@SummaryCardClass("Hazirlaniyor")" @onclick='() => SetStatusFilter("Hazirlaniyor")'>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                            <AppIcon Name="clock" CssClass="h-5 w-5" />
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-[11px] font-black uppercase tracking-wide text-slate-500">Hazırlanıyor</span>
+                            <span class="mt-0.5 block text-xl font-black text-slate-950">@HazirlaniyorCount</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="@SummaryCardClass("Kargoda")" @onclick='() => SetStatusFilter("Kargoda")'>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+                            <AppIcon Name="truck" CssClass="h-5 w-5" />
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-[11px] font-black uppercase tracking-wide text-slate-500">Kargoda</span>
+                            <span class="mt-0.5 block text-xl font-black text-slate-950">@KargodaCount</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="@SummaryCardClass("Teslim Edildi")" @onclick='() => SetStatusFilter("Teslim Edildi")'>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                            <AppIcon Name="check-circle" CssClass="h-5 w-5" />
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-[11px] font-black uppercase tracking-wide text-slate-500">Teslim Edildi</span>
+                            <span class="mt-0.5 block text-xl font-black text-slate-950">@TeslimEdildiCount</span>
+                        </span>
+                    </button>
+                </div>
+
+                <div class="grid gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm lg:grid-cols-[minmax(0,1fr)_11rem_11rem_2.75rem]">
+                    <label class="relative">
+                        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="search" CssClass="h-5 w-5" />
+                        </span>
+                        <input class="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-semibold outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                               placeholder="Sipariş ara..."
+                               @bind="SearchText"
+                               @bind:event="oninput" />
+                    </label>
+
+                    <select class="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                            @bind="StatusFilter">
+                        <option value="">Tüm durumlar</option>
+                        <option value="open">Açık siparişler</option>
+                        <option value="Hazirlaniyor">Hazırlanıyor</option>
+                        <option value="Kargoda">Kargoda</option>
+                        <option value="Teslim Edildi">Teslim Edildi</option>
+                        <option value="Iptal">İptal</option>
+                    </select>
+
+                    <label class="relative">
+                        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                            <AppIcon Name="calendar" CssClass="h-4 w-4" />
+                        </span>
+                        <select class="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-sm font-black text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                @bind="DateFilter">
+                            <option value="">Tarih aralığı</option>
+                            <option value="today">Bugün</option>
+                            <option value="7days">Son 7 gün</option>
+                            <option value="month">Bu ay</option>
+                        </select>
+                    </label>
+
+                    <button type="button"
+                            title="Filtreleri temizle"
+                            class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
+                            @onclick="ClearFilters">
+                        <AppIcon Name="sliders" CssClass="h-5 w-5" />
+                    </button>
+                </div>
+
+                <section class="space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+                        <div>
+                            <p class="text-sm font-black text-slate-950">@FilterTitle</p>
+                            <p class="text-xs font-semibold text-slate-500">@FilteredOrders.Count sipariş listeleniyor</p>
+                        </div>
+                        @if (HasAnyFilter)
+                        {
+                            <button type="button"
+                                    class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                                    @onclick="ClearFilters">
+                                Tümünü göster
+                            </button>
+                        }
+                    </div>
+
+                    @if (FilteredOrders.Count == 0)
                     {
-                        <tr>
-                            <td colspan="6" class="px-5 py-10 text-center text-sm font-semibold text-slate-500">Henüz sipariş yok</td>
-                        </tr>
+                        <div class="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm font-bold text-slate-500 shadow-sm">
+                            Bu filtrede sipariş bulunamadı.
+                        </div>
                     }
                     else
                     {
-                        @foreach (OrderDto order in OrderList)
-                        {
-                            <tr class="cursor-pointer transition hover:bg-blue-50/50" @onclick="() => SelectedOrderId = order.SiparisId">
-                                <td class="px-5 py-4 font-bold text-slate-950">@order.OrderNo</td>
-                                <td class="px-5 py-4">
-                                    <div class="font-semibold text-slate-700">@order.UrunAdi</div>
-                                    <div class="mt-1 text-xs text-slate-500">@order.UrunKalemi kalem · @order.Adet adet</div>
-                                </td>
-                                <td class="px-5 py-4 text-slate-700">@order.YetkiliAdi</td>
-                                <td class="px-5 py-4"><StatusBadge Text="@DisplayStatus(order.SiparisDurumu)" Tone="@StatusTone(order.SiparisDurumu)" /></td>
-                                <td class="px-5 py-4 text-right font-bold text-slate-950">@order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</td>
-                                <td class="px-5 py-4 text-right text-slate-400">
-                                    <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
+                        <div class="space-y-2.5">
+                            @foreach (OrderDto order in FilteredOrders)
+                            {
+                                <button type="button"
+                                        class="@OrderCardClass(order)"
+                                        @onclick="() => SelectedOrderId = order.SiparisId">
+                                    <span class="flex h-12 w-12 items-center justify-center rounded-lg @OrderIconClass(order.SiparisDurumu)">
+                                        <AppIcon Name="@OrderIcon(order.SiparisDurumu)" CssClass="h-5 w-5" />
+                                    </span>
 
-        <OrderDetailDrawer OrderId="@SelectedOrderId" OnClose="CloseOrderDrawer" OnChanged="LoadAsync" />
+                                    <span class="min-w-0">
+                                        <span class="block truncate text-base font-black text-slate-950">@order.OrderNo</span>
+                                        <span class="mt-1 block truncate text-sm font-semibold text-slate-500">@DisplayAuthority(order)</span>
+                                        <span class="mt-1 block text-xs font-bold text-slate-500">@order.UrunKalemi ürün · @order.Adet kalem</span>
+                                    </span>
+
+                                    <span class="hidden text-sm font-bold text-slate-500 md:block">@FormatDate(order.SiparisTarihi)</span>
+
+                                    <span class="justify-self-start md:justify-self-center">
+                                        <StatusBadge Text="@DisplayStatus(order.SiparisDurumu)" Tone="@StatusTone(order.SiparisDurumu)" />
+                                    </span>
+
+                                    <span class="font-black text-slate-950">@order.ToplamTutar.ToString("C", CultureInfo.GetCultureInfo("tr-TR"))</span>
+
+                                    <span class="flex items-center justify-end text-slate-400 transition group-hover:text-blue-600">
+                                        <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
+                                    </span>
+                                </button>
+                            }
+                        </div>
+                    }
+                </section>
+            </div>
+
+            @if (SelectedOrderId.HasValue)
+            {
+                <OrderDetailDrawer OrderId="@SelectedOrderId" Inline="true" OnClose="CloseOrderDrawer" OnChanged="OnOrderChangedAsync" />
+            }
+        </div>
     </section>
 </AuthGate>
 
@@ -72,16 +182,51 @@
     private IReadOnlyList<OrderDto> OrderList { get; set; } = Array.Empty<OrderDto>();
     private int? SelectedOrderId { get; set; }
     private string Message { get; set; } = string.Empty;
+    private string SearchText { get; set; } = string.Empty;
+    private string StatusFilter { get; set; } = string.Empty;
+    private string DateFilter { get; set; } = string.Empty;
+
+    private IReadOnlyList<OrderDto> FilteredOrders => OrderList
+        .Where(MatchesSearch)
+        .Where(MatchesStatus)
+        .Where(MatchesDate)
+        .OrderByDescending(order => order.SiparisTarihi ?? DateTime.MinValue)
+        .ToArray();
+
+    private int OpenOrderCount => OrderList.Count(order => IsOpen(order.SiparisDurumu));
+    private int HazirlaniyorCount => CountStatus("Hazirlaniyor");
+    private int KargodaCount => CountStatus("Kargoda");
+    private int TeslimEdildiCount => CountStatus("Teslim Edildi");
+    private int IptalCount => CountStatus("Iptal");
+    private bool HasAnyFilter => !string.IsNullOrWhiteSpace(SearchText) || !string.IsNullOrWhiteSpace(StatusFilter) || !string.IsNullOrWhiteSpace(DateFilter);
+
+    private string FilterTitle => StatusFilter switch
+    {
+        "open" => "Açık siparişler",
+        "Hazirlaniyor" => "Hazırlanan siparişler",
+        "Kargoda" => "Kargodaki siparişler",
+        "Teslim Edildi" => "Teslim edilen siparişler",
+        "Iptal" => "İptal edilen siparişler",
+        _ => "Tüm siparişler"
+    };
 
     protected override async Task OnInitializedAsync()
     {
         StoreState.Changed += OnStoreChanged;
-        await StoreState.LoadAsync(StoreApi);
-        await LoadAsync();
+        try
+        {
+            await StoreState.LoadAsync(StoreApi);
+            await LoadAsync();
+        }
+        catch
+        {
+            Message = "Sipariş ekranı yüklenemedi. Mağaza erişimini veya oturumunuzu kontrol edin.";
+        }
     }
 
     private async void OnStoreChanged()
     {
+        SelectedOrderId = null;
         await LoadAsync();
         await InvokeAsync(StateHasChanged);
     }
@@ -92,36 +237,174 @@
         {
             Message = string.Empty;
             OrderList = await OrdersApi.GetOrdersAsync(StoreState.SelectedStoreId);
+            if (!SelectedOrderId.HasValue && OrderList.Count > 0)
+                SelectedOrderId = OrderList.OrderByDescending(order => order.SiparisTarihi ?? DateTime.MinValue).First().SiparisId;
+
+            if (SelectedOrderId.HasValue && !OrderList.Any(order => order.SiparisId == SelectedOrderId.Value))
+                SelectedOrderId = OrderList.OrderByDescending(order => order.SiparisTarihi ?? DateTime.MinValue).FirstOrDefault()?.SiparisId;
         }
-        catch (Exception ex)
+        catch
         {
-            Message = ex.Message;
+            Message = "Siparişler yüklenemedi. Mağaza seçimini ve oturumunuzu kontrol edin.";
         }
+    }
+
+    private async Task OnOrderChangedAsync()
+    {
+        int? selected = SelectedOrderId;
+        await LoadAsync();
+        SelectedOrderId = selected;
+    }
+
+    private void SetStatusFilter(string filter)
+    {
+        StatusFilter = StatusFilter == filter ? string.Empty : filter;
+    }
+
+    private void ClearFilters()
+    {
+        SearchText = string.Empty;
+        StatusFilter = string.Empty;
+        DateFilter = string.Empty;
+    }
+
+    private bool MatchesSearch(OrderDto order)
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+            return true;
+
+        string term = SearchText.Trim();
+        return Contains(order.OrderNo, term)
+            || Contains(order.UrunAdi, term)
+            || Contains(order.YetkiliAdi, term)
+            || Contains(order.MagazaAdi, term);
+    }
+
+    private bool MatchesStatus(OrderDto order)
+    {
+        return StatusFilter switch
+        {
+            "open" => IsOpen(order.SiparisDurumu),
+            { Length: > 0 } status => NormalizeStatus(order.SiparisDurumu) == status,
+            _ => true
+        };
+    }
+
+    private bool MatchesDate(OrderDto order)
+    {
+        if (string.IsNullOrWhiteSpace(DateFilter))
+            return true;
+
+        if (!order.SiparisTarihi.HasValue)
+            return false;
+
+        DateTime date = order.SiparisTarihi.Value.ToLocalTime().Date;
+        DateTime today = DateTime.Today;
+
+        return DateFilter switch
+        {
+            "today" => date == today,
+            "7days" => date >= today.AddDays(-6),
+            "month" => date.Year == today.Year && date.Month == today.Month,
+            _ => true
+        };
+    }
+
+    private int CountStatus(string status)
+    {
+        return OrderList.Count(order => NormalizeStatus(order.SiparisDurumu) == status);
+    }
+
+    private string SummaryCardClass(string filter)
+    {
+        bool active = StatusFilter == filter;
+        return "flex min-h-[4.5rem] items-center gap-2.5 rounded-lg border bg-white p-2.5 text-left shadow-sm transition hover:border-blue-200 hover:bg-blue-50/30 "
+            + (active ? "border-blue-300 ring-4 ring-blue-100" : "border-slate-200");
+    }
+
+    private string OrderCardClass(OrderDto order)
+    {
+        bool active = SelectedOrderId == order.SiparisId;
+        return "group grid w-full items-center gap-2.5 rounded-lg border bg-white p-2.5 text-left shadow-sm transition hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md md:grid-cols-[2.5rem_minmax(0,1.4fr)_7.5rem_7rem_7rem_auto] "
+            + (active ? "border-blue-300 bg-blue-50/40 ring-1 ring-blue-200" : "border-slate-200");
     }
 
     private void CloseOrderDrawer() => SelectedOrderId = null;
 
+    private static bool IsOpen(string status)
+    {
+        string normalized = NormalizeStatus(status);
+        return normalized is not "Teslim Edildi" and not "Iptal";
+    }
+
+    private static bool Contains(string value, string term)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && value.Contains(term, StringComparison.CurrentCultureIgnoreCase);
+    }
+
     private static string DisplayStatus(string status)
     {
-        return status switch
+        return NormalizeStatus(status) switch
         {
             "Hazirlaniyor" => "Hazırlanıyor",
             "Iptal" => "İptal",
-            _ => status
+            var value => value
         };
     }
 
     private static string StatusTone(string status)
     {
-        return status switch
+        return NormalizeStatus(status) switch
         {
             "Teslim Edildi" => "success",
             "Hazirlaniyor" => "info",
-            "Hazırlanıyor" => "info",
             "Iptal" => "danger",
-            "İptal" => "danger",
-            _ => "warning"
+            "Kargoda" => "warning",
+            _ => "slate"
         };
+    }
+
+    private static string OrderIcon(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "Teslim Edildi" => "check-circle",
+            "Kargoda" => "truck",
+            "Iptal" => "x",
+            _ => "package"
+        };
+    }
+
+    private static string OrderIconClass(string status)
+    {
+        return NormalizeStatus(status) switch
+        {
+            "Teslim Edildi" => "bg-emerald-50 text-emerald-700",
+            "Kargoda" => "bg-violet-50 text-violet-700",
+            "Iptal" => "bg-rose-50 text-rose-700",
+            _ => "bg-blue-50 text-blue-700"
+        };
+    }
+
+    private static string NormalizeStatus(string status)
+    {
+        return status switch
+        {
+            "Hazırlanıyor" => "Hazirlaniyor",
+            "İptal" => "Iptal",
+            _ => status
+        };
+    }
+
+    private static string FormatDate(DateTime? date)
+    {
+        return date.HasValue ? date.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR")) : "-";
+    }
+
+    private static string DisplayAuthority(OrderDto order)
+    {
+        return string.IsNullOrWhiteSpace(order.YetkiliAdi) ? "-" : order.YetkiliAdi;
     }
 
     public void Dispose()

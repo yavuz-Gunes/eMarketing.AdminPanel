@@ -1,3 +1,9 @@
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 IF OBJECT_ID('dbo.MagazaStoklari', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.MagazaStoklari

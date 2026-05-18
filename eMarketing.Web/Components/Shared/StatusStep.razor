@@ -1,0 +1,20 @@
+<div class="@ContainerClass">
+    <span class="@DotClass"></span>
+    <span class="truncate text-xs font-black">@Label</span>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool Complete { get; set; }
+
+    private string ContainerClass => "flex items-center gap-2 rounded-lg border px-3 py-2 "
+        + (Active
+            ? "border-blue-300 bg-blue-50 text-blue-800"
+            : Complete
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-slate-50 text-slate-500");
+
+    private string DotClass => "h-2.5 w-2.5 shrink-0 rounded-full "
+        + (Active ? "bg-blue-600" : Complete ? "bg-emerald-500" : "bg-slate-300");
+}
