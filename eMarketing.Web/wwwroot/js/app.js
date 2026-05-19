@@ -1,5 +1,7 @@
 const authStorageKey = "emarketing.auth";
 const authCookieName = "emarketing.auth";
+const activeStoreStorageKey = "emarketing.activeStoreId";
+const activeStoreCookieName = "emarketing.activeStoreId";
 
 function writeAuthCookie(value, expiresAt) {
   const expires = new Date(expiresAt);
@@ -12,6 +14,16 @@ function writeAuthCookie(value, expiresAt) {
 
 function clearAuthCookie() {
   document.cookie = `${authCookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; samesite=lax`;
+}
+
+function writeActiveStoreCookie(storeId) {
+  const expires = new Date();
+  expires.setFullYear(expires.getFullYear() + 1);
+  document.cookie = `${activeStoreCookieName}=${encodeURIComponent(String(storeId))}; expires=${expires.toUTCString()}; path=/; samesite=lax`;
+}
+
+function clearActiveStoreCookie() {
+  document.cookie = `${activeStoreCookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; samesite=lax`;
 }
 
 function readCampaignFile(inputId, maxBytes) {
@@ -129,6 +141,16 @@ window.eMarketing = {
     clear: () => {
       localStorage.removeItem(authStorageKey);
       clearAuthCookie();
+    }
+  },
+  store: {
+    save: (storeId) => {
+      localStorage.setItem(activeStoreStorageKey, String(storeId));
+      writeActiveStoreCookie(storeId);
+    },
+    clear: () => {
+      localStorage.removeItem(activeStoreStorageKey);
+      clearActiveStoreCookie();
     }
   },
   campaignCrop: {

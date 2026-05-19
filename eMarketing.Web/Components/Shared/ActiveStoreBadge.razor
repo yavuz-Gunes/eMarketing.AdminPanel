@@ -1,0 +1,52 @@
+@implements IDisposable
+@inject ActiveStoreState StoreState
+
+<div class="@ContainerClass" title="@Description">
+    <span class="@DotClass"></span>
+    <span class="@TextClass">@DisplayText</span>
+</div>
+
+@code {
+    [Parameter] public bool Compact { get; set; } = true;
+    [Parameter] public bool ShowDescription { get; set; }
+
+    protected override void OnInitialized()
+    {
+        StoreState.Changed += OnStoreChanged;
+    }
+
+    private StoreDto? CurrentStore => StoreState.SelectedStoreId.HasValue
+        ? StoreState.Stores.FirstOrDefault(store => store.MagazaId == StoreState.SelectedStoreId.Value) ?? StoreState.SelectedStore
+        : null;
+
+    private bool HasStore => CurrentStore is not null;
+    private string StoreName => CurrentStore?.MagazaAdi ?? "Bayi seçilmedi";
+    private string DisplayText => HasStore ? $"Aktif Bayi · {StoreName}" : StoreName;
+    private string Description => HasStore
+        ? "Sipariş, stok ve bildirimler bu bayiye göre gösterilir."
+        : "Lütfen aktif bayi seçin.";
+
+    private string ContainerClass => $"inline-flex max-w-full items-center gap-2 rounded-lg border px-3 py-2 {ToneClass}";
+
+    private string ToneClass => HasStore
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : "border-amber-200 bg-amber-50 text-amber-800";
+
+    private string DotClass => HasStore
+        ? "h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]"
+        : "h-2.5 w-2.5 shrink-0 rounded-full bg-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.16)]";
+
+    private string TextClass => HasStore
+        ? "block truncate text-sm font-black text-slate-950"
+        : "block truncate text-sm font-black text-amber-900";
+
+    private async void OnStoreChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+    }
+}

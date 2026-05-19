@@ -21,6 +21,7 @@ public sealed class AuthSession
          string.Equals(User?.Rol, "StoreManager", StringComparison.OrdinalIgnoreCase));
 
     public bool CanManageNotifications => CanManageCampaigns;
+    public bool CanManageStock => CanManageCampaigns;
 
     public event Action? Changed;
 

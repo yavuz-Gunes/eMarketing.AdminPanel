@@ -47,7 +47,7 @@
         {
             <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
                 <div class="flex h-20 items-center gap-4 px-4 sm:px-6 lg:px-8">
-                    <div class="min-w-0 flex-1 lg:max-w-[360px]">
+                    <div class="min-w-0 flex-1 lg:max-w-[430px]">
                         <StoreSwitcher />
                     </div>
 
@@ -107,7 +107,7 @@
                     <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
                         <div class="min-w-0">
                             <p class="text-sm font-black text-slate-950">Bildirimler</p>
-                            <p class="truncate text-xs text-slate-500">Seçili mağaza: @SelectedStoreName</p>
+                            <p class="truncate text-xs text-slate-500">Aktif bayi: @SelectedStoreName</p>
                             <p class="mt-0.5 text-xs font-bold text-rose-600">@UnreadCount okunmamış</p>
                         </div>
                         <button type="button"
@@ -179,7 +179,7 @@
     private int UnreadCount { get; set; }
     private bool NotificationsOpen { get; set; }
     private string DisplayUnreadCount => UnreadCount > 99 ? "99+" : UnreadCount.ToString(CultureInfo.InvariantCulture);
-    private string SelectedStoreName => StoreState.SelectedStore?.MagazaAdi ?? "Mağaza seçilmedi";
+    private string SelectedStoreName => StoreState.SelectedStore?.MagazaAdi ?? "Bayi seçilmedi";
 
     private string UserInitials => string.Join(
             "",
@@ -201,6 +201,7 @@
     private async Task Logout()
     {
         Auth.Clear();
+        await StoreState.ClearAsync();
         await JS.InvokeVoidAsync("eMarketing.auth.clear");
         Navigation.NavigateTo("/login", true);
     }
@@ -310,7 +311,7 @@
 
     private static string StoreScopeLabel(NotificationDto notification)
     {
-        return notification.GlobalMi ? "Tüm mağazalar" : "Bu mağaza";
+        return notification.GlobalMi ? "Tüm bayiler" : "Bu bayi";
     }
 
     private static string StoreScopeClass(NotificationDto notification)

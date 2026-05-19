@@ -91,6 +91,8 @@ SELECT
     p.CategoryId AS KategoriId,
     cat.CategoryName AS KategoriAdi,
     ms.StokAdedi AS BayiStok,
+    ISNULL(toplam.ToplamBayiStok, 0) AS ToplamBayiStok,
+    ISNULL(toplam.KritikBayiSayisi, 0) AS KritikBayiSayisi,
     ms.MinimumStok,
     CASE
         WHEN ms.StokAdedi <= 0 THEN N'Tukendi'
@@ -123,7 +125,16 @@ OUTER APPLY
     FROM dbo.MagazaStokHareketleri msh
     WHERE msh.MagazaId = ms.MagazaId
       AND msh.ProductId = ms.ProductId
-) hareket;
+) hareket
+OUTER APPLY
+(
+    SELECT
+        SUM(ms2.StokAdedi) AS ToplamBayiStok,
+        SUM(CASE WHEN ms2.MinimumStok > 0 AND ms2.StokAdedi <= ms2.MinimumStok THEN 1 ELSE 0 END) AS KritikBayiSayisi
+    FROM dbo.MagazaStoklari ms2
+    WHERE ms2.ProductId = ms.ProductId
+      AND ms2.AktifMi = 1
+) toplam;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_MagazaStok_Hareket_Isle
@@ -666,6 +677,8 @@ BEGIN
         KategoriId,
         KategoriAdi,
         BayiStok,
+        ToplamBayiStok,
+        KritikBayiSayisi,
         MinimumStok,
         StokDurumu,
         AktifMi,
@@ -749,7 +762,7 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_MagazaStok_Hareket_Listele
     @MagazaId INT,
-    @ProductId INT,
+    @ProductId INT = NULL,
     @KayitSayisi INT = 25,
     @KullaniciId INT = NULL,
     @AdminMi BIT = 0
@@ -781,6 +794,7 @@ BEGIN
         msh.MagazaStokHareketId,
         msh.MagazaId,
         msh.ProductId AS UrunId,
+        p.ProductName AS UrunAdi,
         msh.HareketTipi,
         CASE
             WHEN msh.HareketTipi IN (N'SiparisTeslimGiris', N'ManuelGiris', N'DuzeltmeGiris') THEN N'Giriş'
@@ -805,10 +819,12 @@ BEGIN
         msh.Aciklama,
         msh.OlusturmaTarihi
     FROM dbo.MagazaStokHareketleri msh
+    INNER JOIN dbo.Products p
+        ON p.ProductId = msh.ProductId
     LEFT JOIN dbo.Orders o
         ON o.OrderId = msh.KaynakSiparisId
     WHERE msh.MagazaId = @MagazaId
-      AND msh.ProductId = @ProductId
+      AND (@ProductId IS NULL OR @ProductId = 0 OR msh.ProductId = @ProductId)
     ORDER BY msh.OlusturmaTarihi DESC, msh.MagazaStokHareketId DESC;
 END
 GO

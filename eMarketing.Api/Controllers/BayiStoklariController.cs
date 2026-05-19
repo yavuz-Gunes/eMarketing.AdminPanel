@@ -46,7 +46,7 @@ public sealed class BayiStoklariController : ControllerBase
 
     [HttpGet("hareketler")]
     [Authorize(Policy = "CanViewStocks")]
-    public async Task<ActionResult<IReadOnlyList<StockMovementDto>>> GetHareketler([FromQuery] int magazaId, [FromQuery] int urunId, [FromQuery] int kayitSayisi = 25, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IReadOnlyList<StockMovementDto>>> GetHareketler([FromQuery] int magazaId, [FromQuery] int urunId = 0, [FromQuery] int kayitSayisi = 25, CancellationToken cancellationToken = default)
     {
         return Ok(await _stockService.GetMovementsAsync(magazaId, urunId, kayitSayisi, cancellationToken));
     }

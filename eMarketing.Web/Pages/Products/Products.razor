@@ -1,44 +1,99 @@
 @page "/products"
+@implements IDisposable
 @inject ProductApiClient ProductsApi
 @inject CartState Cart
 @inject ActiveStoreState StoreState
 @inject StoreApiClient StoreApi
+@inject StockApiClient StockApi
+@inject AuthSession Auth
 
 <PageTitle>Ürünler - eMarketing</PageTitle>
 
 <AuthGate>
-    <section class="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <section class="space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="text-sm font-bold uppercase text-slate-500">Ürünler</p>
-                <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Ürün kataloğu</h1>
-                <p class="mt-1 text-sm text-slate-500">Aktif mağaza: @(StoreState.SelectedStore?.MagazaAdi ?? "-")</p>
+                <h1 class="mt-1 text-3xl font-black tracking-normal text-slate-950">Ürün kataloğu</h1>
+                <p class="mt-1 text-sm font-semibold text-slate-500">Tüm ürünler görünür; stok ve sepete ekleme aktif bayiye göre çalışır.</p>
             </div>
-            <a href="/cart" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-200 hover:bg-blue-700">Sepet (@Cart.Count)</a>
+            <a href="/cart" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200 hover:bg-blue-700">Sepet (@Cart.Count)</a>
         </div>
 
-        <div class="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60 lg:grid-cols-[1fr_auto]">
+        <div class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/60 lg:grid-cols-[1fr_auto]">
             <label class="relative block">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400">⌕</span>
-                <input class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 outline-none focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <AppIcon Name="search" CssClass="h-5 w-5" />
+                </span>
+                <input class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
                        @bind="Search"
                        @bind:event="oninput"
                        placeholder="Ürün, kategori veya açıklama ara" />
             </label>
-            <button class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" @onclick="LoadProductsAsync">Yenile</button>
+            <button class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700" @onclick="RefreshAsync">Yenile</button>
         </div>
+
+        @if (!StoreState.SelectedStoreId.HasValue)
+        {
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                Lütfen aktif bayi seçin. Ürünler listelenir; sepete ekleme seçili bayi stoklarına göre çalışır.
+            </div>
+        }
 
         @if (!string.IsNullOrWhiteSpace(Message))
         {
-            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">@Message</div>
+            <div class="@MessageClass">@Message</div>
         }
 
-        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            @foreach (ProductDto product in FilteredProducts)
-            {
-                <ProductCard Product="product" OnAdd="AddToCart" />
-            }
-        </div>
+        @if (TransferTarget is not null)
+        {
+            <div class="grid gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm lg:grid-cols-[1fr_auto_auto] lg:items-end">
+                <div>
+                    <p class="text-xs font-bold uppercase text-emerald-700">Merkezden Bayiye Transfer</p>
+                    <h2 class="mt-1 text-lg font-bold text-slate-950">@TransferTarget.UrunAdi</h2>
+                    <p class="mt-1 text-sm text-slate-600">Merkez: @TransferTarget.MerkezStok · Bu bayi: @TransferTarget.BayiStok</p>
+                </div>
+                <label class="block">
+                    <span class="text-xs font-bold uppercase text-slate-500">Miktar</span>
+                    <input type="number"
+                           min="1"
+                           class="mt-1 h-11 w-full rounded-xl border border-emerald-200 bg-white px-4 font-semibold outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 lg:w-32"
+                           @bind="TransferQuantity" />
+                </label>
+                <div class="flex gap-2">
+                    <button class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            disabled="@IsTransferInvalid"
+                            @onclick="TransferAsync">
+                        Transfer Et
+                    </button>
+                    <button class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50" @onclick="CancelTransfer">Vazgeç</button>
+                </div>
+            </div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500 shadow-sm">Ürünler yükleniyor...</div>
+        }
+        else if (!FilteredProducts.Any())
+        {
+            <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500 shadow-sm">Ürün bulunamadı.</div>
+        }
+        else
+        {
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                @foreach (ProductDto product in FilteredProducts)
+                {
+                    StockItemDto stock = GetDisplayStock(product);
+                    <ProductCard Product="@WithSelectedStoreStock(product, stock)"
+                                 Stock="@stock"
+                                 CentralStock="@product.Stok"
+                                 ShowAdminStock="@Auth.CanManageStock"
+                                 OnAdd="AddToCart"
+                                 OnTransfer="StartTransfer" />
+                }
+            </div>
+        }
     </section>
 </AuthGate>
 
@@ -50,28 +105,185 @@
     public int? ProductId { get; set; }
 
     private IReadOnlyList<ProductDto> ProductList { get; set; } = Array.Empty<ProductDto>();
+    private IReadOnlyDictionary<int, StockItemDto> StockByProductId { get; set; } = new Dictionary<int, StockItemDto>();
     private string Search { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
+    private bool IsError { get; set; }
+    private bool IsLoading { get; set; }
+    private StockItemDto? TransferTarget { get; set; }
+    private int TransferQuantity { get; set; } = 1;
+
+    private string MessageClass => IsError
+        ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700"
+        : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700";
+
+    private bool IsTransferInvalid => TransferTarget is null || TransferQuantity <= 0 || TransferQuantity > TransferTarget.MerkezStok;
 
     private IEnumerable<ProductDto> FilteredProducts => ProductList.Where(product =>
         (!ProductId.HasValue || product.UrunId == ProductId.Value)
+        && (!CategoryId.HasValue || product.KategoriId == CategoryId.Value)
         && (string.IsNullOrWhiteSpace(Search)
-            || $"{product.UrunAdi} {product.KategoriAdi} {product.Aciklama}".Contains(Search, StringComparison.CurrentCultureIgnoreCase)));
+            || $"{product.UrunAdi} {product.KategoriAdi} {product.Aciklama} {GetStock(product.UrunId)?.StokDurumu}".Contains(Search, StringComparison.CurrentCultureIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
+        StoreState.Changed += OnStoreChanged;
         await StoreState.LoadAsync(StoreApi);
         await LoadProductsAsync();
+        await LoadStocksAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadProductsAsync();
+        await LoadStocksAsync();
     }
 
     private async Task LoadProductsAsync()
     {
-        ProductList = await ProductsApi.GetProductsAsync(categoryId: CategoryId.GetValueOrDefault());
+        IsLoading = true;
+        Message = string.Empty;
+
+        try
+        {
+            ProductList = await ProductsApi.GetProductsAsync(categoryId: CategoryId.GetValueOrDefault());
+        }
+        catch
+        {
+            ProductList = Array.Empty<ProductDto>();
+            IsError = true;
+            Message = "Ürünler yüklenemedi. Oturumunuzu ve API bağlantısını kontrol edin.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadStocksAsync()
+    {
+        Message = string.Empty;
+
+        if (!StoreState.SelectedStoreId.HasValue)
+        {
+            StockByProductId = new Dictionary<int, StockItemDto>();
+            return;
+        }
+
+        try
+        {
+            IReadOnlyList<StockItemDto> stocks = await StockApi.GetStocksAsync(StoreState.SelectedStoreId.Value);
+            StockByProductId = stocks
+                .GroupBy(stock => stock.UrunId)
+                .ToDictionary(group => group.Key, group => group.First());
+        }
+        catch
+        {
+            StockByProductId = new Dictionary<int, StockItemDto>();
+            IsError = true;
+            Message = "Bayi stok bilgileri yüklenemedi. Aktif bayi erişimini kontrol edin.";
+        }
+    }
+
+    private StockItemDto? GetStock(int productId)
+    {
+        return StockByProductId.TryGetValue(productId, out StockItemDto? stock) ? stock : null;
+    }
+
+    private StockItemDto GetDisplayStock(ProductDto product)
+    {
+        return GetStock(product.UrunId) ?? new StockItemDto
+        {
+            UrunId = product.UrunId,
+            UrunAdi = product.UrunAdi,
+            Aciklama = product.Aciklama,
+            Fiyat = product.Fiyat,
+            KategoriId = product.KategoriId,
+            KategoriAdi = product.KategoriAdi,
+            GorselUrl = product.GorselUrl,
+            MerkezStok = product.Stok,
+            BayiStok = 0,
+            StokDurumu = "Stok Yok",
+            AktifMi = product.AktifMi,
+            OlusturmaTarihi = product.OlusturmaTarihi
+        };
     }
 
     private void AddToCart(ProductDto product)
     {
+        if (product.Stok <= 0)
+            return;
+
         Cart.Add(product);
+        IsError = false;
         Message = $"{product.UrunAdi} sepete eklendi.";
+    }
+
+    private void StartTransfer(StockItemDto stock)
+    {
+        TransferTarget = stock;
+        TransferQuantity = stock.MerkezStok > 0 ? 1 : 0;
+        Message = string.Empty;
+    }
+
+    private void CancelTransfer()
+    {
+        TransferTarget = null;
+        TransferQuantity = 1;
+    }
+
+    private async Task TransferAsync()
+    {
+        if (IsTransferInvalid || TransferTarget is null || !StoreState.SelectedStoreId.HasValue)
+        {
+            IsError = true;
+            Message = "Transfer miktarını ve aktif bayi seçimini kontrol edin.";
+            return;
+        }
+
+        try
+        {
+            await StockApi.TransferFromCentralAsync(StoreState.SelectedStoreId.Value, TransferTarget.UrunId, TransferQuantity);
+            string productName = TransferTarget.UrunAdi;
+            CancelTransfer();
+            await LoadStocksAsync();
+            IsError = false;
+            Message = $"{productName} için transfer tamamlandı. Siparişler ekranındaki Merkez transferleri bölümünden takip edebilirsiniz.";
+        }
+        catch
+        {
+            IsError = true;
+            Message = "Transfer yapılamadı. Merkez stoğu, bayi erişimi veya yetkinizi kontrol edin.";
+        }
+    }
+
+    private static ProductDto WithSelectedStoreStock(ProductDto product, StockItemDto? stock) => new()
+    {
+        UrunId = product.UrunId,
+        KategoriId = product.KategoriId,
+        KategoriAdi = product.KategoriAdi,
+        UrunAdi = product.UrunAdi,
+        Aciklama = product.Aciklama,
+        Fiyat = product.Fiyat,
+        Stok = stock?.BayiStok ?? 0,
+        GorselUrl = product.GorselUrl,
+        AktifMi = product.AktifMi,
+        StokDurumu = stock?.StokDurumu ?? "Stok Yok",
+        OlusturmaTarihi = product.OlusturmaTarihi
+    };
+
+    private async void OnStoreChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            TransferTarget = null;
+            await LoadStocksAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
     }
 }

@@ -15,13 +15,10 @@
         <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
-                    <div class="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-blue-700">
-                        <AppIcon Name="store" CssClass="h-4 w-4 shrink-0" />
-                        <span class="truncate">@(StoreState.SelectedStore?.MagazaAdi ?? "Aktif mağaza seçin")</span>
-                    </div>
+                    <ActiveStoreBadge Compact="true" />
                     <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Bugün neye bakmalısınız?</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-                        Siparişleri, kritik stokları, kampanyaları ve ekip durumunu karışmadan takip edin.
+                        Siparişleri, kritik stokları, kampanyaları ve ekip durumunu aktif bayiye göre takip edin.
                     </p>
                 </div>
 
@@ -49,11 +46,20 @@
             </div>
         }
 
+        @if (!StoreState.SelectedStoreId.HasValue)
+        {
+            <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-6 text-sm font-bold text-amber-800">
+                Lütfen aktif bayi seçin. Dashboard özetleri seçili bayiye göre yüklenir.
+            </div>
+        }
+        else
+        {
+
         <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <DashboardMetric Href="/orders" Icon="cart" Label="Açık Siparişler" Value="@OpenOrders.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Hazırlanan ve bekleyen siparişleri aç." Tone="blue" />
             <DashboardMetric Href="/orders" Icon="clock" Label="Onay Bekleyenler" Value="@Summary.BekleyenOdemeSayisi.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Kontrol bekleyen akışları gör." Tone="amber" />
             <DashboardMetric Href="/products" Icon="alert" Label="Kritik Stok" Value="@Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Riskteki ürünleri ürün listesinde incele." Tone="rose" />
-            <DashboardMetric Href="/team" Icon="users" Label="Personel" Value="@Summary.PersonelSayisi.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Mağaza ekibine ve yetkilere git." Tone="emerald" />
+            <DashboardMetric Href="/team" Icon="users" Label="Personel" Value="@Summary.PersonelSayisi.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Bayi ekibine ve yetkilere git." Tone="emerald" />
         </section>
 
         <section class="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -69,7 +75,7 @@
 
                     <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <QuickLink Href="/products" Icon="cart" Title="Yeni Sipariş" Description="Ürün seçip sepete ekleyin." />
-                        <QuickLink Href="/orders" Icon="clock" Title="Siparişler" Description="Aktif mağaza siparişlerini açın." />
+                        <QuickLink Href="/orders" Icon="clock" Title="Siparişler" Description="Aktif bayi siparişlerini açın." />
                         <QuickLink Href="/products" Icon="search" Title="Ürün Ara" Description="Parça, kategori veya açıklama ile arayın." />
                         <QuickLink Href="/team" Icon="users" Title="Ekibim" Description="Takım arkadaşlarını ve yetkileri görün." />
                     </div>
@@ -79,7 +85,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <div>
                             <h2 class="text-xl font-black text-slate-950">Son Siparişler</h2>
-                            <p class="mt-1 text-sm text-slate-500">Aktif mağazanın güncel sipariş hareketleri.</p>
+                            <p class="mt-1 text-sm text-slate-500">Aktif bayinin güncel sipariş hareketleri.</p>
                         </div>
 
                         <a href="/orders" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
@@ -92,7 +98,7 @@
                     {
                         <div class="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                             <p class="font-bold text-slate-900">Henüz sipariş yok</p>
-                            <p class="mt-1 text-sm text-slate-500">Bu mağaza için sipariş oluştuğunda burada görünecek.</p>
+                            <p class="mt-1 text-sm text-slate-500">Bu bayi için sipariş oluştuğunda burada görünecek.</p>
                         </div>
                     }
                     else
@@ -139,7 +145,7 @@
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-xl font-black text-slate-950">Ekibim</h2>
-                            <p class="mt-1 text-sm text-slate-500">Mağaza ekibi özeti</p>
+                            <p class="mt-1 text-sm text-slate-500">Bayi ekibi özeti</p>
                         </div>
                         <StatusBadge Text="@TeamCountText" Tone="slate" />
                     </div>
@@ -172,7 +178,7 @@
                     {
                         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
                             <p class="font-bold text-slate-900">Ekip bilgisi yok</p>
-                            <p class="mt-1 text-sm text-slate-500">Bu mağazaya personel eklendiğinde burada görünür.</p>
+                            <p class="mt-1 text-sm text-slate-500">Bu bayiye personel eklendiğinde burada görünür.</p>
                         </div>
                     }
                 </section>
@@ -217,7 +223,7 @@
                                 <p class="text-xs font-black uppercase tracking-[0.16em] text-rose-600">Önemli Uyarı</p>
                                 <h2 class="mt-1 text-xl font-black text-slate-950">Kritik stok var</h2>
                                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                                    Aktif mağazada @Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) ürün kritik stok seviyesinde. Öncelikle ürün listesini kontrol edin.
+                                    Aktif bayide @Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR")) ürün kritik stok seviyesinde. Öncelikle ürün listesini kontrol edin.
                                 </p>
                             </div>
                         </div>
@@ -251,6 +257,7 @@
                               Member="@SelectedMember"
                               OnClose="CloseDrawer"
                               OnChanged="LoadTeamAsync" />
+        }
         }
     </section>
 </AuthGate>
@@ -291,6 +298,13 @@
         try
         {
             Message = string.Empty;
+            if (StoreState.SelectedStoreId is not int storeId)
+            {
+                Summary = new();
+                RecentOrders = Array.Empty<DashboardRecentOrderDto>();
+                return;
+            }
+
             Summary = await DashboardApi.GetSummaryAsync(StoreState.SelectedStoreId);
             RecentOrders = await DashboardApi.GetRecentOrdersAsync(StoreState.SelectedStoreId);
         }
@@ -319,6 +333,12 @@
     {
         try
         {
+            if (!StoreState.SelectedStoreId.HasValue)
+            {
+                LatestNotifications = Array.Empty<NotificationDto>();
+                return;
+            }
+
             LatestNotifications = await NotificationApi.GetNotificationsAsync(StoreState.SelectedStoreId, false, 3);
         }
         catch

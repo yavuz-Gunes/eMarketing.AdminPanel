@@ -22,6 +22,8 @@ public sealed class StockItemDto
     public int KategoriId { get; set; }
     public string KategoriAdi { get; set; } = string.Empty;
     public int BayiStok { get; set; }
+    public int ToplamBayiStok { get; set; }
+    public int KritikBayiSayisi { get; set; }
     public int MinimumStok { get; set; }
     public string StokDurumu { get; set; } = string.Empty;
     public bool AktifMi { get; set; }
@@ -37,6 +39,7 @@ public sealed class StockMovementDto
     public int MagazaStokHareketId { get; set; }
     public int MagazaId { get; set; }
     public int UrunId { get; set; }
+    public string UrunAdi { get; set; } = string.Empty;
     public string HareketTipi { get; set; } = string.Empty;
     public string HareketYonu { get; set; } = string.Empty;
     public string HareketAciklama { get; set; } = string.Empty;

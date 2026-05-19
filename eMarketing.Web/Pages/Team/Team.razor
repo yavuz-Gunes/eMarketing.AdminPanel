@@ -12,7 +12,7 @@
                 <p class="text-sm font-bold uppercase tracking-wide text-slate-500">Ekibim</p>
                 <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Mağaza ekibi</h1>
                 <p class="mt-1 text-sm text-slate-500">
-                    Aktif mağaza: @(TeamResponse?.Context.MagazaAdi ?? StoreState.SelectedStore?.MagazaAdi ?? "-")
+                    Aktif bayi: @(TeamResponse?.Context.MagazaAdi ?? StoreState.SelectedStore?.MagazaAdi ?? "-")
                     @if (TeamResponse is not null)
                     {
                         <span class="mx-2 text-slate-300">/</span>

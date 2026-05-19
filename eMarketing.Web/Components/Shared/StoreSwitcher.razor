@@ -3,23 +3,31 @@
 
 @if (StoreState.Stores.Count == 0)
 {
-    <span class="inline-flex h-12 w-full items-center rounded-xl border border-slate-200 px-4 text-sm text-slate-500">Mağaza yok</span>
+    <ActiveStoreBadge />
 }
 else
 {
-    <label class="relative block">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600">
-            <AppIcon Name="store" CssClass="h-4 w-4" />
+    <div class="flex h-14 min-w-0 items-center gap-2.5 rounded-xl border border-emerald-200 bg-white px-3 shadow-sm"
+         title="Bu paneldeki sipariş, stok ve bildirimler seçili bayiye göre gösterilir.">
+        <span class="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]"></span>
+            Aktif Bayi
         </span>
-        <select class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-                value="@StoreState.SelectedStoreId"
-                @onchange="OnStoreChanged">
-            @foreach (StoreDto store in StoreState.Stores)
-            {
-                <option value="@store.MagazaId">@store.MagazaAdi</option>
-            }
-        </select>
-    </label>
+
+        <label class="relative min-w-0 flex-1">
+            <select class="h-10 w-full min-w-0 appearance-none rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm font-black text-slate-950 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                    value="@StoreState.SelectedStoreId"
+                    @onchange="OnStoreChanged">
+                @foreach (StoreDto store in StoreState.Stores)
+                {
+                    <option value="@store.MagazaId">@store.MagazaAdi</option>
+                }
+            </select>
+            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                <AppIcon Name="chevron-down" CssClass="h-4 w-4" />
+            </span>
+        </label>
+    </div>
 }
 
 @code {
@@ -29,9 +37,9 @@ else
             await StoreState.LoadAsync(Stores);
     }
 
-    private void OnStoreChanged(ChangeEventArgs args)
+    private async Task OnStoreChanged(ChangeEventArgs args)
     {
         if (int.TryParse(Convert.ToString(args.Value, CultureInfo.InvariantCulture), out int storeId))
-            StoreState.Select(storeId);
+            await StoreState.SelectAsync(storeId);
     }
 }
