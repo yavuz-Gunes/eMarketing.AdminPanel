@@ -143,7 +143,7 @@ function renderAuthority() {
     box.textContent = "Mağaza seç.";
     box.classList.add("muted");
   } else if (!state.selectedAuthority) {
-    box.textContent = "Bu mağaza için aktif sipariş yetkilisi yok.";
+    box.textContent = "Bu bayi için aktif sipariş yetkilisi yok.";
     box.classList.add("muted");
   } else {
     box.textContent = `Sipariş Yetkilisi: ${state.selectedAuthority.AdSoyad}`;

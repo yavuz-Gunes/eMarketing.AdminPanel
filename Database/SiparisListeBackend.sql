@@ -92,7 +92,7 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Siparis_Listele
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1,
+    @TumMagazalar BIT = 0,
     @KullaniciId INT = NULL,
     @AdminMi BIT = 0
 AS

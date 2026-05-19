@@ -33,6 +33,7 @@ builder.Services.AddScoped<ActiveStoreState>();
 builder.Services.AddScoped<CartState>();
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<StoreApiClient>();
+builder.Services.AddScoped<DealerApiClient>();
 builder.Services.AddScoped<ProductApiClient>();
 builder.Services.AddScoped<StockApiClient>();
 builder.Services.AddScoped<OrderApiClient>();

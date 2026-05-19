@@ -1,0 +1,9 @@
+<div class="rounded-xl bg-slate-50 p-3">
+    <dt class="text-slate-500">@Label</dt>
+    <dd class="mt-1 truncate font-bold text-slate-900">@Value</dd>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+}

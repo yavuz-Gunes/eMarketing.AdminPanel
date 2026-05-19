@@ -21,7 +21,7 @@ public sealed class SiparislerController : ControllerBase
     [Authorize(Policy = "CanViewOrders")]
     public async Task<ActionResult<IReadOnlyList<OrderDto>>> Get(
         [FromQuery] int? magazaId = null,
-        [FromQuery] bool tumMagazalar = true,
+        [FromQuery] bool tumMagazalar = false,
         CancellationToken cancellationToken = default)
     {
         return Ok(await _orderService.GetOrdersAsync(magazaId, tumMagazalar, cancellationToken));
@@ -31,7 +31,7 @@ public sealed class SiparislerController : ControllerBase
     [Authorize(Policy = "CanViewOrders")]
     public async Task<ActionResult<Dictionary<string, object>>> GetSummary(
         [FromQuery] int? magazaId = null,
-        [FromQuery] bool tumMagazalar = true,
+        [FromQuery] bool tumMagazalar = false,
         CancellationToken cancellationToken = default)
     {
         return Ok(await _orderService.GetOrderSummaryAsync(magazaId, tumMagazalar, cancellationToken));

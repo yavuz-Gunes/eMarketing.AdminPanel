@@ -408,11 +408,26 @@
   .mt-8 {
     margin-top: calc(var(--spacing) * 8);
   }
+  .mb-3 {
+    margin-bottom: calc(var(--spacing) * 3);
+  }
   .mb-4 {
     margin-bottom: calc(var(--spacing) * 4);
   }
+  .mb-5 {
+    margin-bottom: calc(var(--spacing) * 5);
+  }
+  .ml-1 {
+    margin-left: calc(var(--spacing) * 1);
+  }
   .ml-auto {
     margin-left: auto;
+  }
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
   }
   .line-clamp-2 {
     overflow: hidden;
@@ -449,6 +464,9 @@
   }
   .h-2\.5 {
     height: calc(var(--spacing) * 2.5);
+  }
+  .h-3\.5 {
+    height: calc(var(--spacing) * 3.5);
   }
   .h-4 {
     height: calc(var(--spacing) * 4);
@@ -551,6 +569,9 @@
   }
   .w-2\/3 {
     width: calc(2 / 3 * 100%);
+  }
+  .w-3\.5 {
+    width: calc(var(--spacing) * 3.5);
   }
   .w-3\/4 {
     width: calc(3 / 4 * 100%);
@@ -697,9 +718,6 @@
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .grid-cols-\[2\.25rem_minmax\(0\,1fr\)_auto\] {
-    grid-template-columns: 2.25rem minmax(0,1fr) auto;
-  }
   .grid-cols-\[3rem_minmax\(0\,1fr\)_5rem_7rem\] {
     grid-template-columns: 3rem minmax(0,1fr) 5rem 7rem;
   }
@@ -729,6 +747,9 @@
   }
   .justify-end {
     justify-content: flex-end;
+  }
+  .justify-start {
+    justify-content: flex-start;
   }
   .gap-1 {
     gap: calc(var(--spacing) * 1);
@@ -883,6 +904,10 @@
     border-left-style: var(--tw-border-style);
     border-left-width: 1px;
   }
+  .border-l-4 {
+    border-left-style: var(--tw-border-style);
+    border-left-width: 4px;
+  }
   .border-dashed {
     --tw-border-style: dashed;
     border-style: dashed;
@@ -902,6 +927,9 @@
   .border-emerald-200 {
     border-color: var(--color-emerald-200);
   }
+  .border-rose-100 {
+    border-color: var(--color-rose-100);
+  }
   .border-rose-200 {
     border-color: var(--color-rose-200);
   }
@@ -913,6 +941,9 @@
   }
   .border-slate-300 {
     border-color: var(--color-slate-300);
+  }
+  .border-transparent {
+    border-color: transparent;
   }
   .border-white\/10 {
     border-color: color-mix(in srgb, #fff 10%, transparent);
@@ -932,6 +963,12 @@
   .bg-amber-50 {
     background-color: var(--color-amber-50);
   }
+  .bg-amber-50\/80 {
+    background-color: color-mix(in srgb, oklch(98.7% 0.022 95.277) 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-amber-50) 80%, transparent);
+    }
+  }
   .bg-amber-100 {
     background-color: var(--color-amber-100);
   }
@@ -947,10 +984,22 @@
       background-color: color-mix(in oklab, var(--color-blue-50) 40%, transparent);
     }
   }
+  .bg-blue-50\/60 {
+    background-color: color-mix(in srgb, oklch(97% 0.014 254.604) 60%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-blue-50) 60%, transparent);
+    }
+  }
   .bg-blue-50\/70 {
     background-color: color-mix(in srgb, oklch(97% 0.014 254.604) 70%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-blue-50) 70%, transparent);
+    }
+  }
+  .bg-blue-50\/80 {
+    background-color: color-mix(in srgb, oklch(97% 0.014 254.604) 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-blue-50) 80%, transparent);
     }
   }
   .bg-blue-100 {
@@ -961,6 +1010,12 @@
   }
   .bg-emerald-50 {
     background-color: var(--color-emerald-50);
+  }
+  .bg-emerald-50\/80 {
+    background-color: color-mix(in srgb, oklch(97.9% 0.021 166.113) 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-emerald-50) 80%, transparent);
+    }
   }
   .bg-emerald-100 {
     background-color: var(--color-emerald-100);
@@ -995,6 +1050,12 @@
   .bg-rose-50 {
     background-color: var(--color-rose-50);
   }
+  .bg-rose-50\/40 {
+    background-color: color-mix(in srgb, oklch(96.9% 0.015 12.422) 40%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-rose-50) 40%, transparent);
+    }
+  }
   .bg-rose-100 {
     background-color: var(--color-rose-100);
   }
@@ -1011,6 +1072,12 @@
     background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 60%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-slate-50) 60%, transparent);
+    }
+  }
+  .bg-slate-50\/70 {
+    background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 70%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-slate-50) 70%, transparent);
     }
   }
   .bg-slate-100 {
@@ -1054,6 +1121,12 @@
   }
   .bg-violet-50 {
     background-color: var(--color-violet-50);
+  }
+  .bg-violet-50\/80 {
+    background-color: color-mix(in srgb, oklch(96.9% 0.016 293.756) 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-violet-50) 80%, transparent);
+    }
   }
   .bg-violet-100 {
     background-color: var(--color-violet-100);
@@ -1453,6 +1526,9 @@
   }
   .accent-blue-600 {
     accent-color: var(--color-blue-600);
+  }
+  .opacity-80 {
+    opacity: 80%;
   }
   .shadow-2xl {
     --tw-shadow: 0 25px 50px -12px var(--tw-shadow-color, rgb(0 0 0 / 0.25));
@@ -2094,6 +2170,11 @@
       line-height: var(--tw-leading, var(--text-base--line-height));
     }
   }
+  .md\:col-span-2 {
+    @media (width >= 48rem) {
+      grid-column: span 2 / span 2;
+    }
+  }
   .md\:block {
     @media (width >= 48rem) {
       display: block;
@@ -2169,6 +2250,11 @@
       grid-template-columns: 1.1fr 0.9fr;
     }
   }
+  .lg\:grid-cols-\[1fr_170px_auto\] {
+    @media (width >= 64rem) {
+      grid-template-columns: 1fr 170px auto;
+    }
+  }
   .lg\:grid-cols-\[1fr_220px\] {
     @media (width >= 64rem) {
       grid-template-columns: 1fr 220px;
@@ -2202,6 +2288,11 @@
   .lg\:grid-cols-\[minmax\(0\,1fr\)_15rem\] {
     @media (width >= 64rem) {
       grid-template-columns: minmax(0,1fr) 15rem;
+    }
+  }
+  .lg\:grid-cols-\[minmax\(260px\,1fr\)_520px_auto\] {
+    @media (width >= 64rem) {
+      grid-template-columns: minmax(260px,1fr) 520px auto;
     }
   }
   .lg\:flex-col {
@@ -2252,6 +2343,11 @@
   .lg\:pl-64 {
     @media (width >= 64rem) {
       padding-left: calc(var(--spacing) * 64);
+    }
+  }
+  .xl\:col-span-3 {
+    @media (width >= 80rem) {
+      grid-column: span 3 / span 3;
     }
   }
   .xl\:block {

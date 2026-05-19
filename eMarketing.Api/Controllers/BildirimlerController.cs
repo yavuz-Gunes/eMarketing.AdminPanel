@@ -50,7 +50,7 @@ public sealed class BildirimlerController : ControllerBase
 
     [HttpPost("sistem-kontrol")]
     [Authorize(Policy = "CanManageNotifications")]
-    public async Task<IActionResult> GenerateSystem([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GenerateSystem([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = false, CancellationToken cancellationToken = default)
     {
         await _notificationService.GenerateSystemNotificationsAsync(magazaId, tumMagazalar, cancellationToken);
         return NoContent();

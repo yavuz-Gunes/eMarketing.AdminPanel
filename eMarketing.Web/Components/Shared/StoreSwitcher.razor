@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject ActiveStoreState StoreState
 @inject StoreApiClient Stores
 
@@ -7,15 +8,16 @@
 }
 else
 {
-    <div class="flex h-14 min-w-0 items-center gap-2.5 rounded-xl border border-emerald-200 bg-white px-3 shadow-sm"
+    <div class="flex h-12 min-w-0 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 shadow-sm"
          title="Bu paneldeki sipariş, stok ve bildirimler seçili bayiye göre gösterilir.">
-        <span class="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
+        <span class="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-black uppercase tracking-wide text-emerald-700">
             <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]"></span>
             Aktif Bayi
         </span>
 
         <label class="relative min-w-0 flex-1">
-            <select class="h-10 w-full min-w-0 appearance-none rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm font-black text-slate-950 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+            <select @key="StoreState.SelectedStoreId"
+                    class="h-9 w-full min-w-0 appearance-none rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-8 text-sm font-black text-slate-950 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
                     value="@StoreState.SelectedStoreId"
                     @onchange="OnStoreChanged">
                 @foreach (StoreDto store in StoreState.Stores)
@@ -33,6 +35,8 @@ else
 @code {
     protected override async Task OnInitializedAsync()
     {
+        StoreState.Changed += OnActiveStoreChanged;
+
         if (StoreState.Stores.Count == 0)
             await StoreState.LoadAsync(Stores);
     }
@@ -41,5 +45,15 @@ else
     {
         if (int.TryParse(Convert.ToString(args.Value, CultureInfo.InvariantCulture), out int storeId))
             await StoreState.SelectAsync(storeId);
+    }
+
+    private async void OnActiveStoreChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnActiveStoreChanged;
     }
 }

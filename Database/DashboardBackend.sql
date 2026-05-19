@@ -1,6 +1,6 @@
 CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_Ozet_Getir
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1,
+    @TumMagazalar BIT = 0,
     @KullaniciId INT = NULL,
     @AdminMi BIT = 0
 AS
@@ -107,7 +107,7 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_Dashboard_KritikStok_Getir
     @MagazaId INT = NULL,
-    @TumMagazalar BIT = 1,
+    @TumMagazalar BIT = 0,
     @KullaniciId INT = NULL,
     @AdminMi BIT = 0
 AS

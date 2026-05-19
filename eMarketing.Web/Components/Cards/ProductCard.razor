@@ -33,9 +33,19 @@
 
             @if (ShowAdminStock)
             {
-                <div class="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-xs font-bold text-slate-500">
-                    <span>Merkez stok</span>
-                    <span class="text-slate-800">@DisplayCentralStock adet</span>
+                <div class="mt-2 grid grid-cols-3 gap-2 border-t border-slate-200 pt-2 text-center">
+                    <span class="rounded-md bg-white px-2 py-1">
+                        <span class="block text-[10px] font-black uppercase text-slate-400">Merkez</span>
+                        <span class="block text-xs font-black text-slate-900">@DisplayCentralStock</span>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1">
+                        <span class="block text-[10px] font-black uppercase text-slate-400">Toplam bayi</span>
+                        <span class="block text-xs font-black text-slate-900">@TotalStoreStock</span>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1">
+                        <span class="block text-[10px] font-black uppercase text-slate-400">Kritik bayi</span>
+                        <span class="block text-xs font-black text-rose-600">@CriticalStoreCount</span>
+                    </span>
                 </div>
             }
         </div>
@@ -77,6 +87,8 @@
     private string Initials => string.Join("", Product.UrunAdi.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
     private int AvailableStock => Stock?.BayiStok ?? 0;
     private int DisplayCentralStock => Stock?.MerkezStok ?? CentralStock;
+    private int TotalStoreStock => Stock?.ToplamBayiStok ?? 0;
+    private int CriticalStoreCount => Stock?.KritikBayiSayisi ?? 0;
     private string StockStatusText => AvailableStock > 0 ? "Seçili bayide satışa hazır" : "Seçili bayide stok yok";
     private string StockTone => AvailableStock <= 0 ? "font-black text-rose-600" : "font-black text-emerald-600";
 }

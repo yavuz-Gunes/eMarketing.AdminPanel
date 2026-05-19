@@ -39,7 +39,7 @@ public sealed class BayiStoklariController : ControllerBase
 
     [HttpGet("ozet")]
     [Authorize(Policy = "CanViewStocks")]
-    public async Task<ActionResult<StockSummaryDto>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = true, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<StockSummaryDto>> GetOzet([FromQuery] int? magazaId = null, [FromQuery] bool tumMagazalar = false, CancellationToken cancellationToken = default)
     {
         return Ok(await _stockService.GetSummaryAsync(magazaId, tumMagazalar, cancellationToken));
     }

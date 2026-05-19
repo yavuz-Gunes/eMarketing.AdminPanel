@@ -1,0 +1,19 @@
+<label class="block">
+    <span class="text-xs font-black uppercase text-slate-500">@Label</span>
+    <input class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+           value="@Value"
+           @oninput="OnInput"
+           placeholder="@Placeholder" />
+</label>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Placeholder { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private Task OnInput(ChangeEventArgs args)
+    {
+        return ValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+}

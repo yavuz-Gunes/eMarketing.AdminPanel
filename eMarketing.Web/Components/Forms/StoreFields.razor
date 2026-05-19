@@ -1,0 +1,20 @@
+<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <TextField Label="Mağaza adı" @bind-Value="Model.StoreName" />
+    <TextField Label="Şehir" @bind-Value="Model.City" />
+    <TextField Label="İlçe" @bind-Value="Model.District" />
+    <TextField Label="Telefon" @bind-Value="Model.Phone" />
+    <TextField Label="Sorumlu kişi" @bind-Value="Model.ResponsiblePerson" />
+    <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="Model.IsActive" />
+        Aktif mağaza
+    </label>
+    <label class="md:col-span-2 xl:col-span-3">
+        <span class="text-xs font-black uppercase text-slate-500">Adres</span>
+        <textarea class="mt-1 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                  @bind="Model.Address"></textarea>
+    </label>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DealerStoreSaveRequest Model { get; set; } = new();
+}

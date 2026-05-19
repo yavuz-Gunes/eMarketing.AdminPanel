@@ -13,6 +13,7 @@ public sealed class AuthSession
     public DateTime ExpiresAt { get; private set; }
     public KullaniciDto? User { get; private set; }
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(Token) && ExpiresAt > DateTime.UtcNow;
+    public bool IsAdmin => IsAuthenticated && string.Equals(User?.Rol, "Admin", StringComparison.OrdinalIgnoreCase);
     public bool CanManageCampaigns =>
         IsAuthenticated &&
         (string.Equals(User?.Rol, "Admin", StringComparison.OrdinalIgnoreCase) ||
@@ -22,6 +23,10 @@ public sealed class AuthSession
 
     public bool CanManageNotifications => CanManageCampaigns;
     public bool CanManageStock => CanManageCampaigns;
+    public bool CanManageOrders => CanManageCampaigns;
+    public bool CanManageProducts => CanManageCampaigns;
+    public bool CanManagePersonnel => CanManageCampaigns;
+    public bool CanManageDealers => CanManageCampaigns;
 
     public event Action? Changed;
 

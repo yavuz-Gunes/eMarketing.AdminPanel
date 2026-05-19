@@ -1,0 +1,36 @@
+<span class="@ContainerClass">
+    <span class="@IconClass">
+        <AppIcon Name="@Icon" CssClass="h-4 w-4" />
+    </span>
+    <span class="min-w-0">
+        <span class="block font-black uppercase text-slate-400">@Label</span>
+        <span class="block truncate font-bold text-slate-700">@Value</span>
+    </span>
+</span>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "circle";
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public string Tone { get; set; } = "slate";
+
+    private string ContainerClass => $"flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 {ToneClass}";
+
+    private string IconClass => $"inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {IconToneClass}";
+
+    private string ToneClass => Tone switch
+    {
+        "blue" => "bg-blue-50",
+        "emerald" => "bg-emerald-50",
+        "amber" => "bg-amber-50",
+        _ => "bg-white"
+    };
+
+    private string IconToneClass => Tone switch
+    {
+        "blue" => "bg-blue-100 text-blue-700",
+        "emerald" => "bg-emerald-100 text-emerald-700",
+        "amber" => "bg-amber-100 text-amber-700",
+        _ => "bg-slate-100 text-slate-600"
+    };
+}

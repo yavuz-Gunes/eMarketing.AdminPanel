@@ -1,84 +1,696 @@
 @page "/stores"
 @inject ActiveStoreState StoreState
 @inject StoreApiClient StoreApi
+@inject DealerApiClient DealerApi
+@inject AuthSession Auth
 
-<PageTitle>Mağazalar - eMarketing</PageTitle>
+<PageTitle>Bayiler - eMarketing</PageTitle>
 
 <AuthGate>
-    <section class="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div>
-            <p class="text-sm font-bold uppercase text-slate-500">Mağaza Seçimi</p>
-            <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Bağlı mağazalarım</h1>
-            <p class="mt-1 text-sm text-slate-500">Yalnızca aktif bağlı olduğunuz mağazalar gösterilir.</p>
+    <section class="space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <p class="text-sm font-black uppercase tracking-wide text-slate-500">Bayi Yönetimi</p>
+                <h1 class="mt-1 text-3xl font-black tracking-normal text-slate-950">Bayiler ve mağazalar</h1>
+                <p class="mt-1 text-sm text-slate-500">Bayi seçimi sipariş, stok, bildirim ve ekip kapsamını belirler.</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <ActiveStoreBadge Compact="true" />
+                @if (Auth.IsAdmin)
+                {
+                    <button class="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
+                            @onclick="OpenNewDealer">
+                        <AppIcon Name="plus" CssClass="h-4 w-4" />
+                        Yeni Bayi
+                    </button>
+                }
+            </div>
         </div>
 
         @if (!string.IsNullOrWhiteSpace(Message))
         {
-            <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
+            <div class="@MessageClass">@Message</div>
         }
 
-        <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            @foreach (StoreDto store in StoreState.Stores)
-            {
-                <button class="@StoreClass(store)" @onclick="() => SelectStoreAsync(store.MagazaId)">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-950">@store.MagazaAdi</h2>
-                            <p class="mt-1 text-sm text-slate-500">@store.MusteriAdi</p>
-                        </div>
-                        @if (StoreState.SelectedStoreId == store.MagazaId)
-                        {
-                            <StatusBadge Text="Aktif" Tone="success" />
-                        }
-                    </div>
-                    <dl class="mt-6 grid grid-cols-2 gap-4 text-sm">
-                        <div class="rounded-xl bg-slate-50 p-3">
-                            <dt class="text-slate-500">Şehir</dt>
-                            <dd class="mt-1 font-bold text-slate-900">@store.Sehir</dd>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 p-3">
-                            <dt class="text-slate-500">Personel</dt>
-                            <dd class="mt-1 font-bold text-slate-900">@store.PersonelSayisi</dd>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 p-3">
-                            <dt class="text-slate-500">Sipariş yetkilisi</dt>
-                            <dd class="mt-1 font-bold text-slate-900">@store.SiparisYetkilisiSayisi</dd>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 p-3">
-                            <dt class="text-slate-500">Ciro</dt>
-                            <dd class="mt-1 font-bold text-slate-900">@store.ToplamCiro.ToString("C0", CultureInfo.GetCultureInfo("tr-TR"))</dd>
-                        </div>
-                    </dl>
+        @if (Auth.IsAdmin)
+        {
+            <section class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[1fr_170px_auto]">
+                <label class="relative block">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <AppIcon Name="search" CssClass="h-5 w-5" />
+                    </span>
+                    <input class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                           @bind="Search"
+                           @bind:event="oninput"
+                           placeholder="Bayi, firma, yetkili veya telefon ara" />
+                </label>
+
+                <select class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                        @bind="StatusFilter">
+                    <option value="-1">Tüm durumlar</option>
+                    <option value="1">Aktif</option>
+                    <option value="0">Pasif</option>
+                </select>
+
+                <button class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                        @onclick="LoadDealersAsync">
+                    Yenile
                 </button>
-            }
-        </div>
+            </section>
+        }
+
+        @if (Auth.IsAdmin)
+        {
+            <section class="space-y-3">
+                @if (Loading)
+                {
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500">Bayiler yükleniyor...</div>
+                }
+                else if (!FilteredDealers.Any())
+                {
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500">Bayi bulunamadı.</div>
+                }
+                else
+                {
+                    @foreach (DealerDetailDto dealer in FilteredDealers)
+                    {
+                        IReadOnlyList<DealerStoreDto> stores = StoresFor(dealer.CustomerId);
+                        bool expanded = ExpandedDealerId == dealer.CustomerId;
+
+                        <article class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <div class="@DealerRowClass(stores)"
+                                 role="button"
+                                 tabindex="0"
+                                 title="Mağazaları aç veya kapat"
+                                 @onclick="() => ToggleDealerExpanded(dealer.CustomerId)">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h2 class="truncate text-lg font-black text-slate-950">@DealerName(dealer)</h2>
+                                        <StatusBadge Text="@(dealer.IsActive ? "Aktif" : "Pasif")" Tone="@(dealer.IsActive ? "success" : "danger")" />
+                                        <span class="rounded-lg bg-slate-100 px-2 py-1 text-xs font-black text-slate-600">
+                                            @stores.Count.ToString("N0", Tr) mağaza
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                                        <InfoPill Icon="user" Label="Yetkili" Value="@EmptyText(dealer.AuthorizedPerson)" Tone="blue" />
+                                        <InfoPill Icon="phone" Label="Telefon" Value="@EmptyText(dealer.Phone)" Tone="emerald" />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <MiniMetric Label="Mağaza" Value="@dealer.StoreCount.ToString("N0", Tr)" Icon="store" Tone="blue" />
+                                    <MiniMetric Label="Sipariş" Value="@dealer.OrderCount.ToString("N0", Tr)" Icon="cart" Tone="violet" />
+                                    <MiniMetric Label="Ciro" Value="@dealer.TotalRevenue.ToString("C0", Tr)" Icon="chart" Tone="emerald" />
+                                    <MiniMetric Label="Tip" Value="@EmptyText(dealer.CustomerType)" Icon="briefcase" Tone="amber" />
+                                </div>
+
+                                <div class="flex flex-wrap justify-start gap-2 lg:justify-end" @onclick:stopPropagation="true">
+                                    <button class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-white"
+                                            @onclick="() => OpenEditDealer(dealer)">
+                                        Düzenle
+                                    </button>
+                                    <button class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-white"
+                                            @onclick="() => OpenNewStore(dealer.CustomerId)">
+                                        Mağaza Ekle
+                                    </button>
+                                    <button class="@StatusButtonClass(dealer.IsActive)"
+                                            @onclick="() => ToggleDealerStatusAsync(dealer)">
+                                        @(dealer.IsActive ? "Pasife Al" : "Aktif Yap")
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (expanded)
+                            {
+                                <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <p class="text-xs font-black uppercase tracking-wide text-slate-500">
+                                            Bu bayide @stores.Count.ToString("N0", Tr) mağaza
+                                        </p>
+                                        <p class="text-xs font-bold text-slate-500">
+                                            Mağaza kartına tıklayınca aktif bayi değişir.
+                                        </p>
+                                    </div>
+
+                                    @if (stores.Count == 0)
+                                    {
+                                        <div class="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm font-bold text-slate-500">
+                                            Bu bayiye bağlı mağaza bulunamadı.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                            @foreach (DealerStoreDto store in stores)
+                                            {
+                                                <div class="@DealerStoreClass(store)"
+                                                     role="button"
+                                                     tabindex="0"
+                                                     title="Aktif bayi olarak seç"
+                                                     @onclick="() => SelectStoreAsync(store.CustomerStoreId)">
+                                                    <div class="flex items-start justify-between gap-3">
+                                                        <div class="min-w-0">
+                                                            <h3 class="truncate text-sm font-black text-slate-950">@store.StoreName</h3>
+                                                            <p class="mt-1 truncate text-xs font-bold text-slate-500">@store.City / @store.District</p>
+                                                        </div>
+                                                        <StatusBadge Text="@(store.IsActive ? "Aktif" : "Pasif")" Tone="@(store.IsActive ? "success" : "danger")" />
+                                                    </div>
+
+                                                    <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                                        <InfoBlock Icon="phone" Label="Telefon" Value="@EmptyText(store.Phone)" Tone="emerald" />
+                                                        <InfoBlock Icon="user" Label="Sorumlu" Value="@EmptyText(store.ResponsiblePerson)" Tone="blue" />
+                                                    </div>
+
+                                                    <p class="mt-3 line-clamp-1 text-xs text-slate-500">@EmptyText(store.Address)</p>
+
+                                                    <div class="mt-3 flex flex-wrap gap-2" @onclick:stopPropagation="true">
+                                                        <button class="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100"
+                                                                @onclick="() => SelectStoreAsync(store.CustomerStoreId)">
+                                                            Aktif Bayi Yap
+                                                        </button>
+                                                        <button class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                                                                @onclick="() => OpenEditStore(store)">
+                                                            Düzenle
+                                                        </button>
+                                                        <button class="@StatusButtonClass(store.IsActive)"
+                                                                @onclick="() => ToggleStoreStatusAsync(store)">
+                                                            @(store.IsActive ? "Pasife Al" : "Aktif Yap")
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </article>
+                    }
+                }
+            </section>
+        }
+        else
+        {
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach (StoreDto store in StoreState.Stores)
+                {
+                    <article class="@StoreClass(store)" role="button" tabindex="0" @onclick="() => SelectStoreAsync(store.MagazaId)">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 class="truncate text-lg font-bold text-slate-950">@store.MagazaAdi</h2>
+                                <p class="mt-1 truncate text-sm text-slate-500">@store.MusteriAdi</p>
+                            </div>
+                            @if (StoreState.SelectedStoreId == store.MagazaId)
+                            {
+                                <StatusBadge Text="Aktif Bayi" Tone="success" />
+                            }
+                        </div>
+
+                        <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <StoreStat Label="Şehir" Value="@store.Sehir" />
+                            <StoreStat Label="Personel" Value="@store.PersonelSayisi.ToString("N0", Tr)" />
+                            <StoreStat Label="Sipariş yetkilisi" Value="@store.SiparisYetkilisiSayisi.ToString("N0", Tr)" />
+                            <StoreStat Label="Ciro" Value="@store.ToplamCiro.ToString("C0", Tr)" />
+                        </dl>
+
+                        @if (Auth.CanManageDealers)
+                        {
+                            <div class="mt-4 flex justify-end" @onclick:stopPropagation="true">
+                                <button class="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                                        @onclick="() => OpenEditStore(store)">
+                                    Düzenle
+                                </button>
+                            </div>
+                        }
+                    </article>
+                }
+            </section>
+        }
     </section>
+
+    @if (ShowDealerForm || ShowStoreForm)
+    {
+        <div class="fixed inset-0 z-50 flex justify-end bg-slate-950/35 backdrop-blur-sm" @onclick="CloseForms">
+            <aside class="flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl" @onclick:stopPropagation="true">
+                <div class="border-b border-slate-100 p-5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-wide text-blue-700">Web Admin</p>
+                            <h2 class="mt-1 text-2xl font-black text-slate-950">@DrawerTitle</h2>
+                            <p class="mt-1 text-sm text-slate-500">@DrawerDescription</p>
+                        </div>
+                        <button class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50"
+                                @onclick="CloseForms">
+                            <AppIcon Name="x" CssClass="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                                <AppIcon Name="@(ShowDealerForm ? "briefcase" : "store")" CssClass="h-4 w-4" />
+                            </span>
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-black text-slate-950">@DrawerContextTitle</p>
+                                <p class="truncate text-xs font-bold text-slate-500">@DrawerContextSubtitle</p>
+                            </div>
+                            <StatusBadge Text="@(CurrentFormActive ? "Aktif" : "Pasif")" Tone="@(CurrentFormActive ? "success" : "danger")" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-5">
+                    @if (ShowDealerForm)
+                    {
+                        <FormSection Title="Kimlik">
+                            <TextField Label="Bayi/Firma adı" @bind-Value="DealerForm.FullName" />
+                            <TextField Label="Ticari ünvan" @bind-Value="DealerForm.CompanyName" />
+                        </FormSection>
+
+                        <FormSection Title="İletişim">
+                            <TextField Label="Yetkili kişi" @bind-Value="DealerForm.AuthorizedPerson" />
+                            <TextField Label="Telefon" @bind-Value="DealerForm.Phone" />
+                            <TextField Label="E-posta" @bind-Value="DealerForm.Email" />
+                            <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+                                <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="DealerForm.IsActive" />
+                                Aktif bayi
+                            </label>
+                        </FormSection>
+
+                        <FormSection Title="Vergi">
+                            <TextField Label="Vergi no" @bind-Value="DealerForm.TaxNumber" />
+                            <TextField Label="Vergi dairesi" @bind-Value="DealerForm.TaxOffice" />
+                        </FormSection>
+
+                        <FormSection Title="Adres">
+                            <label class="md:col-span-2">
+                                <span class="text-xs font-black uppercase text-slate-500">Adres</span>
+                                <textarea class="mt-1 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                          @bind="DealerForm.Address"></textarea>
+                            </label>
+                        </FormSection>
+
+                        @if (!EditingDealerId.HasValue)
+                        {
+                            <div class="mt-5 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                                <label class="mb-3 flex items-center gap-2 text-sm font-black text-slate-800">
+                                    <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="CreateInitialStore" />
+                                    Bu bayi için ilk mağazayı da oluştur
+                                </label>
+                                @if (CreateInitialStore)
+                                {
+                                    <StoreFields Model="StoreForm" />
+                                }
+                            </div>
+                        }
+                    }
+                    else if (ShowStoreForm)
+                    {
+                        @if (!EditingStoreId.HasValue && Auth.IsAdmin)
+                        {
+                            <label class="mb-5 block">
+                                <span class="text-xs font-black uppercase text-slate-500">Bayi</span>
+                                <select class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                        @bind="StoreFormCustomerId">
+                                    @foreach (DealerDetailDto dealer in Dealers)
+                                    {
+                                        <option value="@dealer.CustomerId">@DealerName(dealer)</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+
+                        <FormSection Title="Mağaza Bilgileri">
+                            <StoreFields Model="StoreForm" />
+                        </FormSection>
+                    }
+                </div>
+
+                <div class="flex justify-end gap-2 border-t border-slate-100 bg-white p-4">
+                    <button class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50" @onclick="CloseForms">Vazgeç</button>
+                    <button class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            disabled="@Saving"
+                            @onclick="SaveCurrentFormAsync">
+                        Kaydet
+                    </button>
+                </div>
+            </aside>
+        </div>
+    }
 </AuthGate>
 
 @code {
+    private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
+
+    private IReadOnlyList<DealerDetailDto> Dealers { get; set; } = Array.Empty<DealerDetailDto>();
+    private Dictionary<int, IReadOnlyList<DealerStoreDto>> DealerStores { get; set; } = new();
+    private string Search { get; set; } = string.Empty;
+    private int StatusFilter { get; set; } = -1;
     private string Message { get; set; } = string.Empty;
+    private bool IsError { get; set; }
+    private bool Loading { get; set; }
+    private bool Saving { get; set; }
+    private bool ShowDealerForm { get; set; }
+    private bool ShowStoreForm { get; set; }
+    private bool CreateInitialStore { get; set; } = true;
+    private int? EditingDealerId { get; set; }
+    private int? EditingStoreId { get; set; }
+    private int? ExpandedDealerId { get; set; }
+    private int StoreFormCustomerId { get; set; }
+    private DealerSaveRequest DealerForm { get; set; } = NewDealerForm();
+    private DealerStoreSaveRequest StoreForm { get; set; } = NewStoreForm();
+
+    private string MessageClass => IsError
+        ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700"
+        : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700";
+
+    private string DrawerTitle => ShowDealerForm
+        ? (EditingDealerId.HasValue ? "Bayi düzenle" : "Yeni bayi")
+        : (EditingStoreId.HasValue ? "Mağaza düzenle" : "Yeni mağaza");
+
+    private string DrawerDescription => ShowDealerForm
+        ? "Bayi ana bilgilerini ve gerekiyorsa ilk mağaza bilgisini yönetin."
+        : "Seçili bayi kapsamındaki mağaza bilgilerini yönetin.";
+
+    private string DrawerContextTitle => ShowDealerForm
+        ? (!string.IsNullOrWhiteSpace(DealerForm.CompanyName) ? DealerForm.CompanyName : (!string.IsNullOrWhiteSpace(DealerForm.FullName) ? DealerForm.FullName : "Yeni bayi"))
+        : (!string.IsNullOrWhiteSpace(StoreForm.StoreName) ? StoreForm.StoreName : "Yeni mağaza");
+
+    private string DrawerContextSubtitle => ShowDealerForm
+        ? $"{EmptyText(DealerForm.AuthorizedPerson)} · {EmptyText(DealerForm.Phone)}"
+        : $"{DealerNameById(StoreFormCustomerId)} · {EmptyText(StoreForm.City)} / {EmptyText(StoreForm.District)}";
+
+    private bool CurrentFormActive => ShowDealerForm ? DealerForm.IsActive : StoreForm.IsActive;
+
+    private IEnumerable<DealerDetailDto> FilteredDealers => Dealers
+        .Where(dealer => StatusFilter < 0 || dealer.IsActive == (StatusFilter == 1))
+        .Where(dealer => string.IsNullOrWhiteSpace(Search)
+            || $"{dealer.FullName} {dealer.CompanyName} {dealer.AuthorizedPerson} {dealer.Phone} {dealer.Email}".Contains(Search, StringComparison.CurrentCultureIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
+        await StoreState.LoadAsync(StoreApi);
+        if (Auth.IsAdmin)
+            await LoadDealersAsync();
+    }
+
+    private async Task LoadDealersAsync()
+    {
+        if (!Auth.IsAdmin)
+            return;
+
         try
         {
-            await StoreState.LoadAsync(StoreApi);
+            Loading = true;
+            Message = string.Empty;
+            Dealers = await DealerApi.GetDealersAsync(Search, -1);
+            DealerStores = new Dictionary<int, IReadOnlyList<DealerStoreDto>>();
+
+            foreach (DealerDetailDto dealer in Dealers)
+                DealerStores[dealer.CustomerId] = await DealerApi.GetDealerStoresAsync(dealer.CustomerId);
         }
         catch (Exception ex)
         {
+            IsError = true;
             Message = ex.Message;
         }
+        finally
+        {
+            Loading = false;
+        }
+    }
+
+    private IReadOnlyList<DealerStoreDto> StoresFor(int customerId)
+    {
+        return DealerStores.TryGetValue(customerId, out IReadOnlyList<DealerStoreDto>? stores)
+            ? stores
+            : Array.Empty<DealerStoreDto>();
+    }
+
+    private void ToggleDealerExpanded(int dealerId)
+    {
+        ExpandedDealerId = ExpandedDealerId == dealerId ? null : dealerId;
+    }
+
+    private async Task SelectStoreAsync(int storeId)
+    {
+        if (!StoreState.Stores.Any(store => store.MagazaId == storeId))
+            await StoreState.LoadAsync(StoreApi);
+
+        await StoreState.SelectAsync(storeId);
+        IsError = false;
+        Message = "Aktif bayi güncellendi.";
+    }
+
+    private void OpenNewDealer()
+    {
+        CloseForms();
+        DealerForm = NewDealerForm();
+        StoreForm = NewStoreForm();
+        EditingDealerId = null;
+        CreateInitialStore = true;
+        ShowDealerForm = true;
+    }
+
+    private void OpenEditDealer(DealerDetailDto dealer)
+    {
+        CloseForms();
+        EditingDealerId = dealer.CustomerId;
+        DealerForm = new DealerSaveRequest
+        {
+            FullName = dealer.FullName,
+            CompanyName = dealer.CompanyName,
+            AuthorizedPerson = dealer.AuthorizedPerson,
+            Phone = dealer.Phone,
+            Email = dealer.Email,
+            TaxNumber = dealer.TaxNumber,
+            TaxOffice = dealer.TaxOffice,
+            Address = dealer.Address,
+            CustomerType = string.IsNullOrWhiteSpace(dealer.CustomerType) ? "Bayi" : dealer.CustomerType,
+            IsActive = dealer.IsActive
+        };
+        ShowDealerForm = true;
+    }
+
+    private void OpenNewStore(int customerId)
+    {
+        CloseForms();
+        StoreFormCustomerId = customerId;
+        StoreForm = NewStoreForm();
+        ShowStoreForm = true;
+    }
+
+    private void OpenEditStore(DealerStoreDto store)
+    {
+        CloseForms();
+        EditingStoreId = store.CustomerStoreId;
+        StoreFormCustomerId = store.CustomerId;
+        StoreForm = new DealerStoreSaveRequest
+        {
+            StoreName = store.StoreName,
+            City = store.City,
+            District = store.District,
+            Address = store.Address,
+            Phone = store.Phone,
+            ResponsiblePerson = store.ResponsiblePerson,
+            IsActive = store.IsActive
+        };
+        ShowStoreForm = true;
+    }
+
+    private void OpenEditStore(StoreDto store)
+    {
+        CloseForms();
+        EditingStoreId = store.MagazaId;
+        StoreFormCustomerId = store.MusteriId;
+        StoreForm = new DealerStoreSaveRequest
+        {
+            StoreName = store.MagazaAdi,
+            City = store.Sehir,
+            District = store.Ilce,
+            Phone = store.Telefon,
+            ResponsiblePerson = store.SorumluKisi,
+            IsActive = store.MagazaAktifMi
+        };
+        ShowStoreForm = true;
+    }
+
+    private Task SaveCurrentFormAsync()
+    {
+        return ShowDealerForm ? SaveDealerAsync() : SaveStoreAsync();
+    }
+
+    private async Task SaveDealerAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DealerForm.FullName))
+        {
+            ShowError("Bayi adı zorunludur.");
+            return;
+        }
+
+        try
+        {
+            Saving = true;
+            if (EditingDealerId is int dealerId)
+            {
+                await DealerApi.UpdateDealerAsync(dealerId, DealerForm);
+            }
+            else
+            {
+                int newDealerId = await DealerApi.CreateDealerAsync(DealerForm);
+                if (CreateInitialStore && !string.IsNullOrWhiteSpace(StoreForm.StoreName))
+                    await DealerApi.CreateStoreAsync(newDealerId, StoreForm);
+            }
+
+            await RefreshAfterSaveAsync("Bayi bilgileri kaydedildi.");
+            CloseForms();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            Saving = false;
+        }
+    }
+
+    private async Task SaveStoreAsync()
+    {
+        if (string.IsNullOrWhiteSpace(StoreForm.StoreName))
+        {
+            ShowError("Mağaza adı zorunludur.");
+            return;
+        }
+
+        try
+        {
+            Saving = true;
+            if (EditingStoreId is int storeId)
+                await DealerApi.UpdateStoreAsync(storeId, StoreForm);
+            else
+                await DealerApi.CreateStoreAsync(StoreFormCustomerId, StoreForm);
+
+            await RefreshAfterSaveAsync("Mağaza bilgileri kaydedildi.");
+            CloseForms();
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+        finally
+        {
+            Saving = false;
+        }
+    }
+
+    private async Task ToggleDealerStatusAsync(DealerDetailDto dealer)
+    {
+        try
+        {
+            await DealerApi.SetDealerStatusAsync(dealer.CustomerId, !dealer.IsActive);
+            await RefreshAfterSaveAsync("Bayi durumu güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private async Task ToggleStoreStatusAsync(DealerStoreDto store)
+    {
+        try
+        {
+            await DealerApi.SetStoreStatusAsync(store.CustomerStoreId, !store.IsActive);
+            await RefreshAfterSaveAsync("Mağaza durumu güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private async Task RefreshAfterSaveAsync(string message)
+    {
+        await StoreState.LoadAsync(StoreApi);
+        if (Auth.IsAdmin)
+            await LoadDealersAsync();
+
+        IsError = false;
+        Message = message;
+    }
+
+    private void CloseForms()
+    {
+        ShowDealerForm = false;
+        ShowStoreForm = false;
+        EditingDealerId = null;
+        EditingStoreId = null;
+    }
+
+    private void ShowError(string message)
+    {
+        IsError = true;
+        Message = message;
     }
 
     private string StoreClass(StoreDto store)
     {
         return StoreState.SelectedStoreId == store.MagazaId
-            ? "rounded-2xl border border-blue-300 bg-white p-5 text-left shadow-md shadow-blue-100 ring-4 ring-blue-100"
-            : "rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm shadow-slate-200/60 transition hover:border-blue-200 hover:shadow-md";
+            ? "cursor-pointer rounded-xl border border-blue-300 bg-white p-4 text-left shadow-md shadow-blue-100 ring-4 ring-blue-100"
+            : "cursor-pointer rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm shadow-slate-200/60 transition hover:border-blue-200 hover:shadow-md";
     }
 
-    private async Task SelectStoreAsync(int storeId)
+    private string DealerRowClass(IReadOnlyList<DealerStoreDto> stores)
     {
-        await StoreState.SelectAsync(storeId);
+        bool active = stores.Any(store => StoreState.SelectedStoreId == store.CustomerStoreId);
+        string state = active ? "border-blue-300 bg-blue-50/40 ring-4 ring-blue-100" : "border-transparent bg-white hover:bg-slate-50";
+        return $"grid cursor-pointer gap-3 border-l-4 {state} px-4 py-3 transition lg:grid-cols-[minmax(260px,1fr)_520px_auto] lg:items-center";
     }
+
+    private string DealerStoreClass(DealerStoreDto store)
+    {
+        bool active = StoreState.SelectedStoreId == store.CustomerStoreId;
+        string state = active
+            ? "border-blue-300 bg-blue-50 ring-4 ring-blue-100"
+            : store.IsActive
+                ? "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/40"
+                : "border-rose-100 bg-rose-50/40 opacity-80 hover:border-rose-200";
+        return $"cursor-pointer rounded-xl border {state} p-3 text-left transition";
+    }
+
+    private string DealerNameById(int customerId)
+    {
+        DealerDetailDto? dealer = Dealers.FirstOrDefault(item => item.CustomerId == customerId);
+        return dealer is null ? "Bayi seçilmedi" : DealerName(dealer);
+    }
+
+    private static string DealerName(DealerDetailDto dealer)
+    {
+        return !string.IsNullOrWhiteSpace(dealer.CompanyName) ? dealer.CompanyName : dealer.FullName;
+    }
+
+    private static string StatusButtonClass(bool active)
+    {
+        return active
+            ? "rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50"
+            : "rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50";
+    }
+
+    private static string EmptyText(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private static DealerSaveRequest NewDealerForm() => new()
+    {
+        CustomerType = "Bayi",
+        IsActive = true
+    };
+
+    private static DealerStoreSaveRequest NewStoreForm() => new()
+    {
+        IsActive = true
+    };
 }
