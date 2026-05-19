@@ -1,4 +1,5 @@
 @page "/team"
+@implements IDisposable
 @inject ActiveStoreState StoreState
 @inject StoreApiClient StoreApi
 @inject TeamApiClient TeamApi
@@ -6,207 +7,267 @@
 <PageTitle>Ekibim - eMarketing</PageTitle>
 
 <AuthGate>
-    <section class="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-        <div class="flex flex-wrap items-end justify-between gap-4">
+    <section class="space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <p class="text-sm font-bold uppercase tracking-wide text-slate-500">Ekibim</p>
-                <h1 class="mt-1 text-3xl font-bold tracking-normal text-slate-950">Mağaza ekibi</h1>
-                <p class="mt-1 text-sm text-slate-500">
-                    Aktif bayi: @(TeamResponse?.Context.MagazaAdi ?? StoreState.SelectedStore?.MagazaAdi ?? "-")
-                    @if (TeamResponse is not null)
-                    {
-                        <span class="mx-2 text-slate-300">/</span>
-                        <span>@FilteredMembers.Count() / @TeamResponse.Members.Count kişi</span>
-                    }
-                </p>
+                <p class="text-sm font-black uppercase tracking-wide text-slate-500">Ekip Yönetimi</p>
+                <h1 class="mt-1 text-3xl font-black tracking-normal text-slate-950">Ekip ve yetki yönetimi</h1>
+                <p class="mt-1 text-sm text-slate-500">Personel, görev ve sipariş yetkilerini aktif bayi kapsamında yönetin.</p>
             </div>
-            @if (TeamResponse?.Context.PersonelEkleyebilir == true)
-            {
-                <button class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800" @onclick="() => ShowNewPersonnel = true">
-                    <AppIcon Name="user-plus" CssClass="h-5 w-5" />
-                    Yeni Personel
-                </button>
-            }
+
+            <div class="flex flex-wrap items-center gap-2">
+                <ActiveStoreBadge Compact="true" />
+                @if (TeamResponse?.Context.PersonelEkleyebilir == true)
+                {
+                    <button class="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
+                            @onclick="OpenNewPersonnel">
+                        <AppIcon Name="user-plus" CssClass="h-4 w-4" />
+                        Yeni Personel
+                    </button>
+                }
+            </div>
         </div>
 
         @if (!string.IsNullOrWhiteSpace(Message))
         {
-            <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">@Message</div>
+            <div class="@MessageClass">@Message</div>
         }
 
-        @if (TeamResponse is not null)
+        @if (StoreState.SelectedStoreId is null)
         {
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/60">
-                <div class="grid gap-3 xl:grid-cols-[1fr_190px_180px_190px]">
-                    <label class="relative block">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                            <AppIcon Name="search" CssClass="h-5 w-5" />
-                        </span>
-                        <input class="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-                               @bind="Search"
-                               @bind:event="oninput"
-                               placeholder="Ad, e-posta, kullanıcı adı veya telefon ara" />
-                    </label>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm font-bold text-amber-800">
+                Lütfen aktif bayi seçin.
+            </div>
+        }
+        else if (Loading)
+        {
+            <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500">
+                Ekip yükleniyor...
+            </div>
+        }
+        else if (TeamResponse is not null)
+        {
+            <div class="@WorkspaceClass">
+                <div class="min-w-0 space-y-4">
+                    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <Metric Icon="users" Label="Personel" Value="@TeamResponse.Members.Count.ToString("N0", Tr)" Tone="blue" />
+                        <Metric Icon="shield" Label="Sipariş Yetkilisi" Value="@OrderAuthorityCount.ToString("N0", Tr)" Tone="emerald" />
+                        <Metric Icon="briefcase" Label="Yönetici Görevleri" Value="@ManagerCount.ToString("N0", Tr)" Tone="violet" />
+                        <Metric Icon="check-circle" Label="Aktif Personel" Value="@ActiveCount.ToString("N0", Tr)" Tone="amber" />
+                    </section>
 
-                    <label class="relative block">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                            <AppIcon Name="briefcase" CssClass="h-5 w-5" />
-                        </span>
-                        <select class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="DutyFilter">
+                    <section class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm xl:grid-cols-[1fr_190px_180px_190px]">
+                        <label class="relative block">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <AppIcon Name="search" CssClass="h-5 w-5" />
+                            </span>
+                            <input class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                                   @bind="Search"
+                                   @bind:event="oninput"
+                                   placeholder="Personel ara" />
+                        </label>
+
+                        <select class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                @bind="DutyFilter">
                             <option value="all">Tüm görevler</option>
                             <option value="Supervisor">Supervisor</option>
                             <option value="MagazaMuduru">Mağaza Müdürü</option>
                             <option value="Personel">Personel</option>
                         </select>
-                    </label>
 
-                    <label class="relative block">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                            <AppIcon Name="filter" CssClass="h-5 w-5" />
-                        </span>
-                        <select class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="StatusFilter">
+                        <select class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                @bind="StatusFilter">
                             <option value="all">Tüm durumlar</option>
                             <option value="active">Aktif</option>
                             <option value="passive">Pasif</option>
                         </select>
-                    </label>
 
-                    <label class="relative block">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                            <AppIcon Name="shield" CssClass="h-5 w-5" />
-                        </span>
-                        <select class="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-12 pr-9 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="AuthorityFilter">
+                        <select class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                                @bind="AuthorityFilter">
                             <option value="all">Tüm yetkiler</option>
-                            <option value="authorized">Sipariş Yetkisi</option>
-                            <option value="viewer">Görüntüleme</option>
+                            <option value="authorized">Sipariş yetkisi</option>
+                            <option value="viewer">Yetkisiz</option>
                         </select>
-                    </label>
-                </div>
-            </div>
+                    </section>
 
-            @if (ShowNewPersonnel)
-            {
-                <NewPersonnelForm StoreId="@TeamResponse.Context.MagazaId" OnSaved="LoadTeamAsync" OnCancel="() => ShowNewPersonnel = false" />
-            }
+                    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-950">Aktif bayi ekibi</h2>
+                                <p class="mt-1 text-sm text-slate-500">
+                                    @TeamResponse.Context.MagazaAdi · @OrderedMembers.Count.ToString("N0", Tr) / @TeamResponse.Members.Count.ToString("N0", Tr) kişi
+                                </p>
+                            </div>
+                            <StatusBadge Text="@DutyName(TeamResponse.Context.KullaniciGorev)" Tone="@DutyTone(TeamResponse.Context.KullaniciGorev)" />
+                        </div>
 
-            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
-                <div class="hidden overflow-x-auto lg:block">
-                    <table class="min-w-full text-left text-sm">
-                        <thead class="bg-slate-800 text-xs font-bold uppercase tracking-wide text-slate-100">
-                            <tr>
-                                <th class="w-12 px-4 py-3">
-                                    <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" aria-label="Tüm personeli seç" />
-                                </th>
-                                <th class="min-w-64 px-4 py-3">Personel</th>
-                                <th class="min-w-56 px-4 py-3">E-posta</th>
-                                <th class="min-w-40 px-4 py-3">Kullanıcı adı</th>
-                                <th class="min-w-28 px-4 py-3">Durum</th>
-                                <th class="min-w-40 px-4 py-3">Mağaza görevi</th>
-                                <th class="min-w-40 px-4 py-3">Sipariş yetkisi</th>
-                                <th class="min-w-36 px-4 py-3">Telefon</th>
-                                <th class="w-20 px-4 py-3 text-right">Aksiyon</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach (StoreTeamMemberDto member in FilteredMembers)
-                            {
-                                <tr class="@RowClass(member)" @onclick="() => SelectMember(member)">
-                                    <td class="px-4 py-3" @onclick:stopPropagation="true">
-                                        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" aria-label="@($"{member.AdSoyad} seç")" />
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center gap-3">
-                                            <Avatar Member="member" Size="md" />
-                                            <div class="min-w-0">
-                                                <p class="truncate font-semibold text-slate-950">@member.AdSoyad</p>
-                                                <p class="mt-0.5 truncate text-xs text-slate-500">@DutyName(member.MagazaGorev)</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3 text-slate-700">@EmptyText(member.Email)</td>
-                                    <td class="px-4 py-3 font-medium text-slate-700">@member.KullaniciAdi</td>
-                                    <td class="px-4 py-3"><StatusBadge Text="@StatusText(member)" Tone="@(member.AktifMi ? "success" : "slate")" /></td>
-                                    <td class="px-4 py-3"><StatusBadge Text="@DutyName(member.MagazaGorev)" Tone="@DutyTone(member.MagazaGorev)" /></td>
-                                    <td class="px-4 py-3"><StatusBadge Text="@AuthorityText(member)" Tone="@(member.SiparisYetkilisiMi ? "info" : "purple")" /></td>
-                                    <td class="px-4 py-3 text-slate-700">@EmptyText(member.Telefon)</td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-700" title="Detay">
-                                            <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="divide-y divide-slate-100 lg:hidden">
-                    @foreach (StoreTeamMemberDto member in FilteredMembers)
-                    {
-                        <button class="@MobileCardClass(member)" @onclick="() => SelectMember(member)">
-                            <div class="flex items-start gap-3 text-left">
-                                <Avatar Member="member" Size="lg" />
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <h3 class="truncate text-base font-semibold text-slate-950">@member.AdSoyad</h3>
-                                            <p class="mt-1 truncate text-sm text-slate-500">@member.KullaniciAdi</p>
-                                        </div>
-                                        <AppIcon Name="chevron-right" CssClass="h-5 w-5 shrink-0 text-slate-400" />
-                                    </div>
-                                    <div class="mt-3 flex flex-wrap gap-2">
-                                        <StatusBadge Text="@StatusText(member)" Tone="@(member.AktifMi ? "success" : "slate")" />
-                                        <StatusBadge Text="@DutyName(member.MagazaGorev)" Tone="@DutyTone(member.MagazaGorev)" />
-                                        <StatusBadge Text="@AuthorityText(member)" Tone="@(member.SiparisYetkilisiMi ? "info" : "purple")" />
-                                    </div>
-                                    <div class="mt-3 space-y-1 text-sm text-slate-600">
-                                        <p>@EmptyText(member.Email)</p>
-                                        <p>@EmptyText(member.Telefon)</p>
-                                    </div>
+                        @if (OrderedMembers.Count == 0)
+                        {
+                            <div class="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                                    <AppIcon Name="users" CssClass="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h2 class="font-black text-slate-950">Sonuç bulunamadı</h2>
+                                    <p class="mt-1 text-sm text-slate-500">Arama veya filtreleri değiştirerek tekrar deneyin.</p>
                                 </div>
                             </div>
-                        </button>
-                    }
+                        }
+                        else
+                        {
+                            <div class="hidden border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[minmax(220px,1.2fr)_160px_minmax(230px,1fr)_160px_160px_110px]">
+                                <span>Personel</span>
+                                <span>Görev</span>
+                                <span>İletişim</span>
+                                <span>Durum</span>
+                                <span>Sipariş Yetkilisi</span>
+                                <span class="text-right">İşlemler</span>
+                            </div>
+
+                            <div class="divide-y divide-slate-100">
+                                @foreach (StoreTeamMemberDto member in OrderedMembers)
+                                {
+                                    bool admin = IsAdmin(member);
+                                    <div class="@MemberRowClass(member)">
+                                        <div class="flex min-w-0 items-center gap-3">
+                                            <div class="group/avatar relative">
+                                                <Avatar Member="member" Size="md" />
+                                                <div class="pointer-events-none absolute left-0 top-12 z-30 hidden w-64 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-xl shadow-slate-900/10 group-hover/avatar:block">
+                                                    <div class="flex items-center gap-3">
+                                                        <Avatar Member="member" Size="md" />
+                                                        <div class="min-w-0">
+                                                            <p class="truncate text-sm font-black text-slate-950">@member.AdSoyad</p>
+                                                            <p class="truncate text-xs font-bold text-slate-500">@DutyName(member.MagazaGorev)</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3 grid gap-1 text-xs text-slate-500">
+                                                        <span>@(string.IsNullOrWhiteSpace(member.Telefon) ? "Telefon yok" : member.Telefon)</span>
+                                                        <span class="truncate">@EmptyText(member.Email)</span>
+                                                        <span class="font-bold @(member.AktifMi ? "text-emerald-600" : "text-rose-600")">@StatusText(member)</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="min-w-0 text-left">
+                                                <div class="flex items-center gap-2">
+                                                    <p class="truncate text-base font-black text-slate-950">@member.AdSoyad</p>
+                                                    @if (admin)
+                                                    {
+                                                        <StatusBadge Text="Admin" Tone="info" />
+                                                    }
+                                                </div>
+                                                <p class="mt-0.5 truncate text-xs font-bold text-slate-500">@(admin ? "Sistem yöneticisi" : member.KullaniciAdi)</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="text-left">
+                                            <StatusBadge Text="@DutyName(member.MagazaGorev)" Tone="@(admin ? "info" : DutyTone(member.MagazaGorev))" />
+                                        </div>
+
+                                        <div class="grid min-w-0 gap-1 text-left text-sm text-slate-500">
+                                            <span class="truncate font-bold">@(string.IsNullOrWhiteSpace(member.Telefon) ? "-" : member.Telefon)</span>
+                                            <span class="truncate">@EmptyText(member.Email)</span>
+                                        </div>
+
+                                        <div class="text-left">
+                                            <StatusBadge Text="@StatusText(member)" Tone="@(member.AktifMi ? "success" : "danger")" />
+                                        </div>
+
+                                        <div class="flex items-center gap-2 text-left">
+                                            @if (admin)
+                                            {
+                                                <StatusBadge Text="Sistem rolü" Tone="info" />
+                                            }
+                                            else
+                                            {
+                                                <button class="@ToggleButtonClass(member.SiparisYetkilisiMi)"
+                                                        disabled="@(!CanManageAuthority || BusyAuthorityUserId == member.KullaniciId)"
+                                                        @onclick="() => ToggleAuthorityAsync(member)"
+                                                        @onclick:stopPropagation="true"
+                                                        title="Sipariş yetkisini değiştir">
+                                                    <span class="@ToggleKnobClass(member.SiparisYetkilisiMi)"></span>
+                                                </button>
+                                                <span class="text-xs font-black text-slate-500">@(member.SiparisYetkilisiMi ? "Yetkili" : "Yetkisiz")</span>
+                                            }
+                                        </div>
+
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-black text-blue-700 transition hover:bg-blue-50"
+                                                    @onclick="() => SelectMember(member)">
+                                                Düzenle
+                                            </button>
+                                            <button class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                    @onclick="() => SelectMember(member)"
+                                                    title="Detayı aç">
+                                                <AppIcon Name="chevron-right" CssClass="h-5 w-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </section>
                 </div>
 
-                @if (!FilteredMembers.Any())
+                @if (ShowNewPersonnel)
                 {
-                    <div class="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-                            <AppIcon Name="users" CssClass="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h2 class="font-semibold text-slate-950">Sonuç bulunamadı</h2>
-                            <p class="mt-1 text-sm text-slate-500">Arama veya filtreleri değiştirerek tekrar deneyin.</p>
-                        </div>
-                    </div>
+                    <NewPersonnelForm StoreId="@TeamResponse.Context.MagazaId"
+                                      StoreName="@TeamResponse.Context.MagazaAdi"
+                                      OnSaved="LoadTeamAsync"
+                                      OnCancel="CloseNewPersonnel" />
+                }
+                else if (SelectedMember is not null)
+                {
+                    <TeamMemberDrawer StoreId="@TeamResponse.Context.MagazaId"
+                                      Context="@TeamResponse.Context"
+                                      Member="@SelectedMember"
+                                      OnClose="CloseDrawer"
+                                      OnChanged="LoadTeamAsync" />
                 }
             </div>
-
-            <TeamMemberDrawer StoreId="@TeamResponse.Context.MagazaId"
-                              Context="@TeamResponse.Context"
-                              Member="@SelectedMember"
-                              OnClose="CloseDrawer"
-                              OnChanged="LoadTeamAsync" />
         }
     </section>
 </AuthGate>
 
 @code {
+    private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
+
     private StoreTeamResponseDto? TeamResponse { get; set; }
     private StoreTeamMemberDto? SelectedMember { get; set; }
     private string Message { get; set; } = string.Empty;
+    private bool IsError { get; set; }
     private bool ShowNewPersonnel { get; set; }
+    private bool Loading { get; set; }
+    private int? BusyAuthorityUserId { get; set; }
     private string Search { get; set; } = string.Empty;
     private string DutyFilter { get; set; } = "all";
     private string StatusFilter { get; set; } = "all";
     private string AuthorityFilter { get; set; } = "all";
 
-    private IEnumerable<StoreTeamMemberDto> FilteredMembers => (TeamResponse?.Members ?? Array.Empty<StoreTeamMemberDto>())
+    private bool PanelOpen => ShowNewPersonnel || SelectedMember is not null;
+    private bool CanManageAuthority => TeamResponse?.Context.SiparisYetkisiYonetebilir == true;
+
+    private string WorkspaceClass => PanelOpen
+        ? "grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]"
+        : "space-y-4";
+
+    private string MessageClass => IsError
+        ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700"
+        : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700";
+
+    private List<StoreTeamMemberDto> OrderedMembers => (TeamResponse?.Members ?? Array.Empty<StoreTeamMemberDto>())
         .Where(MatchesSearch)
         .Where(MatchesDuty)
         .Where(MatchesStatus)
-        .Where(MatchesAuthority);
+        .Where(MatchesAuthority)
+        .OrderByDescending(IsAdmin)
+        .ThenByDescending(member => member.AktifMi)
+        .ThenBy(member => member.AdSoyad, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
+
+    private int OrderAuthorityCount => TeamResponse?.Members.Count(member => !IsAdmin(member) && member.SiparisYetkilisiMi) ?? 0;
+    private int ManagerCount => TeamResponse?.Members.Count(member => !IsAdmin(member) && member.MagazaGorev is "Supervisor" or "MagazaMuduru") ?? 0;
+    private int ActiveCount => TeamResponse?.Members.Count(member => member.AktifMi) ?? 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -224,23 +285,83 @@
     private async Task LoadTeamAsync()
     {
         Message = string.Empty;
+        IsError = false;
         SelectedMember = null;
+        ShowNewPersonnel = false;
+
         if (StoreState.SelectedStoreId is not int storeId)
+        {
+            TeamResponse = null;
             return;
+        }
 
         try
         {
+            Loading = true;
             TeamResponse = await TeamApi.GetTeamAsync(storeId);
-            ShowNewPersonnel = false;
         }
         catch (Exception ex)
         {
             TeamResponse = null;
             Message = ex.Message;
+            IsError = true;
+        }
+        finally
+        {
+            Loading = false;
         }
     }
 
-    private void SelectMember(StoreTeamMemberDto member) => SelectedMember = member;
+    private void OpenNewPersonnel()
+    {
+        SelectedMember = null;
+        ShowNewPersonnel = true;
+    }
+
+    private void SelectMember(StoreTeamMemberDto member)
+    {
+        ShowNewPersonnel = false;
+        SelectedMember = member;
+    }
+
+    private async Task ToggleAuthorityAsync(StoreTeamMemberDto member)
+    {
+        if (!CanManageAuthority || IsAdmin(member))
+            return;
+
+        BusyAuthorityUserId = member.KullaniciId;
+        Message = string.Empty;
+        IsError = false;
+
+        try
+        {
+            await TeamApi.SetOrderAuthorityAsync(StoreState.SelectedStoreId!.Value, member.KullaniciId, !member.SiparisYetkilisiMi, string.Empty);
+            await ReloadTeamKeepingPanelAsync();
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            IsError = true;
+        }
+        finally
+        {
+            BusyAuthorityUserId = null;
+        }
+    }
+
+    private async Task ReloadTeamKeepingPanelAsync()
+    {
+        if (StoreState.SelectedStoreId is not int storeId)
+            return;
+
+        int? selectedUserId = SelectedMember?.KullaniciId;
+        TeamResponse = await TeamApi.GetTeamAsync(storeId);
+
+        if (selectedUserId.HasValue)
+            SelectedMember = TeamResponse.Members.FirstOrDefault(member => member.KullaniciId == selectedUserId.Value);
+    }
+
+    private void CloseNewPersonnel() => ShowNewPersonnel = false;
     private void CloseDrawer() => SelectedMember = null;
 
     private bool MatchesSearch(StoreTeamMemberDto member)
@@ -259,23 +380,28 @@
         StatusFilter == "all" || (StatusFilter == "active" ? member.AktifMi : !member.AktifMi);
 
     private bool MatchesAuthority(StoreTeamMemberDto member) =>
-        AuthorityFilter == "all" || (AuthorityFilter == "authorized" ? member.SiparisYetkilisiMi : !member.SiparisYetkilisiMi);
+        AuthorityFilter == "all"
+        || (AuthorityFilter == "authorized" ? member.SiparisYetkilisiMi && !IsAdmin(member) : !member.SiparisYetkilisiMi && !IsAdmin(member));
 
-    private string RowClass(StoreTeamMemberDto member)
+    private string MemberRowClass(StoreTeamMemberDto member)
     {
-        string selected = SelectedMember?.KullaniciMagazaId == member.KullaniciMagazaId ? "bg-blue-50/70" : "hover:bg-blue-50/40";
-        return $"cursor-pointer transition {selected}";
+        string selected = SelectedMember?.KullaniciMagazaId == member.KullaniciMagazaId
+            ? "border-l-blue-500 bg-blue-50/70 shadow-sm"
+            : "border-l-transparent";
+
+        string admin = IsAdmin(member)
+            ? "border-l-indigo-500 bg-indigo-50/70 hover:bg-indigo-50"
+            : "bg-white hover:bg-blue-50/40 hover:shadow-sm";
+
+        return $"grid w-full grid-cols-1 items-center gap-3 border-l-4 px-4 py-3 text-left transition xl:grid-cols-[minmax(220px,1.2fr)_160px_minmax(230px,1fr)_160px_160px_110px] {selected} {admin}";
     }
 
-    private string MobileCardClass(StoreTeamMemberDto member)
-    {
-        string selected = SelectedMember?.KullaniciMagazaId == member.KullaniciMagazaId ? "bg-blue-50/70" : "bg-white";
-        return $"block w-full p-4 transition hover:bg-blue-50/40 {selected}";
-    }
+    private static bool IsAdmin(StoreTeamMemberDto member) =>
+        string.Equals(member.Rol, "Admin", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(member.KullaniciAdi, "admin", StringComparison.OrdinalIgnoreCase);
 
     private static string EmptyText(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     private static string StatusText(StoreTeamMemberDto member) => member.AktifMi ? "Aktif" : "Pasif";
-    private static string AuthorityText(StoreTeamMemberDto member) => member.SiparisYetkilisiMi ? "Sipariş Yetkisi" : "Görüntüleme";
 
     private static string DutyName(string duty) => duty switch
     {
@@ -290,4 +416,19 @@
         "MagazaMuduru" => "manager",
         _ => "slate"
     };
+
+    private static string ToggleButtonClass(bool active) =>
+        active
+            ? "relative inline-flex h-6 w-11 rounded-full bg-blue-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+            : "relative inline-flex h-6 w-11 rounded-full bg-slate-300 transition disabled:cursor-not-allowed disabled:opacity-60";
+
+    private static string ToggleKnobClass(bool active) =>
+        active
+            ? "absolute right-1 top-1 h-4 w-4 rounded-full bg-white shadow"
+            : "absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow";
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+    }
 }

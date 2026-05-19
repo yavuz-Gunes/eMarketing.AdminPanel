@@ -27,6 +27,28 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('dbo.MagazaStokHareketleri', 'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.MagazaStokHareketleri
+    SET Aciklama = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(Aciklama,
+        N'Ãœ', N'Ü'), N'Ã¼', N'ü'), N'Ã¶', N'ö'), N'Ã§', N'ç'), N'Ã‡', N'Ç'), N'Ä±', N'ı'),
+        N'Ä°', N'İ'), N'ÄŸ', N'ğ'), N'Äž', N'Ğ'), N'ÅŸ', N'ş'), N'Åž', N'Ş'), N'Ã–', N'Ö')
+    WHERE Aciklama IS NOT NULL
+      AND (Aciklama LIKE N'%Ã%' OR Aciklama LIKE N'%Ä%' OR Aciklama LIKE N'%Å%');
+END
+GO
+
+IF OBJECT_ID('dbo.StockMovements', 'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.StockMovements
+    SET Description = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(Description,
+        N'Ãœ', N'Ü'), N'Ã¼', N'ü'), N'Ã¶', N'ö'), N'Ã§', N'ç'), N'Ã‡', N'Ç'), N'Ä±', N'ı'),
+        N'Ä°', N'İ'), N'ÄŸ', N'ğ'), N'Äž', N'Ğ'), N'ÅŸ', N'ş'), N'Åž', N'Ş'), N'Ã–', N'Ö')
+    WHERE Description IS NOT NULL
+      AND (Description LIKE N'%Ã%' OR Description LIKE N'%Ä%' OR Description LIKE N'%Å%');
+END
+GO
+
 IF OBJECT_ID('dbo.MagazaStokHareketleri', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.MagazaStokHareketleri
@@ -355,6 +377,60 @@ BEGIN
     );
 
     COMMIT TRANSACTION;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_MerkezStok_Hareket_Listele
+    @ProductId INT,
+    @KayitSayisi INT = 25,
+    @KullaniciId INT = NULL,
+    @AdminMi BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @KayitSayisi <= 0
+        SET @KayitSayisi = 25;
+
+    IF @KayitSayisi > 100
+        SET @KayitSayisi = 100;
+
+    IF @AdminMi = 0
+    BEGIN
+        RAISERROR('Merkez stok hareketlerini görüntüleme yetkiniz yok.', 16, 1);
+        RETURN;
+    END
+
+    SELECT TOP (@KayitSayisi)
+        0 AS MagazaStokHareketId,
+        0 AS MagazaId,
+        sm.ProductId AS UrunId,
+        p.ProductName AS UrunAdi,
+        sm.MovementType AS HareketTipi,
+        CASE
+            WHEN sm.MovementType IN (N'OrderOut', N'SiparisOlusturma', N'MerkezCikis') THEN N'Çıkış'
+            ELSE N'Giriş'
+        END AS HareketYonu,
+        CASE
+            WHEN sm.MovementType = N'MerkezGiris' THEN N'Merkez stok girişi'
+            WHEN sm.MovementType = N'OrderOut' THEN N'Sipariş merkez çıkışı'
+            WHEN sm.MovementType = N'SiparisIptalIade' THEN N'Sipariş iptal/iade girişi'
+            ELSE sm.MovementType
+        END AS HareketAciklama,
+        sm.Quantity AS Miktar,
+        0 AS OncekiStok,
+        0 AS SonrakiStok,
+        sm.OrderId AS KaynakSiparisId,
+        o.OrderNo AS SiparisNo,
+        sm.Description AS Aciklama,
+        sm.CreatedAt AS OlusturmaTarihi
+    FROM dbo.StockMovements sm
+    INNER JOIN dbo.Products p
+        ON p.ProductId = sm.ProductId
+    LEFT JOIN dbo.Orders o
+        ON o.OrderId = sm.OrderId
+    WHERE sm.ProductId = @ProductId
+    ORDER BY sm.CreatedAt DESC;
 END
 GO
 

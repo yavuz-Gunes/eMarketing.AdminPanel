@@ -51,6 +51,7 @@ function readFileAsDataUrl(file) {
 }
 
 let activeCampaignCropper;
+let activeProductCropper;
 
 function destroyCampaignCropper() {
   if (activeCampaignCropper) {
@@ -124,6 +125,78 @@ function cropCampaignImage(width, height, quality) {
   return canvas.toDataURL("image/jpeg", quality ?? 0.92);
 }
 
+function destroyProductCropper() {
+  if (activeProductCropper) {
+    activeProductCropper.destroy();
+    activeProductCropper = undefined;
+  }
+}
+
+async function loadProductCropper(inputId, imageId, previewSelector, maxBytes) {
+  if (!window.Cropper) {
+    throw new Error("Gorsel kirpma araci yuklenemedi. Sayfayi yenileyip tekrar deneyin.");
+  }
+
+  const file = readCampaignFile(inputId, maxBytes);
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = document.getElementById(imageId);
+
+  if (!image) {
+    throw new Error("Gorsel onizleme alani bulunamadi.");
+  }
+
+  destroyProductCropper();
+  image.src = dataUrl;
+
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("Gorsel okunamadi."));
+  });
+
+  activeProductCropper = new window.Cropper(image, {
+    aspectRatio: 16 / 11,
+    viewMode: 1,
+    dragMode: "move",
+    autoCropArea: 0.9,
+    background: false,
+    responsive: true,
+    restore: false,
+    checkOrientation: true,
+    guides: true,
+    center: true,
+    highlight: true,
+    cropBoxMovable: true,
+    cropBoxResizable: true,
+    toggleDragModeOnDblclick: false,
+    preview: previewSelector
+  });
+
+  return {
+    dataUrl,
+    fileName: file.name
+  };
+}
+
+function cropProductImage(width, height, quality) {
+  if (!activeProductCropper) {
+    throw new Error("Kaydetmeden once gorsel secip kirpma alanini belirleyin.");
+  }
+
+  const canvas = activeProductCropper.getCroppedCanvas({
+    width,
+    height,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: "high",
+    fillColor: "#ffffff"
+  });
+
+  if (!canvas) {
+    throw new Error("Kirpilmis gorsel hazirlanamadi.");
+  }
+
+  return canvas.toDataURL("image/jpeg", quality ?? 0.9);
+}
+
 window.eMarketing = {
   focus: (selector) => {
     const element = document.querySelector(selector);
@@ -157,5 +230,10 @@ window.eMarketing = {
     load: loadCampaignCropper,
     cropToDataUrl: cropCampaignImage,
     destroy: destroyCampaignCropper
+  },
+  productCrop: {
+    load: loadProductCropper,
+    cropToDataUrl: cropProductImage,
+    destroy: destroyProductCropper
   }
 };

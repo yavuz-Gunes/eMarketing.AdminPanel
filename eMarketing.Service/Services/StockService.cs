@@ -10,6 +10,7 @@ public interface IStockService
     Task<IReadOnlyList<StockItemDto>> GetStocksAsync(StockFilterRequest filter, CancellationToken cancellationToken = default);
     Task<StockSummaryDto> GetSummaryAsync(int? storeId, bool allStores, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<StockMovementDto>> GetMovementsAsync(int storeId, int productId, int count, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StockMovementDto>> GetCentralMovementsAsync(int productId, int count, CancellationToken cancellationToken = default);
     Task UpdateMinimumAsync(int storeStockId, int minimumStock, CancellationToken cancellationToken = default);
     Task ProcessMovementAsync(StockOperationRequest request, CancellationToken cancellationToken = default);
     Task ProcessCentralStockAsync(CentralStockOperationRequest request, CancellationToken cancellationToken = default);
@@ -44,6 +45,15 @@ public sealed class StockService : IStockService
     {
         CurrentUser currentUser = _currentUserService.CurrentUser;
         return _repository.GetMovementsAsync(storeId, productId, count, currentUser.UserId, currentUser.CanSeeAllStores, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<StockMovementDto>> GetCentralMovementsAsync(int productId, int count, CancellationToken cancellationToken = default)
+    {
+        if (productId <= 0)
+            throw new ArgumentException("Ürün seçimi zorunludur.", nameof(productId));
+
+        CurrentUser currentUser = _currentUserService.CurrentUser;
+        return _repository.GetCentralMovementsAsync(productId, count, currentUser.UserId, currentUser.CanSeeAllStores || currentUser.IsManager, cancellationToken);
     }
 
     public Task UpdateMinimumAsync(int storeStockId, int minimumStock, CancellationToken cancellationToken = default)

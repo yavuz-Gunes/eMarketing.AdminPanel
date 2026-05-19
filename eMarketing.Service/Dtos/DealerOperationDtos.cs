@@ -11,6 +11,7 @@ public sealed class StoreTeamMemberDto
     public string Email { get; set; } = string.Empty;
     public string Telefon { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
+    public string Rol { get; set; } = string.Empty;
     public string MagazaGorev { get; set; } = "Personel";
     public string MagazaGorevGorunenAd { get; set; } = "Personel";
     public bool SiparisYetkilisiMi { get; set; }

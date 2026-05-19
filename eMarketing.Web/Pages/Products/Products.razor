@@ -6,6 +6,8 @@
 @inject StoreApiClient StoreApi
 @inject StockApiClient StockApi
 @inject AuthSession Auth
+@inject IJSRuntime JS
+@inject IWebHostEnvironment Environment
 
 <PageTitle>Ürünler - eMarketing</PageTitle>
 
@@ -17,25 +19,113 @@
                 <h1 class="mt-1 text-3xl font-black tracking-normal text-slate-950">Ürün kataloğu</h1>
                 <p class="mt-1 text-sm font-semibold text-slate-500">Tüm ürünler görünür; stok ve sepete ekleme aktif bayiye göre çalışır.</p>
             </div>
-            <a href="/cart" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200 hover:bg-blue-700">Sepet (@Cart.Count)</a>
+
+            <div class="flex flex-wrap items-center gap-2">
+                @if (Auth.CanManageProducts)
+                {
+                    <button class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                            @onclick="OpenCategoriesModal">
+                        Kategoriler
+                    </button>
+                    <button class="rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
+                            @onclick="OpenNewProductModal">
+                        Yeni Ürün
+                    </button>
+                }
+                <a href="/cart" class="rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-800">Sepet (@Cart.Count)</a>
+            </div>
         </div>
 
-        <div class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/60 lg:grid-cols-[1fr_auto]">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <button class="@MetricCardClass(StockFilterMode.All)" type="button" @onclick="() => SetStockFilter(StockFilterMode.All)">
+                <span class="rounded-lg bg-blue-50 p-3 text-blue-700"><AppIcon Name="package" CssClass="h-5 w-5" /></span>
+                <span>
+                    <span class="block text-xs font-black uppercase text-slate-500">Tüm ürünler</span>
+                    <span class="mt-1 block text-2xl font-black text-slate-950">@ProductList.Count</span>
+                </span>
+            </button>
+
+            <button class="@MetricCardClass(StockFilterMode.InStock)" type="button" @onclick="() => SetStockFilter(StockFilterMode.InStock)">
+                <span class="rounded-lg bg-emerald-50 p-3 text-emerald-700"><AppIcon Name="check-circle" CssClass="h-5 w-5" /></span>
+                <span>
+                    <span class="block text-xs font-black uppercase text-slate-500">Stokta var</span>
+                    <span class="mt-1 block text-2xl font-black text-slate-950">@InStockCount</span>
+                </span>
+            </button>
+
+            <button class="@MetricCardClass(StockFilterMode.Critical)" type="button" @onclick="() => SetStockFilter(StockFilterMode.Critical)">
+                <span class="rounded-lg bg-amber-50 p-3 text-amber-700"><AppIcon Name="alert" CssClass="h-5 w-5" /></span>
+                <span>
+                    <span class="block text-xs font-black uppercase text-slate-500">Kritik stok</span>
+                    <span class="mt-1 block text-2xl font-black text-slate-950">@CriticalStockCount</span>
+                </span>
+            </button>
+
+            <button class="@MetricCardClass(StockFilterMode.OutOfStock)" type="button" @onclick="() => SetStockFilter(StockFilterMode.OutOfStock)">
+                <span class="rounded-lg bg-rose-50 p-3 text-rose-700"><AppIcon Name="x" CssClass="h-5 w-5" /></span>
+                <span>
+                    <span class="block text-xs font-black uppercase text-slate-500">Stok yok</span>
+                    <span class="mt-1 block text-2xl font-black text-slate-950">@OutOfStockCount</span>
+                </span>
+            </button>
+
+            @if (Auth.CanManageProducts)
+            {
+                <button class="@StatusMetricCardClass()" type="button" @onclick="TogglePassiveFilterAsync">
+                    <span class="rounded-lg bg-slate-100 p-3 text-slate-700"><AppIcon Name="sliders" CssClass="h-5 w-5" /></span>
+                    <span>
+                        <span class="block text-xs font-black uppercase text-slate-500">Pasif ürün</span>
+                        <span class="mt-1 block text-2xl font-black text-slate-950">@PassiveCount</span>
+                    </span>
+                </button>
+            }
+        </div>
+
+        <div class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/60 xl:grid-cols-[1fr_auto_auto_auto]">
             <label class="relative block">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                     <AppIcon Name="search" CssClass="h-5 w-5" />
                 </span>
-                <input class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-12 pr-4 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                <input class="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 pl-12 pr-4 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
                        @bind="Search"
                        @bind:event="oninput"
                        placeholder="Ürün, kategori veya açıklama ara" />
             </label>
-            <button class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700" @onclick="RefreshAsync">Yenile</button>
+
+            @if (Auth.CanManageProducts)
+            {
+                <select class="h-12 rounded-lg border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                        @bind="ProductStatusFilter">
+                    <option value="-1">Tüm durumlar</option>
+                    <option value="1">Aktif</option>
+                    <option value="0">Pasif</option>
+                </select>
+
+                <div class="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+                    <button class="@ViewButtonClass(ProductViewMode.Cards)" @onclick="() => SetViewModeAsync(ProductViewMode.Cards)">Kart</button>
+                    <button class="@ViewButtonClass(ProductViewMode.Table)" @onclick="() => SetViewModeAsync(ProductViewMode.Table)">Tablo</button>
+                </div>
+            }
+
+            <button class="rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700" @onclick="RefreshAsync">Yenile</button>
         </div>
+
+        @if (Categories.Any())
+        {
+            <div class="flex gap-2 overflow-x-auto pb-1">
+                <button class="@CategoryChipClass(null)" @onclick="() => SelectCategory(null)">Tüm kategoriler</button>
+                @foreach (CategoryDto category in Categories.Where(category => category.AktifMi))
+                {
+                    <button class="@CategoryChipClass(category.KategoriId)" @onclick="() => SelectCategory(category.KategoriId)">
+                        @category.KategoriAdi
+                    </button>
+                }
+            </div>
+        }
 
         @if (!StoreState.SelectedStoreId.HasValue)
         {
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
                 Lütfen aktif bayi seçin. Ürünler listelenir; sepete ekleme seçili bayi stoklarına göre çalışır.
             </div>
         }
@@ -45,56 +135,131 @@
             <div class="@MessageClass">@Message</div>
         }
 
-        @if (TransferTarget is not null)
-        {
-            <div class="grid gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm lg:grid-cols-[1fr_auto_auto] lg:items-end">
-                <div>
-                    <p class="text-xs font-bold uppercase text-emerald-700">Merkezden Bayiye Transfer</p>
-                    <h2 class="mt-1 text-lg font-bold text-slate-950">@TransferTarget.UrunAdi</h2>
-                    <p class="mt-1 text-sm text-slate-600">Merkez: @TransferTarget.MerkezStok · Bu bayi: @TransferTarget.BayiStok</p>
-                </div>
-                <label class="block">
-                    <span class="text-xs font-bold uppercase text-slate-500">Miktar</span>
-                    <input type="number"
-                           min="1"
-                           class="mt-1 h-11 w-full rounded-xl border border-emerald-200 bg-white px-4 font-semibold outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 lg:w-32"
-                           @bind="TransferQuantity" />
-                </label>
-                <div class="flex gap-2">
-                    <button class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            disabled="@IsTransferInvalid"
-                            @onclick="TransferAsync">
-                        Transfer Et
-                    </button>
-                    <button class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50" @onclick="CancelTransfer">Vazgeç</button>
-                </div>
-            </div>
-        }
-
         @if (IsLoading)
         {
-            <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500 shadow-sm">Ürünler yükleniyor...</div>
+            <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500 shadow-sm">Ürünler yükleniyor...</div>
         }
         else if (!FilteredProducts.Any())
         {
-            <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500 shadow-sm">Ürün bulunamadı.</div>
+            <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500 shadow-sm">Ürün bulunamadı.</div>
+        }
+        else if (CurrentViewMode == ProductViewMode.Table && Auth.CanManageProducts)
+        {
+            <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+                <div class="min-w-[1120px]">
+                    <div class="grid grid-cols-[1.45fr_.75fr_.65fr_.55fr_.55fr_.7fr_1.85fr] border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-500">
+                        <span>Ürün</span>
+                        <span>Kategori</span>
+                        <span>Fiyat</span>
+                        <span>Merkez</span>
+                        <span>Bu bayi</span>
+                        <span>Durum</span>
+                        <span class="text-right">İşlemler</span>
+                    </div>
+
+                    @foreach (ProductDto product in FilteredProducts)
+                    {
+                        StockItemDto stock = GetDisplayStock(product);
+                        <div class="grid grid-cols-[1.45fr_.75fr_.65fr_.55fr_.55fr_.7fr_1.85fr] items-center border-b border-l-4 border-l-transparent border-slate-100 px-4 py-3 text-sm transition last:border-b-0 hover:border-blue-200 hover:bg-blue-50/50 hover:shadow-md">
+                            <div class="flex min-w-0 items-center gap-3">
+                            @if (!string.IsNullOrWhiteSpace(product.GorselUrl))
+                            {
+                                <img class="relative z-10 h-12 w-12 rounded-lg object-cover transition duration-200 hover:z-30 hover:scale-175 hover:shadow-xl hover:ring-2 hover:ring-white" src="@NormalizeImage(product.GorselUrl)" alt="@product.UrunAdi" />
+                            }
+                                else
+                                {
+                                    <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-400">@Initials(product.UrunAdi)</div>
+                                }
+                                <div class="min-w-0">
+                                    <p class="truncate font-black text-slate-950">@product.UrunAdi</p>
+                                    <p class="truncate text-xs font-semibold text-slate-500">@product.Aciklama</p>
+                                </div>
+                            </div>
+                            <span class="truncate font-bold text-slate-600">@product.KategoriAdi</span>
+                            <span class="font-black text-slate-950">@product.Fiyat.ToString("C", TrCulture)</span>
+                            <span class="font-black text-slate-950">@stock.MerkezStok</span>
+                            <span class="@StockTextClass(stock.BayiStok)">@stock.BayiStok</span>
+                            <span><span class="@ProductStatusBadgeClass(product)">@ProductStatusText(product)</span></span>
+                            <div class="flex justify-end gap-2 text-xs font-black">
+                                <button class="rounded-lg bg-blue-600 px-3 py-2 text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                                        disabled="@IsAddToCartDisabled(product, stock)"
+                                        @onclick="() => AddToCart(WithSelectedStoreStock(product, stock))">
+                                    Sepete ekle
+                                </button>
+                                <button class="rounded-lg border border-slate-200 px-3 py-2 text-blue-700 hover:bg-blue-50" @onclick="() => OpenEditProductModal(product)">Düzenle</button>
+                                <button class="rounded-lg border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50" @onclick="() => OpenCentralStockModal(product)">Merkez</button>
+                                @if (stock.MerkezStok > 0)
+                                {
+                                    <button class="rounded-lg border border-emerald-200 px-3 py-2 text-emerald-700 hover:bg-emerald-50" @onclick="() => OpenTransferModal(stock)">Aktar</button>
+                                }
+                                <button class="@StatusTableButtonClass(product)" @onclick="() => ToggleProductStatusAsync(product)">@(product.AktifMi ? "Pasife al" : "Aktif yap")</button>
+                                <button class="rounded-lg border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50" @onclick="() => OpenMovementsModal(product)">Hareketler</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
         }
         else
         {
-            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 @foreach (ProductDto product in FilteredProducts)
                 {
                     StockItemDto stock = GetDisplayStock(product);
                     <ProductCard Product="@WithSelectedStoreStock(product, stock)"
                                  Stock="@stock"
                                  CentralStock="@product.Stok"
-                                 ShowAdminStock="@Auth.CanManageStock"
+                                 ShowAdminStock="@Auth.CanManageProducts"
                                  OnAdd="AddToCart"
-                                 OnTransfer="StartTransfer" />
+                                 OnEdit="OpenEditProductModal"
+                                 OnTransfer="OpenTransferModal"
+                                 OnToggleStatus="ToggleProductStatusAsync"
+                                 OnCentralStock="OpenCentralStockModal"
+                                 OnMovements="OpenMovementsModal" />
                 }
             </div>
         }
     </section>
+
+    @if (IsModalOpen)
+    {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
+             tabindex="0"
+             @onclick="CloseModal"
+             @onkeydown="HandleModalKeyDown">
+            <div class="@ModalContainerClass" @onclick:stopPropagation="true">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wide text-blue-700">Web Admin</p>
+                        <h2 class="mt-1 text-2xl font-black text-slate-950">@ModalTitle</h2>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">@ModalDescription</p>
+                    </div>
+                    <button class="rounded-lg border border-slate-200 p-3 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700" @onclick="CloseModal" aria-label="Kapat">
+                        <AppIcon Name="x" CssClass="h-5 w-5" />
+                    </button>
+                </div>
+
+                @switch (ModalMode)
+                {
+                    case CatalogModalMode.Product:
+                        @ProductModalContent()
+                        break;
+                    case CatalogModalMode.Categories:
+                        @CategoriesModalContent()
+                        break;
+                    case CatalogModalMode.Transfer:
+                        @TransferModalContent()
+                        break;
+                    case CatalogModalMode.CentralStock:
+                        @CentralStockModalContent()
+                        break;
+                    case CatalogModalMode.Movements:
+                        @MovementsModalContent()
+                        break;
+                }
+            </div>
+        </div>
+    }
 </AuthGate>
 
 @code {
@@ -104,37 +269,123 @@
     [SupplyParameterFromQuery(Name = "urunId")]
     public int? ProductId { get; set; }
 
+    private static readonly CultureInfo TrCulture = CultureInfo.GetCultureInfo("tr-TR");
+    private const string ViewStorageKey = "emarketing.products.view";
+    private const long MaxProductImageBytes = 5 * 1024 * 1024;
+    private const string ProductImageInputId = "productImageInput";
+    private const string ProductCropImageId = "productCropImage";
+    private const string ProductCropPreviewSelector = ".product-crop-preview";
+    private static readonly HashSet<string> AllowedProductImageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
+
     private IReadOnlyList<ProductDto> ProductList { get; set; } = Array.Empty<ProductDto>();
+    private IReadOnlyList<CategoryDto> Categories { get; set; } = Array.Empty<CategoryDto>();
+    private IReadOnlyList<StockMovementDto> SelectedMovements { get; set; } = Array.Empty<StockMovementDto>();
+    private IReadOnlyList<StockMovementDto> SelectedCentralMovements { get; set; } = Array.Empty<StockMovementDto>();
     private IReadOnlyDictionary<int, StockItemDto> StockByProductId { get; set; } = new Dictionary<int, StockItemDto>();
+    private ProductSaveRequest ProductForm { get; set; } = new();
+    private CategorySaveRequest CategoryForm { get; set; } = new();
+    private ProductDto? SelectedProduct { get; set; }
+    private StockItemDto? TransferTarget { get; set; }
+    private IBrowserFile? SelectedProductImage { get; set; }
+    private int? EditingProductId { get; set; }
+    private int? EditingCategoryId { get; set; }
+    private int ProductStatusFilter { get; set; } = -1;
+    private ProductViewMode CurrentViewMode { get; set; } = ProductViewMode.Cards;
+    private MovementViewMode CurrentMovementView { get; set; } = MovementViewMode.Store;
+    private StockFilterMode CurrentStockFilter { get; set; } = StockFilterMode.All;
+    private CatalogModalMode ModalMode { get; set; } = CatalogModalMode.None;
     private string Search { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
+    private string TransferNote { get; set; } = string.Empty;
+    private string CentralStockNote { get; set; } = string.Empty;
+    private string ProductImagePreviewUrl { get; set; } = string.Empty;
+    private string SelectedProductImageName { get; set; } = string.Empty;
+    private int TransferQuantity { get; set; } = 1;
+    private int CentralStockQuantity { get; set; } = 1;
     private bool IsError { get; set; }
     private bool IsLoading { get; set; }
-    private StockItemDto? TransferTarget { get; set; }
-    private int TransferQuantity { get; set; } = 1;
+    private bool IsSaving { get; set; }
+    private bool ImagePreviewFailed { get; set; }
+    private bool IsProductCropperVisible { get; set; }
+    private bool IsMovementsLoading { get; set; }
 
-    private string MessageClass => IsError
-        ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700"
-        : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700";
-
+    private bool IsModalOpen => ModalMode != CatalogModalMode.None && Auth.CanManageProducts;
     private bool IsTransferInvalid => TransferTarget is null || TransferQuantity <= 0 || TransferQuantity > TransferTarget.MerkezStok;
+    private bool IsCentralStockInvalid => SelectedProduct is null || CentralStockQuantity <= 0;
+    private int EffectiveProductStatus => Auth.CanManageProducts ? -1 : 1;
+    private string ModalTitle => ModalMode switch
+    {
+        CatalogModalMode.Product => EditingProductId.HasValue ? "Ürün düzenle" : "Yeni Ürün",
+        CatalogModalMode.Categories => "Kategoriler",
+        CatalogModalMode.Transfer => "Merkezden aktar",
+        CatalogModalMode.CentralStock => "Merkez stok ekle",
+        CatalogModalMode.Movements => "Stok hareketleri",
+        _ => string.Empty
+    };
+    private string ModalDescription => ModalMode switch
+    {
+        CatalogModalMode.Product => "Merkez katalog bilgisini yönetin; bayi stoğu transfer ile dağıtılır.",
+        CatalogModalMode.Categories => "Kategori ekleyin, düzenleyin ve aktiflik durumunu yönetin.",
+        CatalogModalMode.Transfer => "Merkez stoktan aktif bayiye hareket oluşturun.",
+        CatalogModalMode.CentralStock => "Merkez stoğu artırın ve hareket açıklamasını kaydedin.",
+        CatalogModalMode.Movements => "Seçili ürün için aktif bayi stok hareketlerini inceleyin.",
+        _ => string.Empty
+    };
+    private string ModalContainerClass => ModalMode == CatalogModalMode.Movements
+        ? "max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white shadow-2xl shadow-slate-950/20"
+        : "max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl shadow-slate-950/20";
+    private string MessageClass => IsError
+        ? "rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700"
+        : "rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700";
+    private int ActiveCount => ProductList.Count(product => product.AktifMi);
+    private int PassiveCount => ProductList.Count(product => !product.AktifMi);
+    private int InStockCount => ProductList.Count(product => product.AktifMi && GetDisplayStock(product).BayiStok > 0);
+    private int OutOfStockCount => ProductList.Count(product => product.AktifMi && GetDisplayStock(product).BayiStok <= 0);
+    private int CriticalStockCount => ProductList.Count(product => product.AktifMi && IsCriticalStock(GetDisplayStock(product)));
 
     private IEnumerable<ProductDto> FilteredProducts => ProductList.Where(product =>
         (!ProductId.HasValue || product.UrunId == ProductId.Value)
         && (!CategoryId.HasValue || product.KategoriId == CategoryId.Value)
+        && MatchesStatusFilter(product)
+        && MatchesStockFilter(product)
         && (string.IsNullOrWhiteSpace(Search)
             || $"{product.UrunAdi} {product.KategoriAdi} {product.Aciklama} {GetStock(product.UrunId)?.StokDurumu}".Contains(Search, StringComparison.CurrentCultureIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
+        if (!Auth.CanManageProducts)
+            ProductStatusFilter = 1;
+
         StoreState.Changed += OnStoreChanged;
         await StoreState.LoadAsync(StoreApi);
+        await LoadCategoriesAsync();
         await LoadProductsAsync();
         await LoadStocksAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !Auth.CanManageProducts)
+            return;
+
+        try
+        {
+            string? stored = await JS.InvokeAsync<string?>("localStorage.getItem", ViewStorageKey);
+            if (Enum.TryParse(stored, ignoreCase: true, out ProductViewMode mode))
+            {
+                CurrentViewMode = mode;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Browser storage is optional; default card view is fine.
+        }
+    }
+
     private async Task RefreshAsync()
     {
+        await LoadCategoriesAsync();
         await LoadProductsAsync();
         await LoadStocksAsync();
     }
@@ -146,7 +397,7 @@
 
         try
         {
-            ProductList = await ProductsApi.GetProductsAsync(categoryId: CategoryId.GetValueOrDefault());
+            ProductList = await ProductsApi.GetProductsAsync(status: EffectiveProductStatus);
         }
         catch
         {
@@ -160,10 +411,22 @@
         }
     }
 
+    private async Task LoadCategoriesAsync()
+    {
+        try
+        {
+            Categories = await ProductsApi.GetCategoriesAsync(status: -1);
+        }
+        catch
+        {
+            Categories = Array.Empty<CategoryDto>();
+            IsError = true;
+            Message = "Kategoriler yüklenemedi. Oturumunuzu ve API bağlantısını kontrol edin.";
+        }
+    }
+
     private async Task LoadStocksAsync()
     {
-        Message = string.Empty;
-
         if (!StoreState.SelectedStoreId.HasValue)
         {
             StockByProductId = new Dictionary<int, StockItemDto>();
@@ -183,6 +446,466 @@
             IsError = true;
             Message = "Bayi stok bilgileri yüklenemedi. Aktif bayi erişimini kontrol edin.";
         }
+    }
+
+    private async Task SetViewModeAsync(ProductViewMode mode)
+    {
+        CurrentViewMode = mode;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", ViewStorageKey, mode.ToString());
+        }
+        catch
+        {
+            // Non-critical preference.
+        }
+    }
+
+    private void SetStockFilter(StockFilterMode mode)
+    {
+        if (mode == StockFilterMode.All)
+        {
+            CurrentStockFilter = StockFilterMode.All;
+            ProductStatusFilter = -1;
+            return;
+        }
+
+        CurrentStockFilter = CurrentStockFilter == mode ? StockFilterMode.All : mode;
+    }
+
+    private void TogglePassiveFilterAsync()
+    {
+        if (!Auth.CanManageProducts)
+            return;
+
+        CurrentStockFilter = StockFilterMode.All;
+        ProductStatusFilter = ProductStatusFilter == 0 ? -1 : 0;
+    }
+
+    private void OpenNewProductModal()
+    {
+        _ = DestroyProductCropperAsync();
+        ResetProductForm();
+        ImagePreviewFailed = false;
+        SelectedProductImage = null;
+        SelectedProductImageName = string.Empty;
+        ProductImagePreviewUrl = string.Empty;
+        IsProductCropperVisible = false;
+        ModalMode = CatalogModalMode.Product;
+    }
+
+    private void OpenEditProductModal(ProductDto product)
+    {
+        _ = DestroyProductCropperAsync();
+        ProductDto source = ProductList.FirstOrDefault(item => item.UrunId == product.UrunId) ?? product;
+        EditingProductId = source.UrunId;
+        ProductForm = new ProductSaveRequest
+        {
+            KategoriId = source.KategoriId,
+            UrunAdi = source.UrunAdi,
+            Aciklama = source.Aciklama,
+            Fiyat = source.Fiyat,
+            Stok = source.Stok,
+            GorselUrl = source.GorselUrl,
+            AktifMi = source.AktifMi
+        };
+        ImagePreviewFailed = false;
+        SelectedProductImage = null;
+        SelectedProductImageName = string.Empty;
+        ProductImagePreviewUrl = NormalizeImage(source.GorselUrl);
+        IsProductCropperVisible = false;
+        ModalMode = CatalogModalMode.Product;
+        Message = string.Empty;
+    }
+
+    private void OpenCategoriesModal()
+    {
+        ResetCategoryForm();
+        ModalMode = CatalogModalMode.Categories;
+    }
+
+    private void OpenTransferModal(StockItemDto stock)
+    {
+        TransferTarget = stock;
+        TransferQuantity = stock.MerkezStok > 0 ? 1 : 0;
+        TransferNote = string.Empty;
+        ModalMode = CatalogModalMode.Transfer;
+    }
+
+    private void OpenCentralStockModal(ProductDto product)
+    {
+        SelectedProduct = ProductList.FirstOrDefault(item => item.UrunId == product.UrunId) ?? product;
+        CentralStockQuantity = 1;
+        CentralStockNote = string.Empty;
+        ModalMode = CatalogModalMode.CentralStock;
+    }
+
+    private async Task OpenMovementsModal(ProductDto product)
+    {
+        SelectedProduct = ProductList.FirstOrDefault(item => item.UrunId == product.UrunId) ?? product;
+        SelectedMovements = Array.Empty<StockMovementDto>();
+        SelectedCentralMovements = Array.Empty<StockMovementDto>();
+        CurrentMovementView = MovementViewMode.Store;
+        IsMovementsLoading = false;
+        ModalMode = CatalogModalMode.Movements;
+
+        await LoadMovementDataAsync(product.UrunId);
+    }
+
+    private async Task LoadMovementDataAsync(int productId)
+    {
+        if (!StoreState.SelectedStoreId.HasValue)
+            CurrentMovementView = MovementViewMode.Central;
+
+        IsMovementsLoading = true;
+        try
+        {
+            Task<IReadOnlyList<StockMovementDto>> storeTask = StoreState.SelectedStoreId.HasValue
+                ? StockApi.GetMovementsAsync(StoreState.SelectedStoreId.Value, productId, count: 30)
+                : Task.FromResult<IReadOnlyList<StockMovementDto>>(Array.Empty<StockMovementDto>());
+            Task<IReadOnlyList<StockMovementDto>> centralTask = StockApi.GetCentralMovementsAsync(productId, count: 30);
+
+            await Task.WhenAll(storeTask, centralTask);
+            SelectedMovements = await storeTask;
+            SelectedCentralMovements = await centralTask;
+        }
+        catch
+        {
+            IsError = true;
+            Message = "Stok hareketleri yüklenemedi.";
+        }
+        finally
+        {
+            IsMovementsLoading = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        _ = DestroyProductCropperAsync();
+        ModalMode = CatalogModalMode.None;
+        ResetProductForm();
+        ResetCategoryForm();
+        TransferTarget = null;
+        SelectedProduct = null;
+        SelectedMovements = Array.Empty<StockMovementDto>();
+        SelectedCentralMovements = Array.Empty<StockMovementDto>();
+        CurrentMovementView = MovementViewMode.Store;
+        TransferQuantity = 1;
+        CentralStockQuantity = 1;
+        TransferNote = string.Empty;
+        CentralStockNote = string.Empty;
+        SelectedProductImage = null;
+        SelectedProductImageName = string.Empty;
+        ProductImagePreviewUrl = string.Empty;
+        ImagePreviewFailed = false;
+        IsProductCropperVisible = false;
+        IsMovementsLoading = false;
+    }
+
+    private void HandleModalKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+            CloseModal();
+    }
+
+    private async Task OnProductImageSelected(InputFileChangeEventArgs eventArgs)
+    {
+        try
+        {
+            IBrowserFile file = eventArgs.File;
+            ValidateProductImage(file);
+
+            SelectedProductImage = file;
+            SelectedProductImageName = file.Name;
+            ImagePreviewFailed = false;
+            ProductImagePreviewUrl = string.Empty;
+            IsProductCropperVisible = true;
+            await InvokeAsync(StateHasChanged);
+
+            ProductCropInfo info = await JS.InvokeAsync<ProductCropInfo>("eMarketing.productCrop.load", ProductImageInputId, ProductCropImageId, ProductCropPreviewSelector, MaxProductImageBytes);
+            ProductImagePreviewUrl = info.DataUrl;
+        }
+        catch (Exception ex)
+        {
+            SelectedProductImage = null;
+            SelectedProductImageName = string.Empty;
+            ProductImagePreviewUrl = string.Empty;
+            ImagePreviewFailed = true;
+            IsProductCropperVisible = false;
+            IsError = true;
+            Message = $"Görsel seçilemedi. {ex.Message}";
+        }
+    }
+
+    private async Task SaveProductAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ProductForm.UrunAdi) || ProductForm.KategoriId <= 0)
+        {
+            IsError = true;
+            Message = "Ürün adı ve kategori zorunludur.";
+            return;
+        }
+
+        IsSaving = true;
+        SavedProductImage? savedImage = null;
+        try
+        {
+            string productName = ProductForm.UrunAdi.Trim();
+            ProductForm.UrunAdi = productName;
+            ProductForm.Aciklama = ProductForm.Aciklama?.Trim() ?? string.Empty;
+
+            if (SelectedProductImage is not null)
+            {
+                savedImage = await SaveProductImageAsync(SelectedProductImage);
+                ProductForm.GorselUrl = savedImage.Url;
+            }
+
+            if (EditingProductId.HasValue)
+            {
+                await ProductsApi.UpdateProductAsync(EditingProductId.Value, ProductForm);
+                Message = $"{productName} güncellendi.";
+            }
+            else
+            {
+                await ProductsApi.CreateProductAsync(ProductForm);
+                Message = $"{productName} ürün kataloğuna eklendi.";
+            }
+
+            IsError = false;
+            CloseModal();
+            await LoadProductsAsync();
+            await LoadStocksAsync();
+        }
+        catch (Exception ex)
+        {
+            if (savedImage is not null && File.Exists(savedImage.FullPath))
+                File.Delete(savedImage.FullPath);
+
+            IsError = true;
+            Message = $"Ürün kaydedilemedi. {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task ToggleProductStatusAsync(ProductDto product)
+    {
+        try
+        {
+            await ProductsApi.SetProductStatusAsync(product.UrunId, !product.AktifMi);
+            IsError = false;
+            Message = product.AktifMi
+                ? $"{product.UrunAdi} pasife alındı. Tüm durumlar veya Pasif filtresinden tekrar aktif yapabilirsiniz."
+                : $"{product.UrunAdi} aktif yapıldı.";
+
+            if (Auth.CanManageProducts)
+                ProductStatusFilter = -1;
+
+            await LoadProductsAsync();
+            await LoadStocksAsync();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Ürün durumu güncellenemedi. {ex.Message}";
+        }
+    }
+
+    private async Task SaveCategoryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CategoryForm.KategoriAdi))
+        {
+            IsError = true;
+            Message = "Kategori adı zorunludur.";
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            string categoryName = CategoryForm.KategoriAdi.Trim();
+            if (EditingCategoryId.HasValue)
+            {
+                await ProductsApi.UpdateCategoryAsync(EditingCategoryId.Value, CategoryForm);
+                Message = $"{categoryName} kategorisi güncellendi.";
+            }
+            else
+            {
+                await ProductsApi.CreateCategoryAsync(CategoryForm);
+                Message = $"{categoryName} kategorisi eklendi.";
+            }
+
+            IsError = false;
+            ResetCategoryForm();
+            await LoadCategoriesAsync();
+            await LoadProductsAsync();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Kategori kaydedilemedi. {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task ToggleCategoryStatusAsync(CategoryDto category)
+    {
+        try
+        {
+            await ProductsApi.SetCategoryStatusAsync(category.KategoriId, !category.AktifMi);
+            IsError = false;
+            Message = $"{category.KategoriAdi} kategorisinin durumu güncellendi.";
+            await LoadCategoriesAsync();
+            await LoadProductsAsync();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = $"Kategori durumu güncellenemedi. {ex.Message}";
+        }
+    }
+
+    private async Task TransferAsync()
+    {
+        if (IsTransferInvalid || TransferTarget is null || !StoreState.SelectedStoreId.HasValue)
+        {
+            IsError = true;
+            Message = "Transfer miktarını ve aktif bayi seçimini kontrol edin.";
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            await StockApi.TransferFromCentralAsync(StoreState.SelectedStoreId.Value, TransferTarget.UrunId, TransferQuantity, TransferNote);
+            string productName = TransferTarget.UrunAdi;
+            CloseModal();
+            await LoadStocksAsync();
+            IsError = false;
+            Message = $"{productName} için transfer tamamlandı. Stok hareketlerinden takip edebilirsiniz.";
+        }
+        catch
+        {
+            IsError = true;
+            Message = "Transfer yapılamadı. Merkez stoğu, bayi erişimi veya yetkinizi kontrol edin.";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task IncreaseCentralStockAsync()
+    {
+        if (IsCentralStockInvalid || SelectedProduct is null)
+        {
+            IsError = true;
+            Message = "Merkez stok miktarını kontrol edin.";
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            int quantity = CentralStockQuantity;
+            int productId = SelectedProduct.UrunId;
+            string productName = SelectedProduct.UrunAdi;
+            await StockApi.IncreaseCentralStockAsync(productId, quantity, CentralStockNote);
+            CloseModal();
+            await LoadProductsAsync();
+            await LoadStocksAsync();
+            IsError = false;
+            Message = $"{productName} merkez stoğuna {quantity} adet eklendi.";
+        }
+        catch
+        {
+            IsError = true;
+            Message = "Merkez stok artırılamadı. Yetkinizi ve ürün bilgisini kontrol edin.";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task<SavedProductImage> SaveProductImageAsync(IBrowserFile image)
+    {
+        ValidateProductImage(image);
+
+        string dataUrl = await JS.InvokeAsync<string>("eMarketing.productCrop.cropToDataUrl", 1400, 963, 0.9);
+        const string prefix = "data:image/jpeg;base64,";
+        if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Kırpılmış görsel hazırlanamadı.");
+
+        byte[] bytes = Convert.FromBase64String(dataUrl[prefix.Length..]);
+        string folder = Path.Combine(Environment.WebRootPath, "Images", "Products");
+        Directory.CreateDirectory(folder);
+
+        string fileName = $"{Guid.NewGuid():N}.jpg";
+        string fullPath = Path.Combine(folder, fileName);
+
+        await File.WriteAllBytesAsync(fullPath, bytes);
+
+        return new SavedProductImage($"/Images/Products/{fileName}", fullPath);
+    }
+
+    private async Task DestroyProductCropperAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eMarketing.productCrop.destroy");
+        }
+        catch
+        {
+            // The cropper is a progressive enhancement; closing the modal must never fail.
+        }
+    }
+
+    private static void ValidateProductImage(IBrowserFile image)
+    {
+        string extension = Path.GetExtension(image.Name);
+        if (!AllowedProductImageExtensions.Contains(extension))
+            throw new InvalidOperationException("Sadece JPG, PNG veya WebP görsel seçilebilir.");
+
+        if (image.Size > MaxProductImageBytes)
+            throw new InvalidOperationException("Görsel en fazla 5 MB olabilir.");
+    }
+
+    private void EditCategory(CategoryDto category)
+    {
+        EditingCategoryId = category.KategoriId;
+        CategoryForm = new CategorySaveRequest
+        {
+            KategoriAdi = category.KategoriAdi,
+            AktifMi = category.AktifMi
+        };
+    }
+
+    private void ResetProductForm()
+    {
+        EditingProductId = null;
+        ProductForm = new ProductSaveRequest
+        {
+            KategoriId = Categories.FirstOrDefault(category => category.AktifMi)?.KategoriId ?? 0,
+            AktifMi = true
+        };
+    }
+
+    private void ResetCategoryForm()
+    {
+        EditingCategoryId = null;
+        CategoryForm = new CategorySaveRequest { AktifMi = true };
+    }
+
+    private void SelectCategory(int? categoryId)
+    {
+        CategoryId = categoryId;
     }
 
     private StockItemDto? GetStock(int productId)
@@ -209,9 +932,32 @@
         };
     }
 
+    private bool MatchesStockFilter(ProductDto product)
+    {
+        StockItemDto stock = GetDisplayStock(product);
+        return CurrentStockFilter switch
+        {
+            StockFilterMode.InStock => product.AktifMi && stock.BayiStok > 0,
+            StockFilterMode.OutOfStock => product.AktifMi && stock.BayiStok <= 0,
+            StockFilterMode.Critical => product.AktifMi && IsCriticalStock(stock),
+            _ => true
+        };
+    }
+
+    private static bool IsCriticalStock(StockItemDto stock)
+    {
+        if (!string.IsNullOrWhiteSpace(stock.StokDurumu) &&
+            stock.StokDurumu.Contains("kritik", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return stock.MinimumStok > 0 && stock.BayiStok > 0 && stock.BayiStok <= stock.MinimumStok;
+    }
+
     private void AddToCart(ProductDto product)
     {
-        if (product.Stok <= 0)
+        if (!StoreState.SelectedStoreId.HasValue || product.Stok <= 0 || !product.AktifMi)
             return;
 
         Cart.Add(product);
@@ -219,42 +965,91 @@
         Message = $"{product.UrunAdi} sepete eklendi.";
     }
 
-    private void StartTransfer(StockItemDto stock)
+    private bool MatchesStatusFilter(ProductDto product)
     {
-        TransferTarget = stock;
-        TransferQuantity = stock.MerkezStok > 0 ? 1 : 0;
-        Message = string.Empty;
+        return ProductStatusFilter switch
+        {
+            0 => !product.AktifMi,
+            1 => product.AktifMi,
+            _ => true
+        };
     }
 
-    private void CancelTransfer()
+    private bool IsAddToCartDisabled(ProductDto product, StockItemDto stock)
     {
-        TransferTarget = null;
-        TransferQuantity = 1;
+        return !StoreState.SelectedStoreId.HasValue || !product.AktifMi || stock.BayiStok <= 0;
     }
 
-    private async Task TransferAsync()
+    private string CategoryChipClass(int? categoryId)
     {
-        if (IsTransferInvalid || TransferTarget is null || !StoreState.SelectedStoreId.HasValue)
-        {
-            IsError = true;
-            Message = "Transfer miktarını ve aktif bayi seçimini kontrol edin.";
-            return;
-        }
+        bool selected = CategoryId == categoryId || (!CategoryId.HasValue && !categoryId.HasValue);
+        return selected
+            ? "shrink-0 rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm shadow-blue-200"
+            : "shrink-0 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700";
+    }
 
-        try
-        {
-            await StockApi.TransferFromCentralAsync(StoreState.SelectedStoreId.Value, TransferTarget.UrunId, TransferQuantity);
-            string productName = TransferTarget.UrunAdi;
-            CancelTransfer();
-            await LoadStocksAsync();
-            IsError = false;
-            Message = $"{productName} için transfer tamamlandı. Siparişler ekranındaki Merkez transferleri bölümünden takip edebilirsiniz.";
-        }
-        catch
-        {
-            IsError = true;
-            Message = "Transfer yapılamadı. Merkez stoğu, bayi erişimi veya yetkinizi kontrol edin.";
-        }
+    private string ViewButtonClass(ProductViewMode mode)
+    {
+        return CurrentViewMode == mode
+            ? "rounded-md bg-white px-4 py-2 text-xs font-black text-blue-700 shadow-sm"
+            : "rounded-md px-4 py-2 text-xs font-black text-slate-500 hover:text-slate-700";
+    }
+
+    private string MetricCardClass(StockFilterMode mode)
+    {
+        bool selected = CurrentStockFilter == mode;
+        return selected
+            ? "flex items-center gap-3 rounded-xl border border-blue-300 bg-blue-50 p-4 text-left shadow-sm shadow-blue-100 ring-2 ring-blue-100"
+            : "flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm shadow-slate-200/60 transition hover:border-blue-200 hover:bg-blue-50/40";
+    }
+
+    private string StatusMetricCardClass()
+    {
+        bool selected = ProductStatusFilter == 0;
+        return selected
+            ? "flex items-center gap-3 rounded-xl border border-slate-400 bg-slate-100 p-4 text-left shadow-sm ring-2 ring-slate-200"
+            : "flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm shadow-slate-200/60 transition hover:border-slate-300 hover:bg-slate-50";
+    }
+
+    private string CategoryStatusButtonClass(CategoryDto category)
+    {
+        return category.AktifMi
+            ? "rounded-lg border border-rose-200 px-3 py-2 text-rose-600 hover:bg-rose-50"
+            : "rounded-lg border border-emerald-200 px-3 py-2 text-emerald-700 hover:bg-emerald-50";
+    }
+
+    private string StockTextClass(int quantity)
+    {
+        return quantity <= 0 ? "font-black text-rose-600" : "font-black text-emerald-600";
+    }
+
+    private string ProductStatusText(ProductDto product)
+    {
+        return product.AktifMi ? "Aktif" : "Pasif";
+    }
+
+    private string ProductStatusBadgeClass(ProductDto product)
+    {
+        return product.AktifMi
+            ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100"
+            : "rounded-full bg-slate-900 px-3 py-1 text-xs font-black text-white";
+    }
+
+    private string StatusTableButtonClass(ProductDto product)
+    {
+        return product.AktifMi
+            ? "rounded-lg border border-rose-200 px-3 py-2 text-rose-600 hover:bg-rose-50"
+            : "rounded-lg border border-emerald-200 px-3 py-2 text-emerald-700 hover:bg-emerald-50";
+    }
+
+    private static string NormalizeImage(string imageUrl)
+    {
+        return imageUrl.Replace("\\", "/");
+    }
+
+    private static string Initials(string text)
+    {
+        return string.Join("", text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(TrCulture);
     }
 
     private static ProductDto WithSelectedStoreStock(ProductDto product, StockItemDto? stock) => new()
@@ -276,7 +1071,6 @@
     {
         await InvokeAsync(async () =>
         {
-            TransferTarget = null;
             await LoadStocksAsync();
             StateHasChanged();
         });
@@ -286,4 +1080,369 @@
     {
         StoreState.Changed -= OnStoreChanged;
     }
+
+    private RenderFragment ProductModalContent() => @<div class="grid gap-5 p-5 lg:grid-cols-[1fr_220px]">
+        <div class="space-y-4">
+            <label class="block">
+                <span class="text-xs font-black uppercase text-slate-500">Ürün adı</span>
+                <input class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="ProductForm.UrunAdi" />
+            </label>
+
+            <label class="block">
+                <span class="text-xs font-black uppercase text-slate-500">Kategori</span>
+                <select class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="ProductForm.KategoriId">
+                    <option value="0">Kategori seçin</option>
+                    @foreach (CategoryDto category in Categories)
+                    {
+                        <option value="@category.KategoriId">@category.KategoriAdi @(category.AktifMi ? "" : "(Pasif)")</option>
+                    }
+                </select>
+            </label>
+
+            <label class="block">
+                <span class="text-xs font-black uppercase text-slate-500">Açıklama</span>
+                <textarea class="mt-1 min-h-24 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="ProductForm.Aciklama"></textarea>
+            </label>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+                <label class="block">
+                    <span class="text-xs font-black uppercase text-slate-500">Fiyat</span>
+                    <input type="number" min="0" step="0.01" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="ProductForm.Fiyat" />
+                </label>
+                <label class="block">
+                    <span class="text-xs font-black uppercase text-slate-500">Merkez stok</span>
+                    <input type="number" min="0" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="ProductForm.Stok" />
+                </label>
+            </div>
+
+            <label class="block">
+                <span class="text-xs font-black uppercase text-slate-500">Ürün görseli</span>
+                <InputFile id="@ProductImageInputId"
+                           class="mt-1 block w-full rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-sm font-semibold text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-xs file:font-black file:text-white"
+                           OnChange="OnProductImageSelected"
+                           accept=".jpg,.jpeg,.png,.webp" />
+                <span class="mt-1 block text-xs font-semibold text-slate-500">
+                    JPG, PNG veya WebP seçin. Maksimum 5 MB. Görsel 16:11 ürün kartı oranında kırpılır.
+                    @if (!string.IsNullOrWhiteSpace(SelectedProductImageName))
+                    {
+                        <span class="font-black text-blue-700"> Seçili: @SelectedProductImageName</span>
+                    }
+                </span>
+            </label>
+
+            <label class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+                Aktif ürün
+                <input type="checkbox" class="h-5 w-5 accent-blue-600" @bind="ProductForm.AktifMi" />
+            </label>
+        </div>
+
+        <div>
+            <p class="mb-2 text-xs font-black uppercase text-slate-500">Görsel önizleme</p>
+            @if (IsProductCropperVisible)
+            {
+                <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
+                    <img id="@ProductCropImageId"
+                         class="block max-h-[320px] w-full"
+                         alt="Kırpılacak ürün görseli" />
+                </div>
+                <p class="mt-2 text-xs font-semibold text-slate-500">Kutu alanını sürükleyin veya kenarlarından boyutlandırın. Görseli tekerlek ile yakınlaştırabilirsiniz.</p>
+                <div class="mt-3 grid gap-3">
+                    <div>
+                        <p class="mb-2 text-xs font-black uppercase text-slate-500">Kart görünümü</p>
+                        <div class="product-crop-preview aspect-[16/11] overflow-hidden rounded-lg border border-slate-200 bg-slate-100"></div>
+                    </div>
+                    <div class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div class="product-crop-preview h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-white"></div>
+                        <div>
+                            <p class="text-xs font-black text-slate-700">Tablo küçük görseli</p>
+                            <p class="text-xs font-semibold text-slate-500">Kaydedilince kart ve tabloda bu kırpım kullanılır.</p>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="aspect-[16/11] overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                    @if (!string.IsNullOrWhiteSpace(ProductImagePreviewUrl) && !ImagePreviewFailed)
+                    {
+                        <img class="h-full w-full object-cover" src="@ProductImagePreviewUrl" alt="Ürün önizleme" @onerror="() => ImagePreviewFailed = true" />
+                    }
+                    else
+                    {
+                        <div class="flex h-full items-center justify-center px-4 text-center text-sm font-black text-slate-400">Görsel önizleme yok</div>
+                    }
+                </div>
+                <p class="mt-2 text-xs font-semibold text-slate-500">Görsel kaydedilince ürün kartında otomatik kullanılır.</p>
+            }
+        </div>
+
+        <div class="flex justify-end gap-2 border-t border-slate-100 pt-4 lg:col-span-2">
+            <button class="rounded-lg border border-slate-200 px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50" @onclick="CloseModal">Vazgeç</button>
+            <button class="rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled="@IsSaving" @onclick="SaveProductAsync">Kaydet</button>
+        </div>
+    </div>;
+
+    private RenderFragment CategoriesModalContent() => @<div class="space-y-4 p-5">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <label class="block">
+                <span class="text-xs font-black uppercase text-slate-500">Kategori adı</span>
+                <input class="mt-1 h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="CategoryForm.KategoriAdi" />
+            </label>
+            <label class="mt-3 flex items-center justify-between text-sm font-black text-slate-700">
+                Aktif kategori
+                <input type="checkbox" class="h-5 w-5 accent-blue-600" @bind="CategoryForm.AktifMi" />
+            </label>
+            <div class="mt-3 flex justify-end gap-2">
+                @if (EditingCategoryId.HasValue)
+                {
+                    <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 hover:bg-slate-50" @onclick="ResetCategoryForm">Vazgeç</button>
+                }
+                <button class="rounded-lg bg-slate-950 px-4 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled="@IsSaving" @onclick="SaveCategoryAsync">
+                    @(EditingCategoryId.HasValue ? "Güncelle" : "Kategori ekle")
+                </button>
+            </div>
+        </div>
+
+        <div class="max-h-96 space-y-2 overflow-y-auto pr-1">
+            @foreach (CategoryDto category in Categories)
+            {
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+                    <div>
+                        <p class="font-black text-slate-950">@category.KategoriAdi</p>
+                        <p class="mt-1 text-xs font-bold @(category.AktifMi ? "text-emerald-600" : "text-rose-600")">@(category.AktifMi ? "Aktif" : "Pasif")</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-black">
+                        <button class="rounded-lg border border-slate-200 px-3 py-2 text-blue-700 hover:bg-blue-50" @onclick="() => EditCategory(category)">Düzenle</button>
+                        <button class="@CategoryStatusButtonClass(category)" @onclick="() => ToggleCategoryStatusAsync(category)">@(category.AktifMi ? "Pasife al" : "Aktif yap")</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>;
+
+    private RenderFragment TransferModalContent() => @<div class="space-y-4 p-5">
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <p class="text-xs font-black uppercase text-emerald-700">Seçili ürün</p>
+            <h3 class="mt-1 text-lg font-black text-slate-950">@TransferTarget?.UrunAdi</h3>
+            <p class="mt-1 text-sm font-semibold text-slate-600">Merkez: @TransferTarget?.MerkezStok · Bu bayi: @TransferTarget?.BayiStok</p>
+        </div>
+        <label class="block">
+            <span class="text-xs font-black uppercase text-slate-500">Miktar</span>
+            <input type="number" min="1" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100" @bind="TransferQuantity" />
+        </label>
+        <label class="block">
+            <span class="text-xs font-black uppercase text-slate-500">Açıklama</span>
+            <input class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100" @bind="TransferNote" placeholder="Merkezden bayiye transfer" />
+        </label>
+        <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <button class="rounded-lg border border-slate-200 px-4 py-3 text-sm font-black text-slate-600 hover:bg-slate-50" @onclick="CloseModal">Vazgeç</button>
+            <button class="rounded-lg bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" disabled="@(IsSaving || IsTransferInvalid)" @onclick="TransferAsync">Transfer Et</button>
+        </div>
+    </div>;
+
+    private RenderFragment CentralStockModalContent() => @<div class="space-y-4 p-5">
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p class="text-xs font-black uppercase text-blue-700">Merkez stok</p>
+            <h3 class="mt-1 text-lg font-black text-slate-950">@SelectedProduct?.UrunAdi</h3>
+            <p class="mt-1 text-sm font-semibold text-slate-600">Mevcut merkez: @(SelectedProduct?.Stok ?? 0)</p>
+        </div>
+        <label class="block">
+            <span class="text-xs font-black uppercase text-slate-500">Eklenecek miktar</span>
+            <input type="number" min="1" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="CentralStockQuantity" />
+        </label>
+        <label class="block">
+            <span class="text-xs font-black uppercase text-slate-500">Açıklama</span>
+            <input class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="CentralStockNote" placeholder="Merkez stok artırma" />
+        </label>
+        <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <button class="rounded-lg border border-slate-200 px-4 py-3 text-sm font-black text-slate-600 hover:bg-slate-50" @onclick="CloseModal">Vazgeç</button>
+            <button class="rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300" disabled="@(IsSaving || IsCentralStockInvalid)" @onclick="IncreaseCentralStockAsync">Merkeze Ekle</button>
+        </div>
+    </div>;
+
+    private RenderFragment MovementsModalContent() => @<div class="p-5">
+        <div class="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+                <p class="text-xs font-black uppercase text-slate-500">Ürün</p>
+                <h3 class="mt-1 text-lg font-black text-slate-950">@SelectedProduct?.UrunAdi</h3>
+                <p class="mt-1 text-sm font-semibold text-slate-500">@((StoreState.SelectedStore?.MagazaAdi ?? "Aktif bayi") + " ve merkez stok hareketleri")</p>
+            </div>
+            @if (SelectedProduct is not null)
+            {
+                StockItemDto stock = GetDisplayStock(SelectedProduct);
+                <div class="grid grid-cols-2 gap-2 text-center text-xs font-black">
+                    <span class="rounded-lg bg-white px-3 py-2 text-slate-600 ring-1 ring-slate-200">
+                        <span class="block text-[10px] uppercase text-slate-400">Bu bayi</span>
+                        <span class="@StockTextClass(stock.BayiStok)">@stock.BayiStok</span>
+                    </span>
+                    <span class="rounded-lg bg-white px-3 py-2 text-slate-600 ring-1 ring-slate-200">
+                        <span class="block text-[10px] uppercase text-slate-400">Merkez</span>
+                        <span class="text-slate-950">@stock.MerkezStok</span>
+                    </span>
+                </div>
+            }
+        </div>
+
+        <div class="mb-4 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-1">
+            <button class="@MovementTabClass(MovementViewMode.Store)" @onclick="() => CurrentMovementView = MovementViewMode.Store">Bayi hareketleri</button>
+            <button class="@MovementTabClass(MovementViewMode.Central)" @onclick="() => CurrentMovementView = MovementViewMode.Central">Merkez hareketleri</button>
+        </div>
+
+        @if (IsMovementsLoading)
+        {
+            <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm font-bold text-slate-500">Stok hareketleri yükleniyor...</div>
+        }
+        else if (CurrentMovementView == MovementViewMode.Store && !StoreState.SelectedStoreId.HasValue)
+        {
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">Bayi hareketleri için aktif bayi seçin.</div>
+        }
+        else if (!CurrentMovementItems.Any())
+        {
+            <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm font-bold text-slate-500">Bu ürün için hareket bulunamadı.</div>
+        }
+        else
+        {
+            <div class="overflow-hidden rounded-lg border border-slate-200">
+                @foreach (StockMovementDto movement in CurrentMovementItems)
+                {
+                    <div class="grid gap-3 border-b border-slate-100 p-3 text-sm transition last:border-b-0 hover:bg-blue-50/40 md:grid-cols-[1fr_.8fr_.6fr_.8fr]">
+                        <div>
+                            <p class="font-black text-slate-950">@MovementTitle(movement)</p>
+                            <p class="text-xs font-semibold text-slate-500">@MovementDescription(movement)</p>
+                        </div>
+                        <p class="font-bold text-slate-600">@movement.OlusturmaTarihi?.ToString("dd.MM.yyyy HH:mm", TrCulture)</p>
+                        <p><span class="@MovementQuantityClass(movement)">@MovementQuantityText(movement)</span></p>
+                        <p class="font-bold text-slate-600">@MovementReferenceText(movement)</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>;
+
+    private IReadOnlyList<StockMovementDto> CurrentMovementItems =>
+        CurrentMovementView == MovementViewMode.Central ? SelectedCentralMovements : SelectedMovements;
+
+    private string MovementTabClass(MovementViewMode mode)
+    {
+        return CurrentMovementView == mode
+            ? "rounded-md bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm"
+            : "rounded-md px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-100";
+    }
+
+    private static string MovementTitle(StockMovementDto movement)
+    {
+        return movement.HareketTipi switch
+        {
+            "SiparisTeslimGiris" => "Sipariş teslim girişi",
+            "ManuelGiris" => "Manuel stok girişi",
+            "ManuelCikis" => "Manuel stok çıkışı",
+            "MerkezGiris" => "Merkez stok girişi",
+            "SiparisIptalCikis" => "Sipariş iptal/iade çıkışı",
+            "BayiSatisCikis" => "Bayi satış çıkışı",
+            "DuzeltmeGiris" => "Düzeltme girişi",
+            "DuzeltmeCikis" => "Düzeltme çıkışı",
+            "OrderOut" => "Sipariş merkez çıkışı",
+            _ => string.IsNullOrWhiteSpace(movement.HareketAciklama)
+                ? CleanMovementText(movement.HareketTipi)
+                : CleanMovementText(movement.HareketAciklama)
+        };
+    }
+
+    private static string MovementDescription(StockMovementDto movement)
+    {
+        if (!string.IsNullOrWhiteSpace(movement.Aciklama))
+            return CleanMovementText(movement.Aciklama);
+
+        return string.IsNullOrWhiteSpace(movement.SiparisNo) ? "Manuel stok hareketi" : $"Sipariş: {movement.SiparisNo}";
+    }
+
+    private static string MovementQuantityText(StockMovementDto movement)
+    {
+        string prefix = IsOutgoingMovement(movement) ? "-" : "+";
+        return $"{prefix}{movement.Miktar} adet";
+    }
+
+    private static string MovementQuantityClass(StockMovementDto movement)
+    {
+        return IsOutgoingMovement(movement)
+            ? "inline-flex rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700 ring-1 ring-rose-100"
+            : "inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100";
+    }
+
+    private static string MovementReferenceText(StockMovementDto movement)
+    {
+        if (movement.MagazaId <= 0 && movement.OncekiStok == 0 && movement.SonrakiStok == 0)
+            return string.IsNullOrWhiteSpace(movement.SiparisNo) ? "Merkez stok kaydı" : $"Sipariş: {movement.SiparisNo}";
+
+        return $"Önceki: {movement.OncekiStok} · Son: {movement.SonrakiStok}";
+    }
+
+    private static bool IsOutgoingMovement(StockMovementDto movement)
+    {
+        if (movement.HareketTipi is "BayiSatisCikis" or "ManuelCikis" or "DuzeltmeCikis" or "SiparisIptalCikis" or "OrderOut" or "SiparisOlusturma" or "MerkezCikis")
+            return true;
+
+        string direction = CleanMovementText(movement.HareketYonu);
+        return direction.Contains("Cikis", StringComparison.OrdinalIgnoreCase)
+            || direction.Contains("Çıkış", StringComparison.OrdinalIgnoreCase)
+            || direction.Contains("çıkış", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string CleanMovementText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        return value
+            .Replace("Ãœ", "Ü", StringComparison.Ordinal)
+            .Replace("Ã–", "Ö", StringComparison.Ordinal)
+            .Replace("Ã‡", "Ç", StringComparison.Ordinal)
+            .Replace("Ã¼", "ü", StringComparison.Ordinal)
+            .Replace("Ã¶", "ö", StringComparison.Ordinal)
+            .Replace("Ã§", "ç", StringComparison.Ordinal)
+            .Replace("Ä±", "ı", StringComparison.Ordinal)
+            .Replace("Ä°", "İ", StringComparison.Ordinal)
+            .Replace("ÄŸ", "ğ", StringComparison.Ordinal)
+            .Replace("Äž", "Ğ", StringComparison.Ordinal)
+            .Replace("ÅŸ", "ş", StringComparison.Ordinal)
+            .Replace("Åž", "Ş", StringComparison.Ordinal);
+    }
+
+    private enum ProductViewMode
+    {
+        Cards,
+        Table
+    }
+
+    private enum MovementViewMode
+    {
+        Store,
+        Central
+    }
+
+    private enum StockFilterMode
+    {
+        All,
+        InStock,
+        OutOfStock,
+        Critical
+    }
+
+    private enum CatalogModalMode
+    {
+        None,
+        Product,
+        Categories,
+        Transfer,
+        CentralStock,
+        Movements
+    }
+
+    private sealed class ProductCropInfo
+    {
+        public string DataUrl { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+    }
+
+    private sealed record SavedProductImage(string Url, string FullPath);
 }

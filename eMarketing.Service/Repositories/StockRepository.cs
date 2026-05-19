@@ -106,6 +106,33 @@ public sealed class StockRepository : IStockRepository
         }, cancellationToken);
     }
 
+    public Task<IReadOnlyList<StockMovementDto>> GetCentralMovementsAsync(int productId, int count, int? userId, bool isAdmin, CancellationToken cancellationToken = default)
+    {
+        return _sqlExecutor.QueryAsync("sp_MerkezStok_Hareket_Listele", new[]
+        {
+            SqlParameterFactory.Param("@ProductId", SqlDbType.Int, productId),
+            SqlParameterFactory.Param("@KayitSayisi", SqlDbType.Int, count <= 0 ? 25 : count),
+            SqlParameterFactory.Param("@KullaniciId", SqlDbType.Int, userId),
+            SqlParameterFactory.Param("@AdminMi", SqlDbType.Bit, isAdmin)
+        }, reader => new StockMovementDto
+        {
+            MagazaStokHareketId = reader.GetInt("MagazaStokHareketId"),
+            MagazaId = reader.GetInt("MagazaId"),
+            UrunId = reader.GetInt("UrunId"),
+            UrunAdi = reader.GetText("UrunAdi"),
+            HareketTipi = reader.GetText("HareketTipi"),
+            HareketYonu = reader.GetText("HareketYonu"),
+            HareketAciklama = reader.GetText("HareketAciklama"),
+            Miktar = reader.GetInt("Miktar"),
+            OncekiStok = reader.GetInt("OncekiStok"),
+            SonrakiStok = reader.GetInt("SonrakiStok"),
+            KaynakSiparisId = reader.GetNullableInt("KaynakSiparisId"),
+            SiparisNo = reader.GetText("SiparisNo"),
+            Aciklama = reader.GetText("Aciklama"),
+            OlusturmaTarihi = reader.GetNullableDate("OlusturmaTarihi")
+        }, cancellationToken);
+    }
+
     public Task UpdateMinimumAsync(int storeStockId, int minimumStock, CancellationToken cancellationToken = default)
     {
         return _sqlExecutor.ExecuteAsync("sp_MagazaStok_MinimumGuncelle", new[]

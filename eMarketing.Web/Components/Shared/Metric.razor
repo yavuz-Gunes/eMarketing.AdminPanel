@@ -1,9 +1,41 @@
-<div class="rounded-xl bg-slate-50 p-3">
-    <p class="text-xs font-black uppercase text-slate-400">@Label</p>
-    <p class="mt-1 truncate text-sm font-black text-slate-950">@Value</p>
+<div class="@CssClass">
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="@IconClass">
+            <AppIcon Name="@Icon" CssClass="h-5 w-5" />
+        </span>
+    }
+    <span class="min-w-0">
+        <span class="block text-xs font-black uppercase text-slate-400">@Label</span>
+        <span class="mt-1 block truncate text-xl font-black text-slate-950">@Value</span>
+    </span>
 </div>
 
 @code {
     [Parameter] public string Label { get; set; } = string.Empty;
     [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = string.Empty;
+    [Parameter] public string Tone { get; set; } = "slate";
+
+    private string CssClass => $"flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm {ToneRingClass}";
+
+    private string IconClass => $"inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {IconToneClass}";
+
+    private string ToneRingClass => Tone switch
+    {
+        "blue" => "shadow-blue-100/60",
+        "emerald" => "shadow-emerald-100/60",
+        "amber" => "shadow-amber-100/60",
+        "violet" => "shadow-violet-100/60",
+        _ => "shadow-slate-200/60"
+    };
+
+    private string IconToneClass => Tone switch
+    {
+        "blue" => "bg-blue-50 text-blue-700",
+        "emerald" => "bg-emerald-50 text-emerald-700",
+        "amber" => "bg-amber-50 text-amber-700",
+        "violet" => "bg-violet-50 text-violet-700",
+        _ => "bg-slate-100 text-slate-600"
+    };
 }

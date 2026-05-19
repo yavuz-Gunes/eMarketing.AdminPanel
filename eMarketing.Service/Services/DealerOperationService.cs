@@ -144,12 +144,15 @@ public sealed class DealerOperationService : IDealerOperationService
         if (!currentUser.UserId.HasValue)
             throw new UnauthorizedAccessException("Kullanıcı oturumu bulunamadı.");
 
+        if (currentUser.CanSeeAllStores)
+            return await GetAdminContextAsync(storeId, cancellationToken);
+
         await using SqlConnection connection = _connectionFactory.CreateConnection();
         await using SqlCommand command = new(@"
 SELECT TOP 1
     cs.CustomerStoreId AS MagazaId,
     cs.StoreName AS MagazaAdi,
-    c.CustomerName AS MusteriAdi,
+    COALESCE(NULLIF(c.CompanyName, N''), c.FullName) AS MusteriAdi,
     km.Gorev,
     CAST(CASE WHEN byk.BayiYetkiliId IS NULL THEN 0 ELSE 1 END AS bit) AS SiparisYetkilisiMi
 FROM dbo.KullaniciMagazalari km
@@ -185,6 +188,38 @@ WHERE km.KullaniciId = @KullaniciId
         };
     }
 
+    private async Task<StoreTeamContextDto> GetAdminContextAsync(int storeId, CancellationToken cancellationToken)
+    {
+        await using SqlConnection connection = _connectionFactory.CreateConnection();
+        await using SqlCommand command = new(@"
+SELECT TOP 1
+    cs.CustomerStoreId AS MagazaId,
+    cs.StoreName AS MagazaAdi,
+    COALESCE(NULLIF(c.CompanyName, N''), c.FullName) AS MusteriAdi
+FROM dbo.CustomerStores cs
+INNER JOIN dbo.Customers c ON c.CustomerId = cs.CustomerId
+WHERE cs.CustomerStoreId = @MagazaId
+  AND cs.IsActive = 1
+  AND c.IsActive = 1;", connection);
+
+        command.CommandType = CommandType.Text;
+        command.Parameters.Add("@MagazaId", SqlDbType.Int).Value = storeId;
+
+        await connection.OpenAsync(cancellationToken);
+        await using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+            throw new UnauthorizedAccessException("Aktif bayi bulunamadı.");
+
+        return new StoreTeamContextDto
+        {
+            MagazaId = reader.GetInt("MagazaId"),
+            MagazaAdi = reader.GetText("MagazaAdi"),
+            MusteriAdi = reader.GetText("MusteriAdi"),
+            KullaniciGorev = "Supervisor",
+            SiparisYetkilisiMi = true
+        };
+    }
+
     private async Task<IReadOnlyList<StoreTeamMemberDto>> GetMembersAsync(int storeId, CancellationToken cancellationToken)
     {
         var members = new List<StoreTeamMemberDto>();
@@ -199,6 +234,7 @@ SELECT
     ISNULL(k.Email, N'') AS Email,
     ISNULL(k.Telefon, N'') AS Telefon,
     ISNULL(k.ImageUrl, N'') AS ImageUrl,
+    ISNULL(k.Rol, N'') AS Rol,
     km.Gorev,
     CASE km.Gorev
         WHEN N'Supervisor' THEN N'Supervisor'
@@ -236,6 +272,7 @@ ORDER BY
                 Email = reader.GetText("Email"),
                 Telefon = reader.GetText("Telefon"),
                 ImageUrl = reader.GetText("ImageUrl"),
+                Rol = reader.GetText("Rol"),
                 MagazaGorev = reader.GetText("Gorev"),
                 MagazaGorevGorunenAd = reader.GetText("GorevGorunenAd"),
                 SiparisYetkilisiMi = reader.GetBool("SiparisYetkilisiMi"),

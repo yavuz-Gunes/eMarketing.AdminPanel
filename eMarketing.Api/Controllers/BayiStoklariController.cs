@@ -51,6 +51,13 @@ public sealed class BayiStoklariController : ControllerBase
         return Ok(await _stockService.GetMovementsAsync(magazaId, urunId, kayitSayisi, cancellationToken));
     }
 
+    [HttpGet("merkez-hareketler")]
+    [Authorize(Policy = "CanManageCentralStock")]
+    public async Task<ActionResult<IReadOnlyList<StockMovementDto>>> GetMerkezHareketler([FromQuery] int urunId, [FromQuery] int kayitSayisi = 25, CancellationToken cancellationToken = default)
+    {
+        return Ok(await _stockService.GetCentralMovementsAsync(urunId, kayitSayisi, cancellationToken));
+    }
+
     [HttpPatch("{magazaStokId:int}/minimum")]
     [Authorize(Policy = "CanManageStock")]
     public async Task<IActionResult> MinimumGuncelle(int magazaStokId, [FromBody] MinimumStokRequest request, CancellationToken cancellationToken)

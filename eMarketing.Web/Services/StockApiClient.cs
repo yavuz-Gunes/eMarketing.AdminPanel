@@ -25,6 +25,13 @@ public sealed class StockApiClient : ApiClientBase
         return await ReadRequiredAsync<IReadOnlyList<StockMovementDto>>(response, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<StockMovementDto>> GetCentralMovementsAsync(int productId, int count = 25, CancellationToken cancellationToken = default)
+    {
+        string query = $"bayi-stoklari/merkez-hareketler?urunId={productId}&kayitSayisi={count}";
+        HttpResponseMessage response = await CreateClient().GetAsync(query, cancellationToken);
+        return await ReadRequiredAsync<IReadOnlyList<StockMovementDto>>(response, cancellationToken);
+    }
+
     public async Task TransferFromCentralAsync(int storeId, int productId, int quantity, string note = "", CancellationToken cancellationToken = default)
     {
         HttpResponseMessage response = await CreateClient().PostAsJsonAsync("bayi-stoklari/hareket", new
@@ -34,6 +41,18 @@ public sealed class StockApiClient : ApiClientBase
             HareketTipi = "ManuelGiris",
             Miktar = quantity,
             Aciklama = string.IsNullOrWhiteSpace(note) ? "Merkezden bayiye transfer" : note
+        }, cancellationToken);
+
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task IncreaseCentralStockAsync(int productId, int quantity, string note = "", CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await CreateClient().PostAsJsonAsync("bayi-stoklari/merkez-stok/artir", new
+        {
+            UrunId = productId,
+            Miktar = quantity,
+            Aciklama = string.IsNullOrWhiteSpace(note) ? "Merkez stok artırma" : note
         }, cancellationToken);
 
         await EnsureSuccessAsync(response, cancellationToken);
