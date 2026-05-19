@@ -33,7 +33,7 @@ public sealed class ProductApiClient : ApiClientBase
 
     public async Task SetProductStatusAsync(int productId, bool active, CancellationToken cancellationToken = default)
     {
-        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"urunler/{productId}/durum", new ProductSaveRequest { AktifMi = active }, cancellationToken);
+        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"urunler/{productId}/durum", new StatusUpdateRequest { AktifMi = active }, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
@@ -59,8 +59,13 @@ public sealed class ProductApiClient : ApiClientBase
 
     public async Task SetCategoryStatusAsync(int categoryId, bool active, CancellationToken cancellationToken = default)
     {
-        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"kategoriler/{categoryId}/durum", new CategorySaveRequest { AktifMi = active }, cancellationToken);
+        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"kategoriler/{categoryId}/durum", new StatusUpdateRequest { AktifMi = active }, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    private sealed class StatusUpdateRequest
+    {
+        public bool AktifMi { get; set; }
     }
 
     private sealed class ProductCreateResult

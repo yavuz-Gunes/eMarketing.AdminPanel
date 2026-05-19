@@ -164,7 +164,27 @@
         }
 
         <main class="min-h-[calc(100vh-5rem)]">
-            @Body
+            <ErrorBoundary @ref="PageErrorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent>
+                    <section class="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+                        <div class="rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
+                            <p class="text-sm font-black uppercase tracking-wide text-rose-600">Sayfa yüklenemedi</p>
+                            <h1 class="mt-2 text-2xl font-black text-slate-950">Bu sayfada beklenmeyen bir hata oluştu.</h1>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                Oturumunuz açık kaldı. Menüden başka bir sayfaya geçebilir veya sağ üstten çıkış yapabilirsiniz.
+                            </p>
+                            <button type="button"
+                                    class="mt-5 inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700"
+                                    @onclick="RecoverCurrentPage">
+                                Tekrar dene
+                            </button>
+                        </div>
+                    </section>
+                </ErrorContent>
+            </ErrorBoundary>
         </main>
     </div>
 </div>
@@ -178,6 +198,8 @@
     private IReadOnlyList<NotificationDto> HeaderNotifications { get; set; } = Array.Empty<NotificationDto>();
     private int UnreadCount { get; set; }
     private bool NotificationsOpen { get; set; }
+    private ErrorBoundary? PageErrorBoundary { get; set; }
+    private int NotificationLoadVersion { get; set; }
     private string DisplayUnreadCount => UnreadCount > 99 ? "99+" : UnreadCount.ToString(CultureInfo.InvariantCulture);
     private string SelectedStoreName => StoreState.SelectedStore?.MagazaAdi ?? "Bayi seçilmedi";
 
@@ -193,6 +215,7 @@
     {
         StoreState.Changed += OnStoreChanged;
         Auth.Changed += OnAuthChanged;
+        Navigation.LocationChanged += OnLocationChanged;
 
         if (Auth.IsAuthenticated)
             await LoadNotificationsAsync();
@@ -204,6 +227,16 @@
         await StoreState.ClearAsync();
         await JS.InvokeVoidAsync("eMarketing.auth.clear");
         Navigation.NavigateTo("/login", true);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        PageErrorBoundary?.Recover();
+    }
+
+    private void RecoverCurrentPage()
+    {
+        PageErrorBoundary?.Recover();
     }
 
     private async void OnStoreChanged()
@@ -239,6 +272,8 @@
 
     private async Task LoadNotificationsAsync()
     {
+        int version = ++NotificationLoadVersion;
+
         if (!Auth.IsAuthenticated)
         {
             HeaderNotifications = Array.Empty<NotificationDto>();
@@ -256,13 +291,22 @@
                 return;
             }
 
-            HeaderNotifications = await NotificationApi.GetNotificationsAsync(storeId, false, 6);
-            UnreadCount = await NotificationApi.GetUnreadCountAsync(storeId);
+            IReadOnlyList<NotificationDto> notifications = await NotificationApi.GetNotificationsAsync(storeId, false, 6);
+            int unreadCount = await NotificationApi.GetUnreadCountAsync(storeId);
+
+            if (version != NotificationLoadVersion || StoreState.SelectedStoreId != storeId)
+                return;
+
+            HeaderNotifications = notifications;
+            UnreadCount = unreadCount;
         }
         catch
         {
-            HeaderNotifications = Array.Empty<NotificationDto>();
-            UnreadCount = 0;
+            if (version == NotificationLoadVersion)
+            {
+                HeaderNotifications = Array.Empty<NotificationDto>();
+                UnreadCount = 0;
+            }
         }
     }
 
@@ -330,5 +374,6 @@
     {
         StoreState.Changed -= OnStoreChanged;
         Auth.Changed -= OnAuthChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

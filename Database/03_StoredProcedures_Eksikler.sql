@@ -565,6 +565,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_MusteriMagaza_Ekle
     @Address NVARCHAR(500) = NULL,
     @Phone NVARCHAR(60) = NULL,
     @ResponsiblePerson NVARCHAR(200) = NULL,
+    @SorumluKullaniciId INT = NULL,
     @IsActive BIT = 1
 AS
 BEGIN
@@ -579,6 +580,7 @@ BEGIN
         Address,
         Phone,
         ResponsiblePerson,
+        SorumluKullaniciId,
         IsActive
     )
     VALUES
@@ -590,6 +592,7 @@ BEGIN
         NULLIF(LTRIM(RTRIM(@Address)), ''),
         NULLIF(LTRIM(RTRIM(@Phone)), ''),
         NULLIF(LTRIM(RTRIM(@ResponsiblePerson)), ''),
+        @SorumluKullaniciId,
         @IsActive
     );
 
@@ -605,6 +608,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_MusteriMagaza_Guncelle
     @Address NVARCHAR(500) = NULL,
     @Phone NVARCHAR(60) = NULL,
     @ResponsiblePerson NVARCHAR(200) = NULL,
+    @SorumluKullaniciId INT = NULL,
     @IsActive BIT = 1
 AS
 BEGIN
@@ -618,6 +622,7 @@ BEGIN
         Address = NULLIF(LTRIM(RTRIM(@Address)), ''),
         Phone = NULLIF(LTRIM(RTRIM(@Phone)), ''),
         ResponsiblePerson = NULLIF(LTRIM(RTRIM(@ResponsiblePerson)), ''),
+        SorumluKullaniciId = @SorumluKullaniciId,
         IsActive = @IsActive
     WHERE CustomerStoreId = @CustomerStoreId;
 END

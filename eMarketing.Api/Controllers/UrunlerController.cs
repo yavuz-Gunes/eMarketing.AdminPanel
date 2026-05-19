@@ -65,7 +65,7 @@ public sealed class UrunlerController : ControllerBase
 
     [HttpPatch("{id:int}/durum")]
     [Authorize(Policy = "CanManageProducts")]
-    public async Task<IActionResult> SetStatus(int id, [FromBody] ProductSaveRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetStatus(int id, [FromBody] ProductStatusRequest request, CancellationToken cancellationToken)
     {
         await _productService.SetProductStatusAsync(id, request.AktifMi, cancellationToken);
         return NoContent();
@@ -92,4 +92,9 @@ public sealed class UrunlerController : ControllerBase
 
         return string.Empty;
     }
+}
+
+public sealed class ProductStatusRequest
+{
+    public bool AktifMi { get; set; }
 }

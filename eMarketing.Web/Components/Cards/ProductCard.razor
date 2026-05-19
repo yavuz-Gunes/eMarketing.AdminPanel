@@ -1,4 +1,4 @@
-<article class="group relative flex h-full flex-col rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60 transition hover:z-20 hover:border-blue-200 hover:shadow-md">
+<article class="@CardClass">
     <div class="relative aspect-[16/11] overflow-hidden bg-slate-100">
         @if (!string.IsNullOrWhiteSpace(Product.GorselUrl))
         {
@@ -16,6 +16,13 @@
         <div class="absolute right-3 top-3">
             <span class="@StatusBadgeClass">@StatusText</span>
         </div>
+
+        @if (IsCritical && Product.AktifMi)
+        {
+            <div class="absolute bottom-3 left-3">
+                <span class="rounded-md bg-rose-600 px-2.5 py-1 text-xs font-black text-white shadow-sm shadow-rose-950/20">Kritik stok</span>
+            </div>
+        }
     </div>
 
     <div class="flex flex-1 flex-col p-3">
@@ -78,6 +85,7 @@
     [Parameter, EditorRequired] public ProductDto Product { get; set; } = new();
     [Parameter] public StockItemDto? Stock { get; set; }
     [Parameter] public int CentralStock { get; set; }
+    [Parameter] public bool IsCritical { get; set; }
     [Parameter] public bool ShowAdminStock { get; set; }
     [Parameter] public EventCallback<ProductDto> OnAdd { get; set; }
     [Parameter] public EventCallback<ProductDto> OnEdit { get; set; }
@@ -90,6 +98,9 @@
     private string Initials => string.Join("", Product.UrunAdi.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])).ToUpper(new CultureInfo("tr-TR"));
     private int AvailableStock => Stock?.BayiStok ?? 0;
     private int DisplayCentralStock => Stock?.MerkezStok ?? CentralStock;
+    private string CardClass => IsCritical && Product.AktifMi
+        ? "group relative flex h-full flex-col rounded-lg border border-rose-200 bg-rose-50/30 shadow-sm shadow-rose-100/70 ring-1 ring-rose-100 transition hover:z-20 hover:border-rose-300 hover:shadow-md"
+        : "group relative flex h-full flex-col rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60 transition hover:z-20 hover:border-blue-200 hover:shadow-md";
     private string StockStatusText => AvailableStock > 0 ? "Satışa hazır" : "Seçili bayide stok yok";
     private string StockTone => AvailableStock <= 0 ? "text-sm font-black text-rose-600" : "text-sm font-black text-emerald-600";
     private string StatusText => !Product.AktifMi ? "Pasif" : AvailableStock <= 0 ? "Stok yok" : "Aktif";

@@ -115,6 +115,7 @@ builder.Services.AddScoped<IPersonnelService, PersonnelService>();
 builder.Services.AddScoped<IBayiYetkiliService, BayiYetkiliService>();
 builder.Services.AddScoped<IDealerService, DealerService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IStockService, StockService>();
@@ -154,6 +155,7 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("CanViewDashboard", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanViewOrders", policy => policy.RequireRole(storeUsers));
+    options.AddPolicy("CanCreateOrders", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageOrders", policy => policy.RequireRole(managers));
     options.AddPolicy("CanViewProducts", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageProducts", policy => policy.RequireRole(managers));
@@ -163,7 +165,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanManageCentralStock", policy => policy.RequireRole(managers));
     options.AddPolicy("CanViewPersonnel", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManagePersonnel", policy => policy.RequireRole(managers));
-    options.AddPolicy("CanViewReports", policy => policy.RequireRole(managers));
+    options.AddPolicy("CanViewReports", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageReports", policy => policy.RequireRole(managers));
     options.AddPolicy("CanViewDealers", policy => policy.RequireRole(storeUsers));
     options.AddPolicy("CanManageDealers", policy => policy.RequireRole(managers));

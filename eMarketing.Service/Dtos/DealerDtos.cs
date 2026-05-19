@@ -89,6 +89,8 @@ public sealed class DealerStoreSaveRequest
     [StringLength(200)]
     public string ResponsiblePerson { get; set; } = string.Empty;
 
+    public int? SorumluKullaniciId { get; set; }
+
     public bool IsActive { get; set; } = true;
 }
 

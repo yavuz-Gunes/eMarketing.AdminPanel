@@ -2,6 +2,7 @@
 @inject ActiveStoreState StoreState
 @inject StoreApiClient StoreApi
 @inject DealerApiClient DealerApi
+@inject TeamApiClient TeamApi
 @inject AuthSession Auth
 
 <PageTitle>Bayiler - eMarketing</PageTitle>
@@ -300,7 +301,10 @@
                                 </label>
                                 @if (CreateInitialStore)
                                 {
-                                    <StoreFields Model="StoreForm" />
+                                    <StoreFields Model="StoreForm"
+                                                 Personnel="StorePersonnel"
+                                                 PersonnelLoading="StorePersonnelLoading"
+                                                 PersonnelEmptyText="@StorePersonnelEmptyText" />
                                 }
                             </div>
                         }
@@ -322,7 +326,10 @@
                         }
 
                         <FormSection Title="Mağaza Bilgileri">
-                            <StoreFields Model="StoreForm" />
+                            <StoreFields Model="StoreForm"
+                                         Personnel="StorePersonnel"
+                                         PersonnelLoading="StorePersonnelLoading"
+                                         PersonnelEmptyText="@StorePersonnelEmptyText" />
                         </FormSection>
                     }
                 </div>
@@ -360,6 +367,9 @@
     private int StoreFormCustomerId { get; set; }
     private DealerSaveRequest DealerForm { get; set; } = NewDealerForm();
     private DealerStoreSaveRequest StoreForm { get; set; } = NewStoreForm();
+    private IReadOnlyList<StoreTeamMemberDto> StorePersonnel { get; set; } = Array.Empty<StoreTeamMemberDto>();
+    private bool StorePersonnelLoading { get; set; }
+    private string StorePersonnelEmptyText { get; set; } = "Mağaza kaydedildikten sonra personel bağlanabilir.";
 
     private string MessageClass => IsError
         ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700"
@@ -448,6 +458,7 @@
         CloseForms();
         DealerForm = NewDealerForm();
         StoreForm = NewStoreForm();
+        ResetStorePersonnel("Mağaza kaydedildikten sonra personel bağlanabilir.");
         EditingDealerId = null;
         CreateInitialStore = true;
         ShowDealerForm = true;
@@ -478,10 +489,11 @@
         CloseForms();
         StoreFormCustomerId = customerId;
         StoreForm = NewStoreForm();
+        ResetStorePersonnel("Yeni mağaza kaydedildikten sonra personel bağlanabilir.");
         ShowStoreForm = true;
     }
 
-    private void OpenEditStore(DealerStoreDto store)
+    private async Task OpenEditStore(DealerStoreDto store)
     {
         CloseForms();
         EditingStoreId = store.CustomerStoreId;
@@ -494,12 +506,14 @@
             Address = store.Address,
             Phone = store.Phone,
             ResponsiblePerson = store.ResponsiblePerson,
+            SorumluKullaniciId = store.SorumluKullaniciId,
             IsActive = store.IsActive
         };
         ShowStoreForm = true;
+        await LoadStorePersonnelAsync(store.CustomerStoreId);
     }
 
-    private void OpenEditStore(StoreDto store)
+    private async Task OpenEditStore(StoreDto store)
     {
         CloseForms();
         EditingStoreId = store.MagazaId;
@@ -511,9 +525,11 @@
             District = store.Ilce,
             Phone = store.Telefon,
             ResponsiblePerson = store.SorumluKisi,
+            SorumluKullaniciId = store.SorumluKullaniciId,
             IsActive = store.MagazaAktifMi
         };
         ShowStoreForm = true;
+        await LoadStorePersonnelAsync(store.MagazaId);
     }
 
     private Task SaveCurrentFormAsync()
@@ -567,6 +583,7 @@
         try
         {
             Saving = true;
+            SyncResponsiblePerson();
             if (EditingStoreId is int storeId)
                 await DealerApi.UpdateStoreAsync(storeId, StoreForm);
             else
@@ -627,6 +644,62 @@
         ShowStoreForm = false;
         EditingDealerId = null;
         EditingStoreId = null;
+        ResetStorePersonnel("Mağaza kaydedildikten sonra personel bağlanabilir.");
+    }
+
+    private async Task LoadStorePersonnelAsync(int storeId)
+    {
+        StorePersonnelLoading = true;
+        StorePersonnel = Array.Empty<StoreTeamMemberDto>();
+        StorePersonnelEmptyText = "Personel yükleniyor...";
+
+        try
+        {
+            StoreTeamResponseDto response = await TeamApi.GetTeamAsync(storeId);
+            StorePersonnel = response.Members
+                .Where(member => member.AktifMi)
+                .OrderBy(member => member.MagazaGorev is "Supervisor" ? 0 : member.MagazaGorev is "MagazaMuduru" ? 1 : 2)
+                .ThenBy(member => member.AdSoyad)
+                .ToList();
+
+            if (!StoreForm.SorumluKullaniciId.HasValue && !string.IsNullOrWhiteSpace(StoreForm.ResponsiblePerson))
+            {
+                StoreTeamMemberDto? matched = StorePersonnel.FirstOrDefault(member => string.Equals(member.AdSoyad, StoreForm.ResponsiblePerson, StringComparison.CurrentCultureIgnoreCase));
+                StoreForm.SorumluKullaniciId = matched?.KullaniciId;
+            }
+
+            StorePersonnelEmptyText = StorePersonnel.Count == 0
+                ? "Bu mağazada kayıtlı personel yok. Önce ekip ekranından personel ekleyin."
+                : string.Empty;
+        }
+        catch (Exception ex)
+        {
+            StorePersonnel = Array.Empty<StoreTeamMemberDto>();
+            StorePersonnelEmptyText = $"Personel listesi alınamadı: {ex.Message}";
+        }
+        finally
+        {
+            StorePersonnelLoading = false;
+        }
+    }
+
+    private void ResetStorePersonnel(string emptyText)
+    {
+        StorePersonnel = Array.Empty<StoreTeamMemberDto>();
+        StorePersonnelLoading = false;
+        StorePersonnelEmptyText = emptyText;
+    }
+
+    private void SyncResponsiblePerson()
+    {
+        if (StoreForm.SorumluKullaniciId is not int userId)
+        {
+            StoreForm.ResponsiblePerson = string.Empty;
+            return;
+        }
+
+        StoreTeamMemberDto? member = StorePersonnel.FirstOrDefault(item => item.KullaniciId == userId);
+        StoreForm.ResponsiblePerson = member?.AdSoyad ?? StoreForm.ResponsiblePerson;
     }
 
     private void ShowError(string message)

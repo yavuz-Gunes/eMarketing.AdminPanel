@@ -5,6 +5,8 @@
 @inject DashboardApiClient DashboardApi
 @inject TeamApiClient TeamApi
 @inject NotificationApiClient NotificationApi
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <PageTitle>Dashboard - eMarketing</PageTitle>
 
@@ -27,7 +29,7 @@
                         <span class="text-xs font-black uppercase tracking-wide text-slate-500">Açık sipariş</span>
                         <span class="mt-2 block text-2xl font-black text-slate-950">@OpenOrders.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))</span>
                     </a>
-                    <a href="/products" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-rose-200 hover:bg-rose-50">
+                        <a href="@CriticalProductsHref" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-rose-200 hover:bg-rose-50">
                         <span class="text-xs font-black uppercase tracking-wide text-slate-500">Kritik stok</span>
                         <span class="mt-2 block text-2xl font-black text-slate-950">@Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))</span>
                     </a>
@@ -58,8 +60,8 @@
         <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <DashboardMetric Href="/orders" Icon="cart" Label="Açık Siparişler" Value="@OpenOrders.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Hazırlanan ve bekleyen siparişleri aç." Tone="blue" />
             <DashboardMetric Href="/orders" Icon="clock" Label="Onay Bekleyenler" Value="@Summary.BekleyenOdemeSayisi.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Kontrol bekleyen akışları gör." Tone="amber" />
-            <DashboardMetric Href="/products" Icon="alert" Label="Kritik Stok" Value="@Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Riskteki ürünleri ürün listesinde incele." Tone="rose" />
-            <DashboardMetric Href="/team" Icon="users" Label="Personel" Value="@Summary.PersonelSayisi.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Bayi ekibine ve yetkilere git." Tone="emerald" />
+            <DashboardMetric Href="@CriticalProductsHref" Icon="alert" Label="Kritik Stok" Value="@Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))" Detail="Riskteki ürünleri ürün listesinde incele." Tone="rose" />
+            <DashboardMetric Href="/team" Icon="users" Label="Personel" Value="@TeamCountText" Detail="Bayi ekibine ve yetkilere git." Tone="emerald" />
         </section>
 
         <section class="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -237,9 +239,11 @@
                     </div>
 
                     <div class="mt-5 flex flex-wrap gap-3">
-                        <a href="/products" class="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800">
-                            Ürünlere Git
-                        </a>
+                        <button type="button"
+                                class="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800"
+                                @onclick="GoToPriorityProductsAsync">
+                            Ürüne Git
+                        </button>
                         <button type="button"
                                 class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
                                 @onclick="DismissPriorityPopup">
@@ -265,15 +269,24 @@
 @code {
     private DashboardSummaryDto Summary { get; set; } = new();
     private IReadOnlyList<DashboardRecentOrderDto> RecentOrders { get; set; } = Array.Empty<DashboardRecentOrderDto>();
+    private IReadOnlyList<DashboardCriticalStockDto> CriticalStocks { get; set; } = Array.Empty<DashboardCriticalStockDto>();
     private IReadOnlyList<NotificationDto> LatestNotifications { get; set; } = Array.Empty<NotificationDto>();
     private StoreTeamResponseDto? TeamResponse { get; set; }
     private StoreTeamMemberDto? SelectedMember { get; set; }
     private string Message { get; set; } = string.Empty;
     private bool PriorityPopupDismissed { get; set; }
+    private bool PriorityPopupReady { get; set; }
+    private int DashboardLoadVersion { get; set; }
+    private int TeamLoadVersion { get; set; }
+    private int NotificationLoadVersion { get; set; }
 
     private int OpenOrders => Math.Max(0, Summary.ToplamSiparis - Summary.TeslimEdildiSayisi - Summary.IptalSayisi);
-    private string TeamCountText => $"{TeamResponse?.Members.Count ?? 0}";
-    private bool ShowPriorityPopup => !PriorityPopupDismissed && Summary.KritikStok > 0;
+    private int DashboardTeamCount => TeamResponse?.Members.Count ?? 0;
+    private string TeamCountText => DashboardTeamCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
+    private bool ShowPriorityPopup => PriorityPopupReady && !PriorityPopupDismissed && Summary.KritikStok > 0;
+    private string CriticalProductsHref => CriticalStocks.Count == 1
+        ? $"/products?urunId={CriticalStocks[0].UrunId}"
+        : "/products?stok=kritik";
 
     protected override async Task OnInitializedAsync()
     {
@@ -284,72 +297,156 @@
         await LoadNotificationsAsync();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoadPriorityPopupPreferenceAsync();
+        PriorityPopupReady = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async void OnStoreChanged()
     {
-        PriorityPopupDismissed = false;
+        PriorityPopupReady = false;
         await LoadDashboardAsync();
         await LoadTeamAsync();
         await LoadNotificationsAsync();
+        await LoadPriorityPopupPreferenceAsync();
+        PriorityPopupReady = true;
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadDashboardAsync()
     {
+        int version = ++DashboardLoadVersion;
+        int? storeId = StoreState.SelectedStoreId;
+
+        Summary = new();
+        RecentOrders = Array.Empty<DashboardRecentOrderDto>();
+        CriticalStocks = Array.Empty<DashboardCriticalStockDto>();
+
         try
         {
             Message = string.Empty;
-            if (StoreState.SelectedStoreId is not int storeId)
-            {
-                Summary = new();
-                RecentOrders = Array.Empty<DashboardRecentOrderDto>();
+            if (storeId is not int activeStoreId)
                 return;
-            }
 
-            Summary = await DashboardApi.GetSummaryAsync(StoreState.SelectedStoreId);
-            RecentOrders = await DashboardApi.GetRecentOrdersAsync(StoreState.SelectedStoreId);
+            DashboardSummaryDto summary = await DashboardApi.GetSummaryAsync(activeStoreId);
+            IReadOnlyList<DashboardRecentOrderDto> recentOrders = await DashboardApi.GetRecentOrdersAsync(activeStoreId);
+            IReadOnlyList<DashboardCriticalStockDto> criticalStocks = await DashboardApi.GetCriticalStockAsync(activeStoreId);
+
+            if (version != DashboardLoadVersion || StoreState.SelectedStoreId != activeStoreId)
+                return;
+
+            Summary = summary;
+            RecentOrders = recentOrders;
+            CriticalStocks = criticalStocks;
         }
         catch (Exception ex)
         {
-            Message = ex.Message;
+            if (version == DashboardLoadVersion)
+                Message = ex.Message;
         }
     }
 
     private async Task LoadTeamAsync()
     {
-        if (StoreState.SelectedStoreId is not int storeId)
+        int version = ++TeamLoadVersion;
+        int? storeId = StoreState.SelectedStoreId;
+        TeamResponse = null;
+        SelectedMember = null;
+
+        if (storeId is not int activeStoreId)
             return;
 
         try
         {
-            TeamResponse = await TeamApi.GetTeamAsync(storeId);
+            StoreTeamResponseDto response = await TeamApi.GetTeamAsync(activeStoreId);
+            if (version != TeamLoadVersion || StoreState.SelectedStoreId != activeStoreId)
+                return;
+
+            TeamResponse = response;
         }
         catch
         {
-            TeamResponse = null;
+            if (version == TeamLoadVersion)
+                TeamResponse = null;
         }
     }
 
     private async Task LoadNotificationsAsync()
     {
+        int version = ++NotificationLoadVersion;
+        int? storeId = StoreState.SelectedStoreId;
+        LatestNotifications = Array.Empty<NotificationDto>();
+
         try
         {
-            if (!StoreState.SelectedStoreId.HasValue)
-            {
-                LatestNotifications = Array.Empty<NotificationDto>();
+            if (storeId is not int activeStoreId)
                 return;
-            }
 
-            LatestNotifications = await NotificationApi.GetNotificationsAsync(StoreState.SelectedStoreId, false, 3);
+            IReadOnlyList<NotificationDto> notifications = await NotificationApi.GetNotificationsAsync(activeStoreId, false, 3);
+            if (version != NotificationLoadVersion || StoreState.SelectedStoreId != activeStoreId)
+                return;
+
+            LatestNotifications = notifications;
         }
         catch
         {
-            LatestNotifications = Array.Empty<NotificationDto>();
+            if (version == NotificationLoadVersion)
+                LatestNotifications = Array.Empty<NotificationDto>();
         }
     }
 
     private void SelectMember(StoreTeamMemberDto member) => SelectedMember = member;
     private void CloseDrawer() => SelectedMember = null;
-    private void DismissPriorityPopup() => PriorityPopupDismissed = true;
+    private async Task DismissPriorityPopup()
+    {
+        PriorityPopupDismissed = true;
+        await SavePriorityPopupDismissedAsync();
+    }
+
+    private async Task GoToPriorityProductsAsync()
+    {
+        await DismissPriorityPopup();
+        Navigation.NavigateTo(CriticalProductsHref);
+    }
+
+    private async Task LoadPriorityPopupPreferenceAsync()
+    {
+        try
+        {
+            string key = PriorityPopupStorageKey();
+            string? dismissed = await JS.InvokeAsync<string?>("localStorage.getItem", key);
+            PriorityPopupDismissed = string.Equals(dismissed, "1", StringComparison.Ordinal);
+        }
+        catch
+        {
+            PriorityPopupDismissed = false;
+        }
+    }
+
+    private async Task SavePriorityPopupDismissedAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", PriorityPopupStorageKey(), "1");
+        }
+        catch
+        {
+            // Popup dismissal is a convenience preference.
+        }
+    }
+
+    private string PriorityPopupStorageKey()
+    {
+        string storeKey = StoreState.SelectedStoreId?.ToString(CultureInfo.InvariantCulture) ?? "none";
+        string today = DateTime.Today.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+        return $"emarketing.critical-stock-popup.{storeKey}.{today}";
+    }
+
     private static string NotificationHref(NotificationDto notification) => string.IsNullOrWhiteSpace(notification.HedefUrl) ? "/notifications" : notification.HedefUrl;
 
     private static string DisplayStatus(string status)

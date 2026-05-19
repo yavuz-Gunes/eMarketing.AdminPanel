@@ -59,7 +59,7 @@ public sealed class KategorilerController : ControllerBase
 
     [HttpPatch("{id:int}/durum")]
     [Authorize(Policy = "CanManageCatalog")]
-    public async Task<IActionResult> SetStatus(int id, [FromBody] CategorySaveRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetStatus(int id, [FromBody] CategoryStatusRequest request, CancellationToken cancellationToken)
     {
         await _categoryService.SetCategoryStatusAsync(id, request.AktifMi, cancellationToken);
         return NoContent();
@@ -72,4 +72,9 @@ public sealed class KategorilerController : ControllerBase
         await _categoryService.DeleteCategoryAsync(id, cancellationToken);
         return NoContent();
     }
+}
+
+public sealed class CategoryStatusRequest
+{
+    public bool AktifMi { get; set; }
 }

@@ -50,6 +50,7 @@ public sealed class StoreRepository : IStoreRepository
             Sehir = reader.GetText("Sehir"),
             Ilce = reader.GetText("Ilce"),
             Telefon = reader.GetText("Telefon"),
+            SorumluKullaniciId = reader.HasColumn("SorumluKullaniciId") ? reader.GetNullableInt("SorumluKullaniciId") : null,
             SorumluKisi = reader.GetText("SorumluKisi"),
             MagazaMuduru = reader.HasColumn("MagazaMuduru") ? reader.GetText("MagazaMuduru") : string.Empty,
             Supervisor = reader.HasColumn("Supervisor") ? reader.GetText("Supervisor") : string.Empty,

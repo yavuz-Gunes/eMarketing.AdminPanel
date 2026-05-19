@@ -1,0 +1,673 @@
+@page "/reports"
+@implements IDisposable
+@inject AuthSession Auth
+@inject ActiveStoreState StoreState
+@inject StoreApiClient StoreApi
+@inject ReportApiClient ReportApi
+@inject IJSRuntime JS
+
+<PageTitle>Raporlar - eMarketing</PageTitle>
+
+<AuthGate>
+    <section class="mx-auto max-w-[1440px] space-y-5 px-4 py-5 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0">
+                <p class="text-sm font-black uppercase tracking-wide text-slate-500">Raporlar</p>
+                <h1 class="mt-1 text-3xl font-black tracking-normal text-slate-950">@ReportTitle</h1>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">@ReportSubtitle</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <ActiveStoreBadge Compact="true" />
+                @if (CanSeeAdminReport)
+                {
+                    <label class="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700">
+                        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600"
+                               checked="@AllStores"
+                               @onchange="ToggleAllStores" />
+                        Tüm bayiler
+                    </label>
+                }
+                <button type="button"
+                        class="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:bg-slate-300"
+                        disabled="@Loading"
+                        @onclick="LoadReportAsync">
+                    <AppIcon Name="chart" CssClass="h-4 w-4" />
+                    Yenile
+                </button>
+                <button type="button"
+                        class="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:bg-slate-100 disabled:text-slate-400"
+                        disabled="@(Loading || Exporting || Report is null)"
+                        @onclick="OpenPdfPreview">
+                    <AppIcon Name="download" CssClass="h-4 w-4" />
+                    PDF önizle
+                </button>
+                <button type="button"
+                        class="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:bg-slate-100 disabled:text-slate-400"
+                        disabled="@(Loading || Report is null)"
+                        @onclick="OpenPdfPreview">
+                    <AppIcon Name="printer" CssClass="h-4 w-4" />
+                    Yazdır
+                </button>
+            </div>
+        </div>
+
+        <div class="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+            <div class="min-w-0">
+                <p class="text-xs font-black uppercase tracking-wide text-slate-500">Dönem</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <button type="button" class="@PeriodButtonClass(ReportPeriod.Last7)" @onclick="() => SelectPeriodAsync(ReportPeriod.Last7)">Son 7 gün</button>
+                    <button type="button" class="@PeriodButtonClass(ReportPeriod.Last30)" @onclick="() => SelectPeriodAsync(ReportPeriod.Last30)">Son 30 gün</button>
+                    <button type="button" class="@PeriodButtonClass(ReportPeriod.Last90)" @onclick="() => SelectPeriodAsync(ReportPeriod.Last90)">Son 90 gün</button>
+                    <button type="button" class="@PeriodButtonClass(ReportPeriod.Custom)" @onclick="() => SetCustomPeriod()">Özel aralık</button>
+                </div>
+            </div>
+
+            <div class="grid gap-2 sm:grid-cols-[160px_160px_auto] sm:items-end">
+                <label class="block">
+                    <span class="text-xs font-black uppercase tracking-wide text-slate-500">Başlangıç</span>
+                    <input type="date"
+                           class="@DateInputClass"
+                           value="@DateInputValue(StartDate)"
+                           disabled="@(SelectedPeriod != ReportPeriod.Custom)"
+                           @onchange="OnStartDateChanged" />
+                </label>
+                <label class="block">
+                    <span class="text-xs font-black uppercase tracking-wide text-slate-500">Bitiş</span>
+                    <input type="date"
+                           class="@DateInputClass"
+                           value="@DateInputValue(EndDate)"
+                           disabled="@(SelectedPeriod != ReportPeriod.Custom)"
+                           @onchange="OnEndDateChanged" />
+                </label>
+                <button type="button"
+                        class="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:bg-slate-100 disabled:text-slate-400"
+                        disabled="@(SelectedPeriod != ReportPeriod.Custom || Loading)"
+                        @onclick="ApplyCustomPeriodAsync">
+                    Uygula
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Message))
+        {
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">@Message</div>
+        }
+        else if (Loading)
+        {
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-black text-slate-500 shadow-sm">
+                Rapor yükleniyor...
+            </div>
+        }
+        else if (Report is not null)
+        {
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                @foreach (ReportMetricDto metric in Report.Metrics)
+                {
+                    <a href="@MetricHref(metric)" class="@MetricClass(metric.Tone)">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">@metric.Label</p>
+                                <p class="mt-3 text-3xl font-black text-slate-950">@metric.DisplayValue</p>
+                                <p class="mt-2 text-sm font-semibold text-slate-500">@metric.Detail</p>
+                            </div>
+                            <span class="@MetricIconClass(metric.Tone)">
+                                <AppIcon Name="@MetricIcon(metric.Key)" CssClass="h-5 w-5" />
+                            </span>
+                        </div>
+                        <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div class="@MetricBarClass(metric.Tone)" style="width: @MetricWidth(metric)%"></div>
+                        </div>
+                    </a>
+                }
+            </section>
+
+            @if (CanSeeAdminReport)
+            {
+                <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+                    <div class="space-y-5">
+                        <Panel Title="Personel performansı" Subtitle="Son 30 günde siparişe çevrilen işler">
+                            @if (Report.Personnel.Length == 0)
+                            {
+                                <EmptyState Text="Bu dönem personel satışı yok." />
+                            }
+                            else
+                            {
+                                <div class="space-y-3">
+                                    @foreach (ReportPersonPerformanceDto person in Report.Personnel)
+                                    {
+                                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-black text-slate-950">@person.AdSoyad</p>
+                                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">@person.MagazaAdi</p>
+                                                </div>
+                                                <p class="text-sm font-black text-blue-700">@person.ToplamTutar.ToString("C", Tr)</p>
+                                            </div>
+                                            <div class="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+                                                <span>@person.SiparisSayisi.ToString("N0", Tr) sipariş</span>
+                                                <span>@person.UrunAdedi.ToString("N0", Tr) ürün</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </Panel>
+
+                        <Panel Title="Kategori performansı" Subtitle="Ciroya göre ilk kategoriler">
+                            @if (Report.Categories.Length == 0)
+                            {
+                                <EmptyState Text="Kategori verisi henüz oluşmadı." />
+                            }
+                            else
+                            {
+                                <div class="space-y-3">
+                                    @foreach (ReportCategoryPerformanceDto category in Report.Categories)
+                                    {
+                                        <div>
+                                            <div class="flex justify-between gap-3 text-sm">
+                                                <span class="font-black text-slate-900">@category.KategoriAdi</span>
+                                                <span class="font-black text-slate-700">@category.ToplamTutar.ToString("C", Tr)</span>
+                                            </div>
+                                            <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                                                <div class="h-full rounded-full bg-blue-600" style="width: @CategoryWidth(category)%"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </Panel>
+                    </div>
+
+                    <Panel Title="Stok alarmı" Subtitle="Kritik, stok yok ve pasif ürünler">
+                        <StockRiskList Risks="Report.StockRisks" />
+                    </Panel>
+                </section>
+            }
+            else
+            {
+                <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+                    <Panel Title="Benim ürünlerim" Subtitle="Son 30 günde siparişe çevirdiklerim">
+                        <ProductPerformanceTable Products="Report.Products" />
+                    </Panel>
+
+                    <Panel Title="Aktif bayi stok durumu" Subtitle="Öncelikli kontrol listesi">
+                        <StockRiskList Risks="Report.StockRisks" />
+                    </Panel>
+                </section>
+            }
+
+            <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+                <Panel Title="Ürün performansı" Subtitle="Satış adedi, ciro ve stok sinyali">
+                    <ProductPerformanceTable Products="Report.Products" />
+                </Panel>
+
+                <Panel Title="Son siparişler" Subtitle="@PeriodText">
+                    @if (Report.RecentOrders.Length == 0)
+                    {
+                        <EmptyState Text="Bu dönem sipariş yok." />
+                    }
+                    else
+                    {
+                        <div class="space-y-3">
+                            @foreach (ReportOrderRowDto order in Report.RecentOrders)
+                            {
+                                <a href="/orders" class="block rounded-xl border border-slate-100 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/40">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-black text-slate-950">@OrderTitle(order)</p>
+                                            <p class="mt-1 truncate text-xs font-bold text-slate-500">@order.UrunAdi</p>
+                                        </div>
+                                        <StatusBadge Text="@DisplayStatus(order.SiparisDurumu)" Tone="@StatusTone(order.SiparisDurumu)" />
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-500">
+                                        <span>@order.Adet.ToString("N0", Tr) adet</span>
+                                        <span>@order.ToplamTutar.ToString("C", Tr)</span>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                </Panel>
+            </section>
+        }
+    </section>
+
+    @if (PdfPreviewOpen && Report is not null)
+    {
+        <div class="fixed inset-0 z-[80] bg-slate-950/80 p-3 backdrop-blur-sm sm:p-5" @onclick="ClosePdfPreview">
+            <section class="mx-auto flex h-[calc(100vh-1.5rem)] max-w-[1320px] flex-col overflow-hidden rounded-xl border border-white/10 bg-[#111827] shadow-2xl sm:h-[calc(100vh-2.5rem)]" @onclick:stopPropagation="true">
+                <div class="flex flex-col gap-3 border-b border-white/10 bg-[#0f172a] px-4 py-3 text-white lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-xs font-black uppercase tracking-wide text-slate-500">PDF önizleme</p>
+                        <h2 class="mt-1 truncate text-xl font-black text-white">@ReportTitle</h2>
+                        <p class="mt-1 text-sm font-bold text-slate-300">@Report.StoreName · @PeriodText</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button"
+                                class="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-500 disabled:bg-slate-600"
+                                disabled="@Exporting"
+                                @onclick="DownloadPdfAsync">
+                            <AppIcon Name="download" CssClass="h-4 w-4" />
+                            PDF indir
+                        </button>
+                        <button type="button"
+                                class="inline-flex h-10 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm font-black text-white ring-1 ring-white/15 transition hover:bg-white/15"
+                                @onclick="PrintPreviewAsync">
+                            <AppIcon Name="printer" CssClass="h-4 w-4" />
+                            Yazdır
+                        </button>
+                        <button type="button"
+                                class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white ring-1 ring-white/15 transition hover:bg-white/15"
+                                title="Kapat"
+                                @onclick="ClosePdfPreview">
+                            <AppIcon Name="x" CssClass="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto bg-[#1f2937] px-3 py-5 sm:px-6">
+                    <article id="report-pdf-preview" class="mx-auto min-h-[1120px] max-w-[794px] overflow-hidden bg-white text-slate-950 shadow-2xl">
+                        <header class="bg-[#102033] px-8 py-7 text-white">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="text-xs font-black uppercase tracking-[0.22em] text-blue-200">eMarketing rapor</p>
+                                    <h1 class="mt-3 text-3xl font-black tracking-normal">@ReportTitle</h1>
+                                    <p class="mt-3 max-w-xl text-sm font-semibold leading-6 text-slate-200">@Report.StoreName</p>
+                                </div>
+                                <div class="shrink-0 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-right">
+                                    <p class="text-[11px] font-black uppercase tracking-wide text-blue-100">Dönem</p>
+                                    <p class="mt-1 text-sm font-black">@PeriodText</p>
+                                    <p class="mt-2 text-[11px] font-bold text-slate-300">@DateTime.Now.ToString("dd.MM.yyyy HH:mm", Tr)</p>
+                                </div>
+                            </div>
+                        </header>
+
+                        <section class="grid grid-cols-2 border-b border-slate-200 lg:grid-cols-4">
+                            @foreach (ReportMetricDto metric in Report.Metrics)
+                            {
+                                <div class="min-h-32 border-b border-r border-slate-200 p-5 even:border-r-0 lg:border-b-0 lg:even:border-r lg:last:border-r-0">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-[11px] font-black uppercase tracking-wide text-slate-500">@metric.Label</p>
+                                            <p class="mt-2 text-2xl font-black text-slate-950">@metric.DisplayValue</p>
+                                        </div>
+                                        <span class="@MetricIconClass(metric.Tone)">
+                                            <AppIcon Name="@MetricIcon(metric.Key)" CssClass="h-4 w-4" />
+                                        </span>
+                                    </div>
+                                    <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+                                        <div class="@MetricBarClass(metric.Tone)" style="width: @MetricWidth(metric)%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </section>
+
+                        <section class="grid gap-6 px-8 py-7 lg:grid-cols-[minmax(0,1fr)_270px]">
+                            <div>
+                                <div class="flex items-end justify-between gap-4 border-b border-slate-200 pb-3">
+                                    <div>
+                                        <p class="text-xs font-black uppercase tracking-wide text-emerald-700">Satış liderleri</p>
+                                        <h3 class="mt-1 text-xl font-black text-slate-950">En çok satan ürünler</h3>
+                                    </div>
+                                    <span class="text-xs font-black text-slate-500">@TopProducts.Count() kayıt</span>
+                                </div>
+
+                                <div class="mt-4 space-y-3">
+                                    @if (!TopProducts.Any())
+                                    {
+                                        <EmptyState Text="Bu dönem satış verisi yok." />
+                                    }
+                                    else
+                                    {
+                                        int rank = 0;
+                                        @foreach (ReportProductPerformanceDto product in TopProducts)
+                                        {
+                                            rank++;
+                                            <div class="grid grid-cols-[36px_minmax(0,1fr)_110px] items-center gap-3">
+                                                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-xs font-black text-white">@rank</span>
+                                                <div class="min-w-0">
+                                                    <div class="flex items-center justify-between gap-3">
+                                                        <p class="truncate text-sm font-black text-slate-950">@product.UrunAdi</p>
+                                                        <span class="shrink-0 text-xs font-black text-emerald-700">@product.SatisAdedi.ToString("N0", Tr) adet</span>
+                                                    </div>
+                                                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                                                        <div class="h-full rounded-full bg-emerald-600" style="width: @ProductWidth(product)%"></div>
+                                                    </div>
+                                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">@product.KategoriAdi</p>
+                                                </div>
+                                                <p class="text-right text-sm font-black text-blue-700">@product.ToplamTutar.ToString("C", Tr)</p>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <aside class="space-y-4">
+                            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-black uppercase tracking-wide text-rose-600">Alarm</p>
+                                        <h3 class="mt-1 text-lg font-black text-slate-950">Kritik stok</h3>
+                                    </div>
+                                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-rose-700">
+                                        <AppIcon Name="alert" CssClass="h-5 w-5" />
+                                    </span>
+                                </div>
+
+                                <div class="mt-4 space-y-3">
+                                    @if (!CriticalRisks.Any())
+                                    {
+                                        <div class="rounded-xl bg-white p-4 text-sm font-black text-slate-600">Öncelikli stok riski yok.</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (ReportStockRiskDto risk in CriticalRisks)
+                                        {
+                                            <div class="rounded-xl bg-white p-3">
+                                                <div class="flex items-center justify-between gap-3">
+                                                    <p class="truncate text-sm font-black text-slate-950">@risk.UrunAdi</p>
+                                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-[11px] font-black text-rose-700">@risk.Durum</span>
+                                                </div>
+                                                <p class="mt-1 truncate text-xs font-bold text-slate-500">@risk.KategoriAdi</p>
+                                                <div class="mt-3 grid grid-cols-3 gap-2 text-xs font-bold text-slate-500">
+                                                    <span>Bayi <b class="text-rose-700">@risk.BayiStok.ToString("N0", Tr)</b></span>
+                                                    <span>Merkez <b class="text-slate-900">@risk.MerkezStok.ToString("N0", Tr)</b></span>
+                                                    <span>Min <b class="text-slate-900">@risk.MinimumStok.ToString("N0", Tr)</b></span>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-wide text-slate-500">Rapor notu</p>
+                                <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">PDF çıktısı seçili bayi ve dönem filtresine göre hazırlanır. Personel görünümünde yalnızca yetkili mağaza ve kullanıcının kendi siparişleri yer alır.</p>
+                            </div>
+                            </aside>
+                        </section>
+                    </article>
+                </div>
+            </section>
+        </div>
+    }
+</AuthGate>
+
+@code {
+    private static readonly CultureInfo Tr = CultureInfo.GetCultureInfo("tr-TR");
+
+    private PortalReportDto? Report { get; set; }
+    private string Message { get; set; } = string.Empty;
+    private bool Loading { get; set; }
+    private bool Exporting { get; set; }
+    private bool PdfPreviewOpen { get; set; }
+    private bool AllStores { get; set; }
+    private ReportPeriod SelectedPeriod { get; set; } = ReportPeriod.Last30;
+    private DateTime StartDate { get; set; } = DateTime.Today.AddDays(-29);
+    private DateTime EndDate { get; set; } = DateTime.Today;
+
+    private bool CanSeeAdminReport => Auth.CanManageCampaigns;
+    private string ReportTitle => Report?.Title ?? (CanSeeAdminReport ? "Yönetici raporları" : "Personel raporum");
+    private string ReportSubtitle => CanSeeAdminReport
+        ? "Ciro, sipariş, ekip ve stok risklerini aktif bayi ya da tüm bayiler kapsamında takip edin."
+        : "Son 30 günde kendi siparişlerinizi, sattığınız ürünleri ve aktif bayi stok risklerini görün.";
+    private string PeriodText => Report is null
+        ? "Son 30 gün"
+        : $"{Report.StartDate:dd.MM.yyyy} - {Report.EndDate:dd.MM.yyyy}";
+
+    private IEnumerable<ReportProductPerformanceDto> TopProducts => Report?.Products
+        .OrderByDescending(product => product.ToplamTutar)
+        .ThenByDescending(product => product.SatisAdedi)
+        .Take(5) ?? [];
+
+    private IEnumerable<ReportStockRiskDto> CriticalRisks => Report?.StockRisks
+        .OrderBy(risk => risk.Durum == "Stok yok" ? 0 : risk.Durum == "Kritik" ? 1 : 2)
+        .ThenBy(risk => risk.BayiStok)
+        .Take(5) ?? [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        StoreState.Changed += OnStoreChanged;
+        await StoreState.LoadAsync(StoreApi);
+        await LoadReportAsync();
+    }
+
+    private async void OnStoreChanged()
+    {
+        if (!AllStores)
+            await LoadReportAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleAllStores(ChangeEventArgs args)
+    {
+        AllStores = args.Value is bool value && value;
+        await LoadReportAsync();
+    }
+
+    private async Task LoadReportAsync()
+    {
+        Loading = true;
+        Message = string.Empty;
+
+        try
+        {
+            int? storeId = AllStores && CanSeeAdminReport ? null : StoreState.SelectedStoreId;
+            Report = await ReportApi.GetPortalReportAsync(storeId, AllStores && CanSeeAdminReport, StartDate, EndDate);
+        }
+        catch (Exception ex)
+        {
+            Report = null;
+            Message = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+        }
+    }
+
+    private async Task DownloadPdfAsync()
+    {
+        Exporting = true;
+        Message = string.Empty;
+
+        try
+        {
+            await JS.InvokeVoidAsync("eMarketing.files.downloadElementPdf", "report-pdf-preview", $"rapor-{DateTime.Now:yyyyMMdd-HHmm}.pdf");
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+        finally
+        {
+            Exporting = false;
+        }
+    }
+
+    private async Task PrintAsync()
+    {
+        await JS.InvokeVoidAsync("eMarketing.print");
+    }
+
+    private void OpenPdfPreview()
+    {
+        if (Report is not null)
+            PdfPreviewOpen = true;
+    }
+
+    private void ClosePdfPreview()
+    {
+        PdfPreviewOpen = false;
+    }
+
+    private async Task PrintPreviewAsync()
+    {
+        await JS.InvokeVoidAsync("eMarketing.printElement", "report-pdf-preview", "Rapor Önizleme");
+    }
+
+    private async Task SelectPeriodAsync(ReportPeriod period)
+    {
+        SelectedPeriod = period;
+        if (period == ReportPeriod.Custom)
+            return;
+
+        ApplyRelativePeriod(period);
+        await LoadReportAsync();
+    }
+
+    private void SetCustomPeriod()
+    {
+        SelectedPeriod = ReportPeriod.Custom;
+    }
+
+    private async Task ApplyCustomPeriodAsync()
+    {
+        SelectedPeriod = ReportPeriod.Custom;
+        if (StartDate.Date > EndDate.Date)
+        {
+            Message = "Başlangıç tarihi bitiş tarihinden sonra olamaz.";
+            return;
+        }
+
+        await LoadReportAsync();
+    }
+
+    private void ApplyRelativePeriod(ReportPeriod period)
+    {
+        EndDate = DateTime.Today;
+        StartDate = period switch
+        {
+            ReportPeriod.Last7 => EndDate.AddDays(-6),
+            ReportPeriod.Last90 => EndDate.AddDays(-89),
+            _ => EndDate.AddDays(-29)
+        };
+    }
+
+    private void OnStartDateChanged(ChangeEventArgs args)
+    {
+        SelectedPeriod = ReportPeriod.Custom;
+        if (DateTime.TryParse(Convert.ToString(args.Value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime value))
+            StartDate = value.Date;
+    }
+
+    private void OnEndDateChanged(ChangeEventArgs args)
+    {
+        SelectedPeriod = ReportPeriod.Custom;
+        if (DateTime.TryParse(Convert.ToString(args.Value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime value))
+            EndDate = value.Date;
+    }
+
+    private static string DateInputValue(DateTime value) => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private string PeriodButtonClass(ReportPeriod period) =>
+        SelectedPeriod == period
+            ? "h-10 rounded-xl bg-slate-950 px-4 text-sm font-black text-white"
+            : "h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700";
+
+    private const string DateInputClass = "mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400";
+
+    private static string MetricIcon(string key) => key switch
+    {
+        "revenue" => "chart",
+        "orders" => "cart",
+        "critical" => "alert",
+        "passive" => "sliders",
+        _ => "chart"
+    };
+
+    private static string MetricHref(ReportMetricDto metric) => metric.Key switch
+    {
+        "orders" => "/orders",
+        "critical" => "/products?stok=kritik",
+        "passive" => "/products",
+        _ => "/reports"
+    };
+
+    private static string MetricClass(string tone) => tone switch
+    {
+        "blue" => "rounded-2xl border border-blue-100 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/40",
+        "emerald" => "rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/40",
+        "rose" => "rounded-2xl border border-rose-100 bg-white p-4 shadow-sm transition hover:border-rose-200 hover:bg-rose-50/40",
+        _ => "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+    };
+
+    private static string MetricIconClass(string tone) => tone switch
+    {
+        "blue" => "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700",
+        "emerald" => "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700",
+        "rose" => "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-700",
+        _ => "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700"
+    };
+
+    private static string MetricBarClass(string tone) => tone switch
+    {
+        "blue" => "h-full rounded-full bg-blue-600",
+        "emerald" => "h-full rounded-full bg-emerald-600",
+        "rose" => "h-full rounded-full bg-rose-600",
+        _ => "h-full rounded-full bg-slate-500"
+    };
+
+    private static int MetricWidth(ReportMetricDto metric)
+    {
+        decimal value = Math.Abs(metric.Value);
+        if (value <= 0)
+            return 18;
+
+        return (int)Math.Clamp(34 + Math.Min(value, 100) / 100 * 56, 24, 92);
+    }
+
+    private int CategoryWidth(ReportCategoryPerformanceDto category)
+    {
+        decimal max = Report?.Categories.Select(x => x.ToplamTutar).DefaultIfEmpty(0).Max() ?? 0;
+        if (max <= 0)
+            return 12;
+
+        return (int)Math.Clamp(category.ToplamTutar / max * 100, 12, 100);
+    }
+
+    private int ProductWidth(ReportProductPerformanceDto product)
+    {
+        decimal max = TopProducts.Select(x => x.ToplamTutar).DefaultIfEmpty(0).Max();
+        if (max <= 0)
+            return 12;
+
+        return (int)Math.Clamp(product.ToplamTutar / max * 100, 12, 100);
+    }
+
+    private static string OrderTitle(ReportOrderRowDto order) =>
+        string.IsNullOrWhiteSpace(order.OrderNo)
+            ? $"SP-{order.SiparisId.ToString("D5", CultureInfo.InvariantCulture)}"
+            : order.OrderNo;
+
+    private static string DisplayStatus(string status) => status switch
+    {
+        "Hazirlaniyor" => "Hazırlanıyor",
+        "Iptal" => "İptal",
+        _ => status
+    };
+
+    private static string StatusTone(string status) => status switch
+    {
+        "Teslim Edildi" => "success",
+        "Hazirlaniyor" => "info",
+        "Hazırlanıyor" => "info",
+        "Iptal" => "danger",
+        "İptal" => "danger",
+        _ => "warning"
+    };
+
+    public void Dispose()
+    {
+        StoreState.Changed -= OnStoreChanged;
+    }
+
+    private enum ReportPeriod
+    {
+        Last7,
+        Last30,
+        Last90,
+        Custom
+    }
+}

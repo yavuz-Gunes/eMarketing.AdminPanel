@@ -43,7 +43,7 @@ public abstract class ApiClientBase
         throw new InvalidOperationException(await ReadErrorAsync(response, cancellationToken));
     }
 
-    private static async Task<string> ReadErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    protected static async Task<string> ReadErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         string body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(body))

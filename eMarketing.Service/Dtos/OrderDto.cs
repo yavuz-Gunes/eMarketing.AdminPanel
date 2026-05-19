@@ -105,6 +105,37 @@ public sealed class CartOrderCreateRequest
     public IReadOnlyList<OrderCreateItemRequest> Items { get; set; } = Array.Empty<OrderCreateItemRequest>();
 }
 
+public sealed class PaymentSimulationRequest
+{
+    [Required, StringLength(120)]
+    public string CardHolder { get; set; } = string.Empty;
+
+    [Required, StringLength(32)]
+    public string CardNumber { get; set; } = string.Empty;
+
+    [Required, StringLength(7)]
+    public string Expiry { get; set; } = string.Empty;
+
+    [Required, StringLength(4)]
+    public string Cvv { get; set; } = string.Empty;
+}
+
+public sealed class PaidCartOrderCreateRequest
+{
+    [Required]
+    public CartOrderCreateRequest Order { get; set; } = new();
+
+    [Required]
+    public PaymentSimulationRequest Payment { get; set; } = new();
+}
+
+public sealed class PaidCartOrderResponseDto
+{
+    public int SiparisId { get; set; }
+    public string PaymentStatus { get; set; } = string.Empty;
+    public string CardLastFour { get; set; } = string.Empty;
+}
+
 public class OrderStatusUpdateRequest
 {
     [Required, StringLength(50)]

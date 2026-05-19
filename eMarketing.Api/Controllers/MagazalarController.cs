@@ -35,7 +35,7 @@ public sealed class MagazalarController : ControllerBase
     }
 
     [HttpGet("{magazaId:int}/siparis-yetkilileri")]
-    [Authorize(Policy = "CanManageOrders")]
+    [Authorize(Policy = "CanCreateOrders")]
     public async Task<ActionResult<IReadOnlyList<SiparisYetkilisiDto>>> GetSiparisYetkilileri(int magazaId, CancellationToken cancellationToken = default)
     {
         return Ok(await _bayiYetkiliService.GetOrderAuthoritiesAsync(magazaId, cancellationToken));

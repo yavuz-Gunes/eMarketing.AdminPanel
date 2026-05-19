@@ -9,6 +9,7 @@ public sealed class StoreDto
     public string Sehir { get; set; } = string.Empty;
     public string Ilce { get; set; } = string.Empty;
     public string Telefon { get; set; } = string.Empty;
+    public int? SorumluKullaniciId { get; set; }
     public string SorumluKisi { get; set; } = string.Empty;
     public string MagazaMuduru { get; set; } = string.Empty;
     public string Supervisor { get; set; } = string.Empty;

@@ -2,6 +2,7 @@ using eMarketing.Service.Dtos;
 using eMarketing.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.RegularExpressions;
 
 namespace eMarketing.Api.Controllers;
 
@@ -58,15 +59,36 @@ public sealed class SiparislerController : ControllerBase
     }
 
     [HttpPost("sepet")]
-    [Authorize(Policy = "CanManageOrders")]
+    [Authorize(Policy = "CanCreateOrders")]
     public async Task<ActionResult<object>> CreateCart([FromBody] CartOrderCreateRequest request, CancellationToken cancellationToken)
     {
         string validationMessage = ValidateCartRequest(request);
         if (!string.IsNullOrWhiteSpace(validationMessage))
             return BadRequest(validationMessage);
 
-        int orderId = await _orderService.CreateCartOrderAsync(request, cancellationToken);
+        int orderId = await _orderService.CreateCartOrderAsync(request, cancellationToken: cancellationToken);
         return Ok(new { SiparisId = orderId });
+    }
+
+    [HttpPost("sepet/odemeli")]
+    [Authorize(Policy = "CanCreateOrders")]
+    public async Task<ActionResult<PaidCartOrderResponseDto>> CreatePaidCart([FromBody] PaidCartOrderCreateRequest request, CancellationToken cancellationToken)
+    {
+        string validationMessage = ValidateCartRequest(request.Order);
+        if (!string.IsNullOrWhiteSpace(validationMessage))
+            return BadRequest(validationMessage);
+
+        PaymentSimulationResult paymentResult = SimulatePayment(request.Payment);
+        if (!paymentResult.Success)
+            return BadRequest(paymentResult.Message);
+
+        int orderId = await _orderService.CreateCartOrderAsync(request.Order, "Odendi", cancellationToken);
+        return Ok(new PaidCartOrderResponseDto
+        {
+            SiparisId = orderId,
+            PaymentStatus = "Odendi",
+            CardLastFour = paymentResult.CardLastFour
+        });
     }
 
     [HttpPatch("{id:int}/durum")]
@@ -129,5 +151,41 @@ public sealed class SiparislerController : ControllerBase
         }
 
         return string.Empty;
+    }
+
+    private static PaymentSimulationResult SimulatePayment(PaymentSimulationRequest request)
+    {
+        if (request == null)
+            return PaymentSimulationResult.Failed("Ödeme bilgileri zorunludur.");
+
+        if (string.IsNullOrWhiteSpace(request.CardHolder))
+            return PaymentSimulationResult.Failed("Kart sahibi zorunludur.");
+
+        string cardNumber = DigitsOnly(request.CardNumber);
+        if (cardNumber.Length != 16)
+            return PaymentSimulationResult.Failed("Kart numarası 16 haneli olmalıdır.");
+
+        if (cardNumber == "4000000000000002")
+            return PaymentSimulationResult.Failed("Kart reddedildi. Lütfen farklı bir test kartı deneyin.");
+
+        if (!Regex.IsMatch(request.Expiry.Trim(), "^(0[1-9]|1[0-2])\\/[0-9]{2}$"))
+            return PaymentSimulationResult.Failed("Son kullanma tarihi AA/YY formatında olmalıdır.");
+
+        string cvv = DigitsOnly(request.Cvv);
+        if (cvv.Length is < 3 or > 4)
+            return PaymentSimulationResult.Failed("CVV 3 veya 4 haneli olmalıdır.");
+
+        return PaymentSimulationResult.Paid(cardNumber[^4..]);
+    }
+
+    private static string DigitsOnly(string value)
+    {
+        return new string((value ?? string.Empty).Where(char.IsDigit).ToArray());
+    }
+
+    private sealed record PaymentSimulationResult(bool Success, string Message, string CardLastFour)
+    {
+        public static PaymentSimulationResult Paid(string cardLastFour) => new(true, string.Empty, cardLastFour);
+        public static PaymentSimulationResult Failed(string message) => new(false, message, string.Empty);
     }
 }

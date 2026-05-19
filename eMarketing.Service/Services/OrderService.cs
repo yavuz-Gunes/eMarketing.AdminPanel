@@ -13,7 +13,7 @@ public interface IOrderService
     Task<OrderDetailResponseDto?> GetOrderDetailAsync(int orderId, CancellationToken cancellationToken = default);
     Task<Dictionary<string, object>> GetOrderSummaryAsync(int? magazaId, bool tumMagazalar, CancellationToken cancellationToken = default);
     Task<int> CreateOrderAsync(OrderCreateRequest request, CancellationToken cancellationToken = default);
-    Task<int> CreateCartOrderAsync(CartOrderCreateRequest request, CancellationToken cancellationToken = default);
+    Task<int> CreateCartOrderAsync(CartOrderCreateRequest request, string paymentStatus = "Bekliyor", CancellationToken cancellationToken = default);
     Task UpdateOrderStatusAsync(int orderId, string status, CancellationToken cancellationToken = default);
     Task CancelOrderAsync(int orderId, CancellationToken cancellationToken = default);
 }
@@ -169,7 +169,7 @@ public sealed class OrderService : IOrderService
         return orderId;
     }
 
-    public async Task<int> CreateCartOrderAsync(CartOrderCreateRequest request, CancellationToken cancellationToken = default)
+    public async Task<int> CreateCartOrderAsync(CartOrderCreateRequest request, string paymentStatus = "Bekliyor", CancellationToken cancellationToken = default)
     {
         if (!request.CustomerStoreId.HasValue || request.CustomerStoreId.Value <= 0)
             throw new InvalidOperationException("Sipariş için mağaza seçimi zorunludur.");
@@ -193,7 +193,7 @@ public sealed class OrderService : IOrderService
             int totalQuantity = request.Items.Sum(item => item.Quantity);
             OrderCreateItemRequest firstItem = request.Items[0];
 
-            int orderId = await InsertOrderHeaderAsync(connection, transaction, request, store, firstItem, totalQuantity, grandTotal, cancellationToken);
+            int orderId = await InsertOrderHeaderAsync(connection, transaction, request, store, firstItem, totalQuantity, grandTotal, paymentStatus, cancellationToken);
 
             foreach (OrderCreateItemRequest item in request.Items)
                 await InsertOrderItemAsync(connection, transaction, orderId, item, request.OrderSource, cancellationToken);
@@ -440,6 +440,7 @@ WHERE byk.BayiYetkiliId = @BayiYetkiliId
         OrderCreateItemRequest firstItem,
         int totalQuantity,
         decimal grandTotal,
+        string paymentStatus,
         CancellationToken cancellationToken)
     {
         await using SqlCommand command = new(@"
@@ -480,7 +481,7 @@ VALUES
     NULL,
     @OrderType,
     @OrderSource,
-    N'Bekliyor',
+    @PaymentStatus,
     @TotalPrice,
     0,
     0,
@@ -509,6 +510,7 @@ SELECT @OrderId;", connection, transaction);
         command.Parameters.Add("@CustomerStoreId", SqlDbType.Int).Value = request.CustomerStoreId!.Value;
         command.Parameters.Add("@OrderType", SqlDbType.NVarChar, 50).Value = string.IsNullOrWhiteSpace(request.OrderType) ? "Bayi" : request.OrderType.Trim();
         command.Parameters.Add("@OrderSource", SqlDbType.NVarChar, 50).Value = string.IsNullOrWhiteSpace(request.OrderSource) ? "Web" : request.OrderSource.Trim();
+        command.Parameters.Add("@PaymentStatus", SqlDbType.NVarChar, 50).Value = string.IsNullOrWhiteSpace(paymentStatus) ? "Bekliyor" : paymentStatus.Trim();
         command.Parameters.Add("@BayiYetkiliId", SqlDbType.Int).Value = request.BayiYetkiliId!.Value;
 
         object? result = await command.ExecuteScalarAsync(cancellationToken);

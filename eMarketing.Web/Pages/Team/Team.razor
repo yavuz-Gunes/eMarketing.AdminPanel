@@ -239,6 +239,7 @@
     private bool ShowNewPersonnel { get; set; }
     private bool Loading { get; set; }
     private int? BusyAuthorityUserId { get; set; }
+    private int TeamLoadVersion { get; set; }
     private string Search { get; set; } = string.Empty;
     private string DutyFilter { get; set; } = "all";
     private string StatusFilter { get; set; } = "all";
@@ -284,31 +285,40 @@
 
     private async Task LoadTeamAsync()
     {
+        int version = ++TeamLoadVersion;
+        int? storeId = StoreState.SelectedStoreId;
+
         Message = string.Empty;
         IsError = false;
         SelectedMember = null;
         ShowNewPersonnel = false;
+        TeamResponse = null;
 
-        if (StoreState.SelectedStoreId is not int storeId)
-        {
-            TeamResponse = null;
+        if (storeId is not int activeStoreId)
             return;
-        }
 
         try
         {
             Loading = true;
-            TeamResponse = await TeamApi.GetTeamAsync(storeId);
+            StoreTeamResponseDto response = await TeamApi.GetTeamAsync(activeStoreId);
+            if (version != TeamLoadVersion || StoreState.SelectedStoreId != activeStoreId)
+                return;
+
+            TeamResponse = response;
         }
         catch (Exception ex)
         {
-            TeamResponse = null;
-            Message = ex.Message;
-            IsError = true;
+            if (version == TeamLoadVersion)
+            {
+                TeamResponse = null;
+                Message = ex.Message;
+                IsError = true;
+            }
         }
         finally
         {
-            Loading = false;
+            if (version == TeamLoadVersion)
+                Loading = false;
         }
     }
 

@@ -113,6 +113,7 @@ public sealed class DealerRepository : IDealerRepository
             SqlParameterFactory.NullableTextParam("@Address", 500, request.Address),
             SqlParameterFactory.NullableTextParam("@Phone", 60, request.Phone),
             SqlParameterFactory.NullableTextParam("@ResponsiblePerson", 200, request.ResponsiblePerson),
+            SqlParameterFactory.Param("@SorumluKullaniciId", SqlDbType.Int, request.SorumluKullaniciId),
             SqlParameterFactory.Param("@IsActive", SqlDbType.Bit, request.IsActive)
         };
     }

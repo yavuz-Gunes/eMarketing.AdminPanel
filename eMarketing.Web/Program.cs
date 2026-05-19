@@ -39,6 +39,7 @@ builder.Services.AddScoped<StockApiClient>();
 builder.Services.AddScoped<OrderApiClient>();
 builder.Services.AddScoped<TeamApiClient>();
 builder.Services.AddScoped<DashboardApiClient>();
+builder.Services.AddScoped<ReportApiClient>();
 builder.Services.AddScoped<CampaignApiClient>();
 builder.Services.AddScoped<NotificationApiClient>();
 

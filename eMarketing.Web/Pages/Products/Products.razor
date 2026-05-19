@@ -8,6 +8,7 @@
 @inject AuthSession Auth
 @inject IJSRuntime JS
 @inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
 
 <PageTitle>Ürünler - eMarketing</PageTitle>
 
@@ -160,7 +161,7 @@
                     @foreach (ProductDto product in FilteredProducts)
                     {
                         StockItemDto stock = GetDisplayStock(product);
-                        <div class="grid grid-cols-[1.45fr_.75fr_.65fr_.55fr_.55fr_.7fr_1.85fr] items-center border-b border-l-4 border-l-transparent border-slate-100 px-4 py-3 text-sm transition last:border-b-0 hover:border-blue-200 hover:bg-blue-50/50 hover:shadow-md">
+                        <div class="@ProductTableRowClass(product, stock)">
                             <div class="flex min-w-0 items-center gap-3">
                             @if (!string.IsNullOrWhiteSpace(product.GorselUrl))
                             {
@@ -178,7 +179,13 @@
                             <span class="truncate font-bold text-slate-600">@product.KategoriAdi</span>
                             <span class="font-black text-slate-950">@product.Fiyat.ToString("C", TrCulture)</span>
                             <span class="font-black text-slate-950">@stock.MerkezStok</span>
-                            <span class="@StockTextClass(stock.BayiStok)">@stock.BayiStok</span>
+                            <span class="@StockTextClass(stock.BayiStok)">
+                                @stock.BayiStok
+                                @if (product.AktifMi && IsCriticalStock(stock))
+                                {
+                                    <span class="ml-2 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black text-rose-700 ring-1 ring-rose-100">Kritik</span>
+                                }
+                            </span>
                             <span><span class="@ProductStatusBadgeClass(product)">@ProductStatusText(product)</span></span>
                             <div class="flex justify-end gap-2 text-xs font-black">
                                 <button class="rounded-lg bg-blue-600 px-3 py-2 text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
@@ -209,6 +216,7 @@
                     <ProductCard Product="@WithSelectedStoreStock(product, stock)"
                                  Stock="@stock"
                                  CentralStock="@product.Stok"
+                                 IsCritical="@IsCriticalStock(stock)"
                                  ShowAdminStock="@Auth.CanManageProducts"
                                  OnAdd="AddToCart"
                                  OnEdit="OpenEditProductModal"
@@ -269,6 +277,9 @@
     [SupplyParameterFromQuery(Name = "urunId")]
     public int? ProductId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "stok")]
+    public string? StockQuery { get; set; }
+
     private static readonly CultureInfo TrCulture = CultureInfo.GetCultureInfo("tr-TR");
     private const string ViewStorageKey = "emarketing.products.view";
     private const long MaxProductImageBytes = 5 * 1024 * 1024;
@@ -308,6 +319,7 @@
     private bool ImagePreviewFailed { get; set; }
     private bool IsProductCropperVisible { get; set; }
     private bool IsMovementsLoading { get; set; }
+    private string LastQuerySignature { get; set; } = string.Empty;
 
     private bool IsModalOpen => ModalMode != CatalogModalMode.None && Auth.CanManageProducts;
     private bool IsTransferInvalid => TransferTarget is null || TransferQuantity <= 0 || TransferQuantity > TransferTarget.MerkezStok;
@@ -361,6 +373,36 @@
         await LoadCategoriesAsync();
         await LoadProductsAsync();
         await LoadStocksAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        string querySignature = $"{ProductId?.ToString(CultureInfo.InvariantCulture) ?? "-"}|{CategoryId?.ToString(CultureInfo.InvariantCulture) ?? "-"}|{StockQuery ?? "-"}";
+        if (string.Equals(querySignature, LastQuerySignature, StringComparison.Ordinal))
+            return;
+
+        LastQuerySignature = querySignature;
+
+        if (string.Equals(StockQuery, "kritik", StringComparison.OrdinalIgnoreCase))
+        {
+            ProductId = null;
+            CurrentStockFilter = StockFilterMode.Critical;
+            ProductStatusFilter = -1;
+            Search = string.Empty;
+            return;
+        }
+
+        if (ProductId.HasValue || CategoryId.HasValue)
+        {
+            CurrentStockFilter = StockFilterMode.All;
+            ProductStatusFilter = -1;
+            Search = string.Empty;
+            return;
+        }
+
+        CurrentStockFilter = StockFilterMode.All;
+        ProductStatusFilter = Auth.CanManageProducts ? -1 : 1;
+        Search = string.Empty;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -467,6 +509,11 @@
         {
             CurrentStockFilter = StockFilterMode.All;
             ProductStatusFilter = -1;
+            ProductId = null;
+            CategoryId = null;
+            StockQuery = null;
+            Search = string.Empty;
+            Navigation.NavigateTo("/products");
             return;
         }
 
@@ -952,7 +999,15 @@
             return true;
         }
 
-        return stock.MinimumStok > 0 && stock.BayiStok > 0 && stock.BayiStok <= stock.MinimumStok;
+        return stock.BayiStok > 0 && (stock.MinimumStok > 0 ? stock.BayiStok <= stock.MinimumStok : stock.BayiStok <= 5);
+    }
+
+    private static string ProductTableRowClass(ProductDto product, StockItemDto stock)
+    {
+        string baseClass = "grid grid-cols-[1.45fr_.75fr_.65fr_.55fr_.55fr_.7fr_1.85fr] items-center border-b border-l-4 px-4 py-3 text-sm transition last:border-b-0 hover:shadow-md";
+        return product.AktifMi && IsCriticalStock(stock)
+            ? $"{baseClass} border-rose-100 border-l-rose-400 bg-rose-50/35 hover:border-rose-200 hover:bg-rose-50/70"
+            : $"{baseClass} border-l-transparent border-slate-100 hover:border-blue-200 hover:bg-blue-50/50";
     }
 
     private void AddToCart(ProductDto product)
@@ -1228,7 +1283,7 @@
         </div>
         <label class="block">
             <span class="text-xs font-black uppercase text-slate-500">Miktar</span>
-            <input type="number" min="1" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100" @bind="TransferQuantity" />
+            <input type="number" min="1" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100" @bind="TransferQuantity" @bind:event="oninput" />
         </label>
         <label class="block">
             <span class="text-xs font-black uppercase text-slate-500">Açıklama</span>
@@ -1248,7 +1303,7 @@
         </div>
         <label class="block">
             <span class="text-xs font-black uppercase text-slate-500">Eklenecek miktar</span>
-            <input type="number" min="1" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="CentralStockQuantity" />
+            <input type="number" min="1" class="mt-1 h-11 w-full rounded-lg border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" @bind="CentralStockQuantity" @bind:event="oninput" />
         </label>
         <label class="block">
             <span class="text-xs font-black uppercase text-slate-500">Açıklama</span>
@@ -1342,6 +1397,8 @@
             "DuzeltmeGiris" => "Düzeltme girişi",
             "DuzeltmeCikis" => "Düzeltme çıkışı",
             "OrderOut" => "Sipariş merkez çıkışı",
+            "OrderCancelIn" => "Sipariş iptal/iade girişi",
+            "DeliveredOrderCancelReturn" => "Teslim iptal/iade girişi",
             _ => string.IsNullOrWhiteSpace(movement.HareketAciklama)
                 ? CleanMovementText(movement.HareketTipi)
                 : CleanMovementText(movement.HareketAciklama)

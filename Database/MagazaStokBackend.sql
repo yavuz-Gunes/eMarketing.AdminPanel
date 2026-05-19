@@ -414,6 +414,8 @@ BEGIN
         CASE
             WHEN sm.MovementType = N'MerkezGiris' THEN N'Merkez stok girişi'
             WHEN sm.MovementType = N'OrderOut' THEN N'Sipariş merkez çıkışı'
+            WHEN sm.MovementType = N'OrderCancelIn' THEN N'Sipariş iptal/iade girişi'
+            WHEN sm.MovementType = N'DeliveredOrderCancelReturn' THEN N'Teslim iptal/iade girişi'
             WHEN sm.MovementType = N'SiparisIptalIade' THEN N'Sipariş iptal/iade girişi'
             ELSE sm.MovementType
         END AS HareketAciklama,

@@ -205,6 +205,84 @@ window.eMarketing = {
     }
   },
   scrollTop: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+  print: () => window.print(),
+  printElement: (elementId, title) => {
+    const element = document.getElementById(elementId);
+    if (!element) {
+      throw new Error("Yazdirilacak rapor bulunamadi.");
+    }
+
+    const printWindow = window.open("", "_blank", "width=980,height=900");
+    if (!printWindow) {
+      throw new Error("Yazdirma penceresi acilamadi. Tarayici popup engelini kontrol edin.");
+    }
+
+    printWindow.document.write(`<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>${title || "Rapor"}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f1f5f9; color: #0f172a; font-family: Inter, Arial, sans-serif; }
+    article { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; padding: 24px; }
+    .shadow-xl { box-shadow: none !important; }
+    @page { size: A4; margin: 12mm; }
+    @media print {
+      body { background: #fff; }
+      article { width: auto; min-height: auto; margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>${element.outerHTML}</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  },
+  files: {
+    downloadBase64: (fileName, contentType, base64) => {
+      const link = document.createElement("a");
+      link.href = `data:${contentType};base64,${base64}`;
+      link.download = fileName || "rapor.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    },
+    downloadElementPdf: async (elementId, fileName) => {
+      const element = document.getElementById(elementId);
+      if (!element) {
+        throw new Error("PDF'e aktarilacak rapor bulunamadi.");
+      }
+
+      if (!window.html2pdf) {
+        throw new Error("PDF aktarim araci yuklenemedi. Sayfayi yenileyip tekrar deneyin.");
+      }
+
+      await window.html2pdf()
+        .set({
+          filename: fileName || "rapor.pdf",
+          margin: [0, 0, 0, 0],
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff"
+          },
+          jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait"
+          },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+        })
+        .from(element)
+        .save();
+    }
+  },
   auth: {
     save: (session) => {
       const value = JSON.stringify(session);

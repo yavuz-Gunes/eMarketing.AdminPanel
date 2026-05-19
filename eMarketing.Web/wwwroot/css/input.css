@@ -11,3 +11,28 @@ html {
 body {
   margin: 0;
 }
+
+@media print {
+  aside,
+  header,
+  button,
+  input,
+  select {
+    display: none !important;
+  }
+
+  body,
+  main,
+  section {
+    background: #fff !important;
+  }
+
+  .lg\:pl-64 {
+    padding-left: 0 !important;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

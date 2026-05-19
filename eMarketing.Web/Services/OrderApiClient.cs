@@ -66,4 +66,36 @@ public sealed class OrderApiClient : ApiClientBase
         Dictionary<string, int> result = await ReadRequiredAsync<Dictionary<string, int>>(response, cancellationToken);
         return result.TryGetValue("SiparisId", out int orderId) ? orderId : 0;
     }
+
+    public async Task<PaidCartOrderResponseDto> CreatePaidCartOrderAsync(
+        StoreDto store,
+        SiparisYetkilisiDto authority,
+        IReadOnlyList<CartItem> items,
+        PaymentSimulationRequest payment,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new PaidCartOrderCreateRequest
+        {
+            Order = new CartOrderCreateRequest
+            {
+                CustomerName = store.MusteriAdi,
+                CustomerEmail = string.Empty,
+                CustomerPhone = store.Telefon,
+                CustomerStoreId = store.MagazaId,
+                OrderType = "Bayi",
+                OrderSource = "Web",
+                BayiYetkiliId = authority.BayiYetkiliId,
+                Items = items.Select(item => new OrderCreateItemRequest
+                {
+                    ProductId = item.Product.UrunId,
+                    Quantity = item.Quantity,
+                    TotalPrice = item.LineTotal
+                }).ToList()
+            },
+            Payment = payment
+        };
+
+        HttpResponseMessage response = await CreateClient().PostAsJsonAsync("siparisler/sepet/odemeli", request, cancellationToken);
+        return await ReadRequiredAsync<PaidCartOrderResponseDto>(response, cancellationToken);
+    }
 }
