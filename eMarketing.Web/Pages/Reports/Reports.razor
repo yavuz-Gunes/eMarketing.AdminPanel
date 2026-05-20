@@ -249,10 +249,11 @@
                                 disabled="@Exporting"
                                 @onclick="DownloadPdfAsync">
                             <AppIcon Name="download" CssClass="h-4 w-4" />
-                            PDF indir
+                            @(Exporting ? "Hazırlanıyor..." : "PDF indir")
                         </button>
                         <button type="button"
-                                class="inline-flex h-10 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm font-black text-white ring-1 ring-white/15 transition hover:bg-white/15"
+                                class="inline-flex h-10 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm font-black text-white ring-1 ring-white/15 transition hover:bg-white/15 disabled:bg-slate-700 disabled:text-slate-400"
+                                disabled="@Exporting"
                                 @onclick="PrintPreviewAsync">
                             <AppIcon Name="printer" CssClass="h-4 w-4" />
                             Yazdır
@@ -474,7 +475,13 @@
 
         try
         {
-            await JS.InvokeVoidAsync("eMarketing.files.downloadElementPdf", "report-pdf-preview", $"rapor-{DateTime.Now:yyyyMMdd-HHmm}.pdf");
+            int? storeId = AllStores && CanSeeAdminReport ? null : StoreState.SelectedStoreId;
+            ReportExportResultDto export = await ReportApi.DownloadPortalReportPdfAsync(storeId, AllStores && CanSeeAdminReport, StartDate, EndDate);
+            await JS.InvokeVoidAsync(
+                "eMarketing.files.downloadBase64",
+                export.FileName,
+                export.ContentType,
+                Convert.ToBase64String(export.Content));
         }
         catch (Exception ex)
         {

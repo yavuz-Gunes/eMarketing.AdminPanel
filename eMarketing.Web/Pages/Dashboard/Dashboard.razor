@@ -7,6 +7,7 @@
 @inject NotificationApiClient NotificationApi
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@using System.Text
 
 <PageTitle>Dashboard - eMarketing</PageTitle>
 
@@ -14,7 +15,66 @@
     <section class="mx-auto max-w-[1440px] space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         <CampaignCarousel />
 
-        <section class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="grid gap-0 lg:grid-cols-[minmax(0,1fr)_420px]">
+                <div class="border-b border-slate-100 p-5 lg:border-b-0 lg:border-r lg:p-6">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-xs font-black uppercase tracking-wide text-blue-700">Operasyon Merkezi</p>
+                            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Bayi canlı durum ekranı</h1>
+                            <p class="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+                                Sipariş kuyruğu, stok alarmı, ekip ve bildirimleri aktif bayi kapsamında tek ekrandan takip edin.
+                            </p>
+                        </div>
+                        <div class="min-w-[220px] rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <ActiveStoreBadge Compact="true" ShowDescription="false" />
+                            <p class="mt-3 text-xs font-black uppercase tracking-wide text-slate-500">@TodayText</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid gap-3 md:grid-cols-4">
+                        <a href="/orders" class="rounded-xl border border-blue-100 bg-blue-50 p-4 transition hover:border-blue-300">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-blue-700"><AppIcon Name="cart" CssClass="h-5 w-5" /></span>
+                            <span class="mt-3 block text-xs font-black uppercase text-blue-700">Açık sipariş</span>
+                            <span class="mt-1 block text-2xl font-black text-slate-950">@OpenOrders.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                        </a>
+                        <a href="@CriticalProductsHref" class="rounded-xl border border-rose-100 bg-rose-50 p-4 transition hover:border-rose-300">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-rose-700"><AppIcon Name="alert" CssClass="h-5 w-5" /></span>
+                            <span class="mt-3 block text-xs font-black uppercase text-rose-700">Kritik stok</span>
+                            <span class="mt-1 block text-2xl font-black text-slate-950">@Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                        </a>
+                        <a href="/orders" class="rounded-xl border border-amber-100 bg-amber-50 p-4 transition hover:border-amber-300">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-amber-700"><AppIcon Name="clock" CssClass="h-5 w-5" /></span>
+                            <span class="mt-3 block text-xs font-black uppercase text-amber-700">Onay bekleyen</span>
+                            <span class="mt-1 block text-2xl font-black text-slate-950">@Summary.BekleyenOdemeSayisi.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))</span>
+                        </a>
+                        <a href="/team" class="rounded-xl border border-emerald-100 bg-emerald-50 p-4 transition hover:border-emerald-300">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-700"><AppIcon Name="users" CssClass="h-5 w-5" /></span>
+                            <span class="mt-3 block text-xs font-black uppercase text-emerald-700">Ekip</span>
+                            <span class="mt-1 block text-2xl font-black text-slate-950">@TeamCountText</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 p-4 text-white lg:p-5">
+                    <p class="text-xs font-black uppercase tracking-wide text-blue-200">Günün önceliği</p>
+                    <h2 class="mt-2 text-xl font-black">@PriorityTitle</h2>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-300">@PriorityDescription</p>
+                    <div class="mt-4 grid gap-2">
+                        <a href="@CriticalProductsHref" class="inline-flex h-11 items-center justify-center rounded-lg bg-white px-4 text-sm font-black text-slate-950 transition hover:bg-blue-50">
+                            Stok alarmını aç
+                        </a>
+                        <a href="/orders" class="inline-flex h-11 items-center justify-center rounded-lg border border-white/15 px-4 text-sm font-black text-white transition hover:bg-white/10">
+                            Sipariş kuyruğuna git
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @if (ShowLegacyHeroRemoved)
+        {
+        <section class="hidden rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <ActiveStoreBadge Compact="true" />
@@ -40,6 +100,7 @@
                 </div>
             </div>
         </section>
+        }
 
         @if (!string.IsNullOrWhiteSpace(Message))
         {
@@ -125,8 +186,8 @@
                                         </div>
 
                                         <div class="min-w-0">
-                                            <p class="truncate font-semibold text-slate-900">@order.UrunAdi</p>
-                                            <p class="mt-1 text-xs text-slate-500">@order.OrderType / @order.YetkiliAdi</p>
+                                            <p class="truncate font-semibold text-slate-900">@DisplayText(order.UrunAdi)</p>
+                                            <p class="mt-1 text-xs text-slate-500">@DisplayText(order.OrderType) / @DisplayText(order.YetkiliAdi)</p>
                                         </div>
 
                                         <div class="font-bold text-slate-950">
@@ -283,7 +344,19 @@
     private int OpenOrders => Math.Max(0, Summary.ToplamSiparis - Summary.TeslimEdildiSayisi - Summary.IptalSayisi);
     private int DashboardTeamCount => TeamResponse?.Members.Count ?? 0;
     private string TeamCountText => DashboardTeamCount.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"));
-    private bool ShowPriorityPopup => PriorityPopupReady && !PriorityPopupDismissed && Summary.KritikStok > 0;
+    private bool ShowLegacyHeroRemoved => false;
+    private bool ShowPriorityPopup => false;
+    private string TodayText => DateTime.Now.ToString("dd MMMM yyyy, HH:mm", CultureInfo.GetCultureInfo("tr-TR"));
+    private string PriorityTitle => Summary.KritikStok > 0
+        ? $"{Summary.KritikStok.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))} kritik stok alarmı"
+        : OpenOrders > 0
+            ? $"{OpenOrders.ToString("N0", CultureInfo.GetCultureInfo("tr-TR"))} açık sipariş takipte"
+            : "Operasyon dengede";
+    private string PriorityDescription => Summary.KritikStok > 0
+        ? "Önce kritik stokları kontrol edin; gerekiyorsa merkez stok aktarımı veya ürün kontrolü başlatın."
+        : OpenOrders > 0
+            ? "Hazırlanan ve kargodaki siparişleri güncel tutarak bayi ekranını temiz bırakın."
+            : "Aktif bayide acil aksiyon görünmüyor. Bildirimleri ve kampanyaları izlemeye devam edin.";
     private string CriticalProductsHref => CriticalStocks.Count == 1
         ? $"/products?urunId={CriticalStocks[0].UrunId}"
         : "/products?stok=kritik";
@@ -448,6 +521,34 @@
     }
 
     private static string NotificationHref(NotificationDto notification) => string.IsNullOrWhiteSpace(notification.HedefUrl) ? "/notifications" : notification.HedefUrl;
+
+    private static string DisplayText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "-";
+
+        string text = value.Trim();
+        if (!LooksMojibake(text))
+            return text;
+
+        try
+        {
+            string decoded = Encoding.UTF8.GetString(Encoding.GetEncoding("ISO-8859-1").GetBytes(text));
+            return LooksMojibake(decoded) ? text : decoded;
+        }
+        catch
+        {
+            return text;
+        }
+    }
+
+    private static bool LooksMojibake(string value)
+    {
+        return value.Contains('Ã', StringComparison.Ordinal)
+            || value.Contains('Ä', StringComparison.Ordinal)
+            || value.Contains('Å', StringComparison.Ordinal)
+            || value.Contains('Â', StringComparison.Ordinal);
+    }
 
     private static string DisplayStatus(string status)
     {

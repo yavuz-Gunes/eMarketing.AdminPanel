@@ -1,14 +1,20 @@
-<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-    <TextField Label="Mağaza adı" @bind-Value="Model.StoreName" />
-    <TextField Label="Şehir" @bind-Value="Model.City" />
-    <TextField Label="İlçe" @bind-Value="Model.District" />
-    <TextField Label="Telefon" @bind-Value="Model.Phone" />
+<div class="space-y-4">
+    <section class="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-3">
+        <div class="md:col-span-2 xl:col-span-3">
+            <p class="text-xs font-black uppercase tracking-wide text-blue-700">Temel bilgiler</p>
+            <p class="mt-1 text-xs font-semibold text-slate-500">Mağaza adı ve konum bilgileri bayi kartlarında ve aktif bayi seçiminde gösterilir.</p>
+        </div>
+        <TextField Label="Mağaza adı" Kind="person" MaxLength="300" @bind-Value="Model.StoreName" />
+        <TextField Label="Şehir" Kind="person" MaxLength="100" @bind-Value="Model.City" />
+        <TextField Label="İlçe" Kind="person" MaxLength="100" @bind-Value="Model.District" />
+        <TextField Label="Telefon" Kind="phone" MaxLength="60" Hint="Sadece telefon karakterleri girilebilir." @bind-Value="Model.Phone" />
+    </section>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2 xl:col-span-2">
+    <section class="rounded-xl border border-slate-200 bg-white p-4">
         <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
                 <p class="text-xs font-black uppercase tracking-wide text-slate-500">Sorumlu personel</p>
-                <p class="mt-1 text-xs font-semibold text-slate-500">Mağazaya bağlı aktif personelden seçilir.</p>
+                <p class="mt-1 text-xs font-semibold text-slate-500">@PersonnelHelpText</p>
             </div>
             @if (SelectedResponsible is not null)
             {
@@ -54,15 +60,17 @@
         }
     </section>
 
-    <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
-        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="Model.IsActive" />
-        Aktif mağaza
-    </label>
-    <label class="md:col-span-2 xl:col-span-3">
-        <span class="text-xs font-black uppercase text-slate-500">Adres</span>
-        <textarea class="mt-1 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-                  @bind="Model.Address"></textarea>
-    </label>
+    <section class="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-[180px_1fr]">
+        <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+            <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="Model.IsActive" />
+            Aktif mağaza
+        </label>
+        <label>
+            <span class="text-xs font-black uppercase text-slate-500">Adres</span>
+            <textarea class="mt-1 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                      @bind="Model.Address"></textarea>
+        </label>
+    </section>
 </div>
 
 @code {
@@ -70,6 +78,7 @@
     [Parameter] public IReadOnlyList<StoreTeamMemberDto> Personnel { get; set; } = Array.Empty<StoreTeamMemberDto>();
     [Parameter] public bool PersonnelLoading { get; set; }
     [Parameter] public string PersonnelEmptyText { get; set; } = "Mağaza kaydedildikten sonra personel bağlanabilir.";
+    [Parameter] public string PersonnelHelpText { get; set; } = "Bayiye bağlı aktif personelden seçilir.";
 
     private string PersonnelSearch { get; set; } = string.Empty;
     private string ResponsibleSelectValue => Model.SorumluKullaniciId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;

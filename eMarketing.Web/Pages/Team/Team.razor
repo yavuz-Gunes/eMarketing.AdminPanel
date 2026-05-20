@@ -3,6 +3,7 @@
 @inject ActiveStoreState StoreState
 @inject StoreApiClient StoreApi
 @inject TeamApiClient TeamApi
+@inject AuthSession Auth
 
 <PageTitle>Ekibim - eMarketing</PageTitle>
 
@@ -181,7 +182,7 @@
                                             else
                                             {
                                                 <button class="@ToggleButtonClass(member.SiparisYetkilisiMi)"
-                                                        disabled="@(!CanManageAuthority || BusyAuthorityUserId == member.KullaniciId)"
+                                                        disabled="@(!CanManageAuthority || IsCurrentUser(member) || BusyAuthorityUserId == member.KullaniciId)"
                                                         @onclick="() => ToggleAuthorityAsync(member)"
                                                         @onclick:stopPropagation="true"
                                                         title="Sipariş yetkisini değiştir">
@@ -245,10 +246,9 @@
     private string StatusFilter { get; set; } = "all";
     private string AuthorityFilter { get; set; } = "all";
 
-    private bool PanelOpen => ShowNewPersonnel || SelectedMember is not null;
     private bool CanManageAuthority => TeamResponse?.Context.SiparisYetkisiYonetebilir == true;
 
-    private string WorkspaceClass => PanelOpen
+    private string WorkspaceClass => ShowNewPersonnel
         ? "grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]"
         : "space-y-4";
 
@@ -336,7 +336,7 @@
 
     private async Task ToggleAuthorityAsync(StoreTeamMemberDto member)
     {
-        if (!CanManageAuthority || IsAdmin(member))
+        if (!CanManageAuthority || IsAdmin(member) || IsCurrentUser(member))
             return;
 
         BusyAuthorityUserId = member.KullaniciId;
@@ -409,6 +409,8 @@
     private static bool IsAdmin(StoreTeamMemberDto member) =>
         string.Equals(member.Rol, "Admin", StringComparison.OrdinalIgnoreCase)
         || string.Equals(member.KullaniciAdi, "admin", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsCurrentUser(StoreTeamMemberDto member) => Auth.User?.KullaniciId == member.KullaniciId;
 
     private static string EmptyText(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     private static string StatusText(StoreTeamMemberDto member) => member.AktifMi ? "Aktif" : "Pasif";

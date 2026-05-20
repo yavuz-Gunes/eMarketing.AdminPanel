@@ -47,4 +47,16 @@ public sealed class TeamApiClient : ApiClientBase
         HttpResponseMessage response = await CreateClient().DeleteAsync($"bayi-operasyon/magazalar/{storeId}/personel/{userStoreId}", cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
     }
+
+    public async Task UpdateProfileAsync(int userId, StorePersonnelProfileUpdateRequest request, CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"bayi-operasyon/personel/{userId}/profil", request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task UpdatePasswordAsync(int userId, StorePersonnelPasswordUpdateRequest request, CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await CreateClient().PatchAsJsonAsync($"bayi-operasyon/personel/{userId}/sifre", request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
 }

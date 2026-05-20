@@ -22,11 +22,18 @@
                 }
                 <label class="block space-y-1 text-sm font-medium text-slate-700">
                     <span>Kullanıcı adı</span>
-                    <InputText class="w-full rounded-md border border-slate-200 px-3 py-2.5 outline-none focus:border-slate-400" @bind-Value="Model.KullaniciAdi" autocomplete="username" />
+                    <input class="w-full rounded-md border border-slate-200 px-3 py-2.5 outline-none focus:border-slate-400"
+                           value="@Model.KullaniciAdi"
+                           @oninput="args => Model.KullaniciAdi = args.Value?.ToString() ?? string.Empty"
+                           autocomplete="username" />
                 </label>
                 <label class="block space-y-1 text-sm font-medium text-slate-700">
                     <span>Şifre</span>
-                    <InputText type="password" class="w-full rounded-md border border-slate-200 px-3 py-2.5 outline-none focus:border-slate-400" @bind-Value="Model.Sifre" autocomplete="current-password" />
+                    <input type="password"
+                           class="w-full rounded-md border border-slate-200 px-3 py-2.5 outline-none focus:border-slate-400"
+                           value="@Model.Sifre"
+                           @oninput="args => Model.Sifre = args.Value?.ToString() ?? string.Empty"
+                           autocomplete="current-password" />
                 </label>
                 <ValidationSummary class="text-sm text-rose-700" />
                 <button class="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:bg-slate-300" disabled="@Busy">

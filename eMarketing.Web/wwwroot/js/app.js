@@ -217,31 +217,41 @@ window.eMarketing = {
       throw new Error("Yazdirma penceresi acilamadi. Tarayici popup engelini kontrol edin.");
     }
 
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map((node) => node.outerHTML)
+      .join("\n");
+    const content = element.outerHTML;
+
     printWindow.document.write(`<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="utf-8">
   <title>${title || "Rapor"}</title>
+  ${styles}
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; background: #f1f5f9; color: #0f172a; font-family: Inter, Arial, sans-serif; }
-    article { width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; padding: 24px; }
-    .shadow-xl { box-shadow: none !important; }
-    @page { size: A4; margin: 12mm; }
+    html, body { margin: 0; min-height: 100%; background: #1f2937; }
+    body { padding: 18px; }
+    #${elementId} { margin: 0 auto; box-shadow: none !important; }
+    @page { size: A4; margin: 0; }
     @media print {
-      body { background: #fff; }
-      article { width: auto; min-height: auto; margin: 0; padding: 0; }
+      html, body { background: #fff; padding: 0; }
+      #${elementId} { width: 210mm !important; min-height: 297mm !important; max-width: none !important; }
     }
   </style>
 </head>
-<body>${element.outerHTML}</body>
+<body>${content}</body>
 </html>`);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
+    const runPrint = () => {
       printWindow.print();
-      printWindow.close();
-    }, 250);
+    };
+    if (printWindow.document.fonts && printWindow.document.fonts.ready) {
+      printWindow.document.fonts.ready.then(() => setTimeout(runPrint, 150));
+    } else {
+      setTimeout(runPrint, 250);
+    }
   },
   files: {
     downloadBase64: (fileName, contentType, base64) => {

@@ -122,11 +122,11 @@
                                 <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">@PaymentError</div>
                             }
 
-                            <TextField Label="Kart sahibi" Placeholder="Ad Soyad" @bind-Value="PaymentForm.CardHolder" />
-                            <TextField Label="Kart numarası" Placeholder="4242 4242 4242 4242" @bind-Value="PaymentForm.CardNumber" />
+                            <TextField Label="Kart sahibi" Kind="person" Placeholder="Ad Soyad" @bind-Value="PaymentForm.CardHolder" />
+                            <TextField Label="Kart numarası" Kind="numeric" MaxLength="19" Placeholder="4242 4242 4242 4242" @bind-Value="PaymentForm.CardNumber" />
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <TextField Label="Son kullanma" Placeholder="12/30" @bind-Value="PaymentForm.Expiry" />
-                                <TextField Label="CVV" Placeholder="123" @bind-Value="PaymentForm.Cvv" />
+                                <TextField Label="Son kullanma" Kind="expiry" MaxLength="5" Placeholder="12/30" Hint="AA/YY formatında girin." @bind-Value="PaymentForm.Expiry" />
+                                <TextField Label="CVV" Kind="numeric" MaxLength="4" Placeholder="123" @bind-Value="PaymentForm.Cvv" />
                             </div>
 
                             <div class="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-blue-800">

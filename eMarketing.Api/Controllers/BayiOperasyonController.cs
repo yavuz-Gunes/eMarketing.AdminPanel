@@ -50,4 +50,18 @@ public sealed class BayiOperasyonController : ControllerBase
         await _dealerOperationService.RemovePersonnelAsync(magazaId, kullaniciMagazaId, cancellationToken);
         return NoContent();
     }
+
+    [HttpPatch("personel/{kullaniciId:int}/profil")]
+    public async Task<IActionResult> UpdateProfile(int kullaniciId, [FromBody] StorePersonnelProfileUpdateRequest request, CancellationToken cancellationToken)
+    {
+        await _dealerOperationService.UpdateProfileAsync(kullaniciId, request, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPatch("personel/{kullaniciId:int}/sifre")]
+    public async Task<IActionResult> UpdatePassword(int kullaniciId, [FromBody] StorePersonnelPasswordUpdateRequest request, CancellationToken cancellationToken)
+    {
+        await _dealerOperationService.UpdatePasswordAsync(kullaniciId, request, cancellationToken);
+        return NoContent();
+    }
 }

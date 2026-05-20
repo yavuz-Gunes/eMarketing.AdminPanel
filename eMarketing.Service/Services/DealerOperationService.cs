@@ -15,6 +15,8 @@ public interface IDealerOperationService
     Task UpdateDutyAsync(int storeId, int userStoreId, string duty, CancellationToken cancellationToken = default);
     Task SetOrderAuthorityAsync(int storeId, int userId, bool active, string notes, CancellationToken cancellationToken = default);
     Task RemovePersonnelAsync(int storeId, int userStoreId, CancellationToken cancellationToken = default);
+    Task UpdateProfileAsync(int userId, StorePersonnelProfileUpdateRequest request, CancellationToken cancellationToken = default);
+    Task UpdatePasswordAsync(int userId, StorePersonnelPasswordUpdateRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class DealerOperationService : IDealerOperationService
@@ -23,6 +25,7 @@ public sealed class DealerOperationService : IDealerOperationService
     private readonly IPersonnelService _personnelService;
     private readonly IBayiYetkiliRepository _authorityRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IPasswordService _passwordService;
     private readonly ILogger<DealerOperationService> _logger;
 
     public DealerOperationService(
@@ -30,12 +33,14 @@ public sealed class DealerOperationService : IDealerOperationService
         IPersonnelService personnelService,
         IBayiYetkiliRepository authorityRepository,
         ICurrentUserService currentUserService,
+        IPasswordService passwordService,
         ILogger<DealerOperationService> logger)
     {
         _connectionFactory = connectionFactory;
         _personnelService = personnelService;
         _authorityRepository = authorityRepository;
         _currentUserService = currentUserService;
+        _passwordService = passwordService;
         _logger = logger;
     }
 
@@ -76,6 +81,7 @@ public sealed class DealerOperationService : IDealerOperationService
     {
         await EnsureSupervisorAsync(storeId, cancellationToken);
         StoreMembership membership = await GetMembershipAsync(storeId, userStoreId, cancellationToken);
+        EnsureNotSelf(membership.UserId, "Kendi mağaza görevinizi değiştiremezsiniz.");
         string normalizedDuty = NormalizeDuty(duty);
 
         if (string.Equals(membership.Duty, "Supervisor", StringComparison.OrdinalIgnoreCase)
@@ -93,6 +99,7 @@ public sealed class DealerOperationService : IDealerOperationService
             throw new UnauthorizedAccessException("Sipariş yetkisi yönetmek için mağaza müdürü veya supervisor olmalısınız.");
 
         StoreMembership membership = await GetMembershipByUserAsync(storeId, userId, cancellationToken);
+        EnsureNotSelf(membership.UserId, "Kendi sipariş yetkinizi değiştiremezsiniz.");
         int customerId = await GetCustomerIdAsync(storeId, cancellationToken);
         int? authorityId = await GetOrderAuthorityIdAsync(storeId, membership.UserId, cancellationToken);
 
@@ -120,6 +127,7 @@ public sealed class DealerOperationService : IDealerOperationService
     {
         await EnsureSupervisorAsync(storeId, cancellationToken);
         StoreMembership membership = await GetMembershipAsync(storeId, userStoreId, cancellationToken);
+        EnsureNotSelf(membership.UserId, "Kendi mağaza bağlantınızı kaldıramazsınız.");
         if (string.Equals(membership.Duty, "Supervisor", StringComparison.OrdinalIgnoreCase))
             await EnsureNotLastSupervisorAsync(storeId, membership.UserId, cancellationToken);
 
@@ -131,11 +139,86 @@ public sealed class DealerOperationService : IDealerOperationService
         _logger.LogInformation("Dealer personnel removed from store. UserStoreId: {UserStoreId}, StoreId: {StoreId}, ActorUserId: {ActorUserId}", userStoreId, storeId, _currentUserService.CurrentUser.UserId);
     }
 
+    public async Task UpdateProfileAsync(int userId, StorePersonnelProfileUpdateRequest request, CancellationToken cancellationToken = default)
+    {
+        EnsureCanManageAccount(userId);
+        if (string.IsNullOrWhiteSpace(request.AdSoyad))
+            throw new ArgumentException("Ad soyad zorunludur.");
+
+        await using SqlConnection connection = _connectionFactory.CreateConnection();
+        await using SqlCommand command = new(@"
+UPDATE dbo.Kullanicilar
+SET
+    AdSoyad = @AdSoyad,
+    Telefon = NULLIF(LTRIM(RTRIM(@Telefon)), N''),
+    Email = NULLIF(LTRIM(RTRIM(@Email)), N'')
+WHERE KullaniciId = @KullaniciId;", connection);
+
+        command.CommandType = CommandType.Text;
+        command.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = userId;
+        command.Parameters.Add("@AdSoyad", SqlDbType.NVarChar, 150).Value = request.AdSoyad.Trim();
+        command.Parameters.Add("@Telefon", SqlDbType.NVarChar, 60).Value = (object?)request.Telefon?.Trim() ?? DBNull.Value;
+        command.Parameters.Add("@Email", SqlDbType.NVarChar, 400).Value = (object?)request.Email?.Trim() ?? DBNull.Value;
+
+        await connection.OpenAsync(cancellationToken);
+        int affected = await command.ExecuteNonQueryAsync(cancellationToken);
+        if (affected == 0)
+            throw new InvalidOperationException("Personel bulunamadı.");
+
+        _logger.LogInformation("Dealer personnel profile updated. UserId: {UserId}, ActorUserId: {ActorUserId}", userId, _currentUserService.CurrentUser.UserId);
+    }
+
+    public async Task UpdatePasswordAsync(int userId, StorePersonnelPasswordUpdateRequest request, CancellationToken cancellationToken = default)
+    {
+        EnsureCanManageAccount(userId);
+        if (string.IsNullOrWhiteSpace(request.YeniSifre) || request.YeniSifre.Trim().Length < 4)
+            throw new ArgumentException("Yeni şifre en az 4 karakter olmalıdır.");
+
+        string passwordHash = _passwordService.HashPassword(request.YeniSifre.Trim());
+        await using SqlConnection connection = _connectionFactory.CreateConnection();
+        await using SqlCommand command = new(@"
+UPDATE dbo.Kullanicilar
+SET Sifre = @Sifre
+WHERE KullaniciId = @KullaniciId;", connection);
+
+        command.CommandType = CommandType.Text;
+        command.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = userId;
+        command.Parameters.Add("@Sifre", SqlDbType.NVarChar, 100).Value = passwordHash;
+
+        await connection.OpenAsync(cancellationToken);
+        int affected = await command.ExecuteNonQueryAsync(cancellationToken);
+        if (affected == 0)
+            throw new InvalidOperationException("Personel bulunamadı.");
+
+        _logger.LogInformation("Dealer personnel password updated. UserId: {UserId}, ActorUserId: {ActorUserId}", userId, _currentUserService.CurrentUser.UserId);
+    }
+
     private async Task EnsureSupervisorAsync(int storeId, CancellationToken cancellationToken)
     {
         StoreTeamContextDto context = await GetContextAsync(storeId, cancellationToken);
         if (!context.SupervisorMu)
             throw new UnauthorizedAccessException("Bu işlem için aktif mağazada supervisor olmalısınız.");
+    }
+
+    private void EnsureCanManageAccount(int targetUserId)
+    {
+        CurrentUser currentUser = _currentUserService.CurrentUser;
+        if (!currentUser.UserId.HasValue)
+            throw new UnauthorizedAccessException("Kullanıcı oturumu bulunamadı.");
+
+        if (currentUser.IsAdmin || currentUser.UserId.Value == targetUserId)
+            return;
+
+        throw new UnauthorizedAccessException("Bu personelin profil veya şifre bilgilerini güncelleme yetkiniz yok.");
+    }
+
+    private void EnsureNotSelf(int targetUserId, string message)
+    {
+        CurrentUser currentUser = _currentUserService.CurrentUser;
+        if (currentUser.UserId.HasValue
+            && currentUser.UserId.Value == targetUserId
+            && !currentUser.IsAdmin)
+            throw new UnauthorizedAccessException(message);
     }
 
     private async Task<StoreTeamContextDto> GetContextAsync(int storeId, CancellationToken cancellationToken)

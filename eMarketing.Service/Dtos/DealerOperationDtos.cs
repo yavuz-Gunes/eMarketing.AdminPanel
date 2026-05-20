@@ -50,7 +50,7 @@ public sealed class StorePersonnelCreateRequest
     [Required, StringLength(150)]
     public string AdSoyad { get; set; } = string.Empty;
 
-    [EmailAddress, StringLength(400)]
+    [StringLength(400)]
     public string Email { get; set; } = string.Empty;
 
     [StringLength(60)]
@@ -71,4 +71,22 @@ public sealed class StoreOrderAuthorityUpdateRequest
     public bool AktifMi { get; set; }
     [StringLength(500)]
     public string Notlar { get; set; } = string.Empty;
+}
+
+public sealed class StorePersonnelProfileUpdateRequest
+{
+    [Required, StringLength(150)]
+    public string AdSoyad { get; set; } = string.Empty;
+
+    [StringLength(60)]
+    public string Telefon { get; set; } = string.Empty;
+
+    [StringLength(400)]
+    public string Email { get; set; } = string.Empty;
+}
+
+public sealed class StorePersonnelPasswordUpdateRequest
+{
+    [Required, StringLength(100, MinimumLength = 4)]
+    public string YeniSifre { get; set; } = string.Empty;
 }
