@@ -16,8 +16,8 @@ else
             {
                 <a href="@($"/products?urunId={product.UrunId}")" class="@RowClass(product)">
                     <div class="min-w-0">
-                        <p class="truncate text-sm font-black text-slate-950">@product.UrunAdi</p>
-                        <p class="mt-1 truncate text-xs font-bold text-slate-500">@product.KategoriAdi</p>
+                        <p class="truncate text-sm font-black text-slate-950">@DisplayTextNormalizer.Normalize(product.UrunAdi)</p>
+                        <p class="mt-1 truncate text-xs font-bold text-slate-500">@DisplayTextNormalizer.Normalize(product.KategoriAdi)</p>
                     </div>
                     <div class="text-sm font-black text-slate-900">@product.SatisAdedi.ToString("N0", Tr)</div>
                     <div class="text-sm font-black text-blue-700">@product.ToplamTutar.ToString("C", Tr)</div>

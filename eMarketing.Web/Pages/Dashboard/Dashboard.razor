@@ -186,8 +186,8 @@
                                         </div>
 
                                         <div class="min-w-0">
-                                            <p class="truncate font-semibold text-slate-900">@DisplayText(order.UrunAdi)</p>
-                                            <p class="mt-1 text-xs text-slate-500">@DisplayText(order.OrderType) / @DisplayText(order.YetkiliAdi)</p>
+                                            <p class="truncate font-semibold text-slate-900">@DisplayTextNormalizer.Normalize(order.UrunAdi)</p>
+                                            <p class="mt-1 text-xs text-slate-500">@DisplayTextNormalizer.Normalize(order.OrderType) / @DisplayTextNormalizer.Normalize(order.YetkiliAdi)</p>
                                         </div>
 
                                         <div class="font-bold text-slate-950">

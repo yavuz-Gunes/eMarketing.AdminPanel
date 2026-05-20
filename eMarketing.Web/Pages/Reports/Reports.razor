@@ -216,7 +216,7 @@
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
                                             <p class="truncate text-sm font-black text-slate-950">@OrderTitle(order)</p>
-                                            <p class="mt-1 truncate text-xs font-bold text-slate-500">@order.UrunAdi</p>
+                                            <p class="mt-1 truncate text-xs font-bold text-slate-500">@DisplayTextNormalizer.Normalize(order.UrunAdi)</p>
                                         </div>
                                         <StatusBadge Text="@DisplayStatus(order.SiparisDurumu)" Tone="@StatusTone(order.SiparisDurumu)" />
                                     </div>
@@ -329,13 +329,13 @@
                                                 <span class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-xs font-black text-white">@rank</span>
                                                 <div class="min-w-0">
                                                     <div class="flex items-center justify-between gap-3">
-                                                        <p class="truncate text-sm font-black text-slate-950">@product.UrunAdi</p>
+                                                        <p class="truncate text-sm font-black text-slate-950">@DisplayTextNormalizer.Normalize(product.UrunAdi)</p>
                                                         <span class="shrink-0 text-xs font-black text-emerald-700">@product.SatisAdedi.ToString("N0", Tr) adet</span>
                                                     </div>
                                                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                                                         <div class="h-full rounded-full bg-emerald-600" style="width: @ProductWidth(product)%"></div>
                                                     </div>
-                                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">@product.KategoriAdi</p>
+                                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">@DisplayTextNormalizer.Normalize(product.KategoriAdi)</p>
                                                 </div>
                                                 <p class="text-right text-sm font-black text-blue-700">@product.ToplamTutar.ToString("C", Tr)</p>
                                             </div>
@@ -367,10 +367,10 @@
                                         {
                                             <div class="rounded-xl bg-white p-3">
                                                 <div class="flex items-center justify-between gap-3">
-                                                    <p class="truncate text-sm font-black text-slate-950">@risk.UrunAdi</p>
-                                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-[11px] font-black text-rose-700">@risk.Durum</span>
+                                                    <p class="truncate text-sm font-black text-slate-950">@DisplayTextNormalizer.Normalize(risk.UrunAdi)</p>
+                                                    <span class="rounded-full bg-rose-100 px-2 py-1 text-[11px] font-black text-rose-700">@DisplayTextNormalizer.Normalize(risk.Durum)</span>
                                                 </div>
-                                                <p class="mt-1 truncate text-xs font-bold text-slate-500">@risk.KategoriAdi</p>
+                                                <p class="mt-1 truncate text-xs font-bold text-slate-500">@DisplayTextNormalizer.Normalize(risk.KategoriAdi)</p>
                                                 <div class="mt-3 grid grid-cols-3 gap-2 text-xs font-bold text-slate-500">
                                                     <span>Bayi <b class="text-rose-700">@risk.BayiStok.ToString("N0", Tr)</b></span>
                                                     <span>Merkez <b class="text-slate-900">@risk.MerkezStok.ToString("N0", Tr)</b></span>

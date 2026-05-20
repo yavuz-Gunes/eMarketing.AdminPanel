@@ -10,10 +10,10 @@ else
             <a href="@($"/products?urunId={risk.UrunId}")" class="@RiskRowClass(risk)">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <p class="truncate text-sm font-black text-slate-950">@risk.UrunAdi</p>
-                        <span class="@RiskBadgeClass(risk)">@risk.Durum</span>
+                        <p class="truncate text-sm font-black text-slate-950">@DisplayTextNormalizer.Normalize(risk.UrunAdi)</p>
+                        <span class="@RiskBadgeClass(risk)">@DisplayTextNormalizer.Normalize(risk.Durum)</span>
                     </div>
-                    <p class="mt-1 truncate text-xs font-bold text-slate-500">@risk.KategoriAdi</p>
+                    <p class="mt-1 truncate text-xs font-bold text-slate-500">@DisplayTextNormalizer.Normalize(risk.KategoriAdi)</p>
                 </div>
                 <div class="mt-3 grid grid-cols-3 gap-2 text-xs font-bold text-slate-500">
                     <span>Bayi <b class="@QuantityClass(risk.BayiStok)">@risk.BayiStok.ToString("N0", Tr)</b></span>

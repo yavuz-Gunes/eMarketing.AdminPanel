@@ -51,6 +51,18 @@ namespace eMarketing.AdminPanel.Pages
         private int? selectedStockId;
         private Label lblStokEmptyState;
         private Label lblHareketEmptyState;
+        private const string TotalCardIcon = "▤";
+        private const string StockedCardIcon = "✓";
+        private const string CriticalCardIcon = "!";
+        private const string EmptyCardIcon = "×";
+        private const string TotalStockCardTitle = "Stok Kartı";
+        private const string StockedProductTitle = "Stoklu Ürün";
+        private const string EmptyStockTitle = "Tükendi";
+        private const string SelectStockMessage = "Bir stok kartı seçin.";
+        private const string StockHistoryIntro = "Stok kartı seçildiğinde son hareketler burada görünür.";
+        private const string WarningTitle = "Uyarı";
+        private const string DirectionIn = "Giriş";
+        private const string DirectionOut = "Çıkış";
 
         public BayiStokPage()
         {
@@ -90,7 +102,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblTitle = new Label
             {
-                Text = "Bayi StoklarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±",
+                Text = "Bayi Stokları",
                 Location = new Point(0, 0),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
@@ -99,7 +111,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblSubtitle = new Label
             {
-                Text = "Teslim edilen sipariÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸lerden oluÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸an maÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸aza stoklarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±nÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± takip edin.",
+                Text = "Teslim edilen siparişlerden oluşan mağaza stoklarını takip edin.",
                 Location = new Point(2, 36),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9F),
@@ -108,7 +120,6 @@ namespace eMarketing.AdminPanel.Pages
             headerPanel.Controls.Add(lblSubtitle);
             headerPanel.Controls.Add(lblTitle);
         }
-
         private void BuildStats()
         {
             statsPanel = new Panel
@@ -135,10 +146,10 @@ namespace eMarketing.AdminPanel.Pages
             cKritik = new CategoriesCard { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 16, 0) };
             cTukendi = new CategoriesCard { Dock = DockStyle.Fill, Margin = Padding.Empty };
 
-            cToplamKart.SetData("ÃƒÆ’Ã¢â‚¬ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡", "Stok KartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", "0");
-            cStokluUrun.SetData("ÃƒÆ’Ã¢â‚¬ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦", "Stoklu ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n", "0");
-            cKritik.SetData("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ", "Kritik", "0");
-            cTukendi.SetData("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂºÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â", "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi", "0");
+            cToplamKart.SetData(TotalCardIcon, TotalStockCardTitle, "0");
+            cStokluUrun.SetData(StockedCardIcon, StockedProductTitle, "0");
+            cKritik.SetData(CriticalCardIcon, "Kritik", "0");
+            cTukendi.SetData(EmptyCardIcon, EmptyStockTitle, "0");
 
             grid.Controls.Add(cToplamKart, 0, 0);
             grid.Controls.Add(cStokluUrun, 1, 0);
@@ -147,7 +158,6 @@ namespace eMarketing.AdminPanel.Pages
 
             statsPanel.Controls.Add(grid);
         }
-
         private void BuildFilters()
         {
             filterPanel = new Panel
@@ -171,7 +181,7 @@ namespace eMarketing.AdminPanel.Pages
             ButtonStyleHelper.ApplyInput(txtArama);
 
             chkStokta = CreateCheckBox("Sadece stokta", 314);
-            chkKritik = CreateCheckBox("Kritik / tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi", 452);
+            chkKritik = CreateCheckBox("Kritik / tükendi", 452);
 
             btnViewMode = new Button
             {
@@ -207,7 +217,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblInfo = new Label
             {
-                Text = "0 kayÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±t",
+                Text = "0 kayıt",
                 Width = 180,
                 Height = 30,
                 TextAlign = ContentAlignment.MiddleRight,
@@ -227,7 +237,6 @@ namespace eMarketing.AdminPanel.Pages
             filterPanel.Resize += (sender, e) => UpdateFilterLayout();
             UpdateFilterLayout();
         }
-
         private CheckBox CreateCheckBox(string text, int x)
         {
             CheckBox checkBox = new CheckBox
@@ -257,7 +266,7 @@ namespace eMarketing.AdminPanel.Pages
 
             Label title = new Label
             {
-                Text = "Stok iÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸lemi",
+                Text = "Stok işlemi",
                 Location = new Point(18, 16),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
@@ -267,7 +276,7 @@ namespace eMarketing.AdminPanel.Pages
 
             lblSeciliStok = new Label
             {
-                Text = "Bir stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± seÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in.",
+                Text = SelectStockMessage,
                 Location = new Point(18, 44),
                 Width = 360,
                 Height = 24,
@@ -282,10 +291,10 @@ namespace eMarketing.AdminPanel.Pages
             Label lblMinimum = CreateSmallLabel("Minimum", 510, 20);
             txtMinimumStok = CreateAdminTextBox(510, 48, 84);
 
-            btnStokGirisi = CreateAdminButton("+ Bayi GiriÃƒâ€¦Ã…Â¸", AppColors.Success, 620);
-            btnStokCikisi = CreateAdminButton("- Bayi ÃƒÆ’Ã¢â‚¬Â¡Ãƒâ€Ã‚Â±kÃƒâ€Ã‚Â±Ãƒâ€¦Ã…Â¸", AppColors.Danger, 718);
+            btnStokGirisi = CreateAdminButton("+ Bayi Giriş", AppColors.Success, 620);
+            btnStokCikisi = CreateAdminButton("- Bayi Çıkış", AppColors.Danger, 718);
             btnMerkezStokArtir = CreateAdminButton("+ Merkez", AppColors.Primary, 816);
-            btnMinimumGuncelle = CreateAdminButton("Min. GÃƒÆ’Ã‚Â¼ncelle", AppColors.Primary, 922);
+            btnMinimumGuncelle = CreateAdminButton("Min. Güncelle", AppColors.Primary, 922);
 
             btnStokGirisi.Click += (sender, e) => StokHareketiYap("ManuelGiris");
             btnStokCikisi.Click += (sender, e) => StokHareketiYap("ManuelCikis");
@@ -310,7 +319,6 @@ namespace eMarketing.AdminPanel.Pages
             adminPanel.Resize += (sender, e) => UpdateAdminPanelLayout();
             UpdateAdminPanelLayout();
         }
-
         private Label CreateSmallLabel(string text, int x, int y)
         {
             return new Label
@@ -446,7 +454,7 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Dock = DockStyle.Top,
                 Height = 24,
-                Text = "Hareket GeÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§miÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸i",
+                Text = "Hareket Geçmişi",
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 ForeColor = AppColors.TextPrimary,
                 BackColor = Color.Transparent
@@ -456,7 +464,7 @@ namespace eMarketing.AdminPanel.Pages
             {
                 Dock = DockStyle.Top,
                 Height = 22,
-                Text = "Stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± seÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ildiÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸inde son hareketler burada gÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼nÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r.",
+                Text = StockHistoryIntro,
                 Font = new Font("Segoe UI", 8.5F),
                 ForeColor = AppColors.TextSecondary,
                 BackColor = Color.Transparent
@@ -491,7 +499,6 @@ namespace eMarketing.AdminPanel.Pages
             hareketPanel.Controls.Add(lblHareketInfo);
             hareketPanel.Controls.Add(lblHareketBaslik);
         }
-
         private void ConfigureColumns()
         {
             dgvStoklar.Columns.Clear();
@@ -499,19 +506,18 @@ namespace eMarketing.AdminPanel.Pages
             AddHiddenColumn("MagazaId");
             AddHiddenColumn("UrunId");
             AddHiddenColumn("GorselUrl");
-            AddImageColumn("UrunGorsel", "GÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶rsel", 7, 48);
+            AddImageColumn("UrunGorsel", "Görsel", 7, 48);
             AddTextColumn("MusteriAdi", "Bayi", 18, 120);
-            AddTextColumn("MagazaAdi", "MaÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸aza", 16, 110);
+            AddTextColumn("MagazaAdi", "Mağaza", 16, 110);
             AddTextColumn("SorumluKisi", "Sorumlu", 12, 90);
-            AddTextColumn("UrunAdi", "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n", 18, 120);
+            AddTextColumn("UrunAdi", "Ürün", 18, 120);
             AddTextColumn("KategoriAdi", "Kategori", 10, 82);
             AddTextColumn("BayiStok", "Bayi", 7, 58);
             AddTextColumn("MinimumStok", "Min.", 7, 56);
             AddTextColumn("MerkezStok", "Merkez", 7, 60);
             AddTextColumn("StokDurumu", "Durum", 9, 72);
-            AddTextColumn("SonGirisTarihi", "Son GiriÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸", 9, 78);
+            AddTextColumn("SonGirisTarihi", "Son Giriş", 9, 78);
         }
-
         private void AddHiddenColumn(string name)
         {
             dgvStoklar.Columns.Add(new DataGridViewTextBoxColumn
@@ -553,15 +559,14 @@ namespace eMarketing.AdminPanel.Pages
         {
             dgvHareketler.Columns.Clear();
             AddHareketColumn("OlusturmaTarihi", "Tarih", 14, 110);
-            AddHareketColumn("HareketYonu", "YÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶n", 10, 78);
-            AddHareketColumn("HareketAciklama", "ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸lem", 20, 130);
+            AddHareketColumn("HareketYonu", "Yön", 10, 78);
+            AddHareketColumn("HareketAciklama", "İşlem", 20, 130);
             AddHareketColumn("Miktar", "Miktar", 8, 60);
-            AddHareketColumn("OncekiStok", "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œnce", 8, 58);
+            AddHareketColumn("OncekiStok", "Önce", 8, 58);
             AddHareketColumn("SonrakiStok", "Sonra", 8, 58);
-            AddHareketColumn("SiparisNo", "SipariÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸", 12, 88);
-            AddHareketColumn("Aciklama", "AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±klama", 21, 140);
+            AddHareketColumn("SiparisNo", "Sipariş", 12, 88);
+            AddHareketColumn("Aciklama", "Açıklama", 21, 140);
         }
-
         private void AddHareketColumn(string name, string header, float fillWeight, int minWidth)
         {
             dgvHareketler.Columns.Add(new DataGridViewTextBoxColumn
@@ -591,7 +596,7 @@ namespace eMarketing.AdminPanel.Pages
                 RenderStockCards(stokTable);
                 UpdateAdminSelection();
                 DataGridViewStyleHelper.UpdateCountLabel(lblInfo, stokTable.Rows.Count, stokTable.Rows.Count);
-                ToggleGridEmptyState(dgvStoklar, ref lblStokEmptyState, "Stok listesinde gÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶sterilecek kayÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±t bulunamadÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±.");
+                ToggleGridEmptyState(dgvStoklar, ref lblStokEmptyState, "Stok listesinde gösterilecek kayıt bulunamadı.");
                 await OzetleriYukleAsync();
             }
             catch (Exception ex)
@@ -599,26 +604,24 @@ namespace eMarketing.AdminPanel.Pages
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private async Task OzetleriYukleAsync()
         {
             DataRow row = await GetStokOzetiAsync();
 
             if (row == null)
             {
-                cToplamKart.SetData("ÃƒÆ’Ã¢â‚¬ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡", "Stok KartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", "0");
-                cStokluUrun.SetData("ÃƒÆ’Ã¢â‚¬ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦", "Stoklu ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n", "0");
-                cKritik.SetData("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ", "Kritik", "0");
-                cTukendi.SetData("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂºÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â", "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi", "0");
+                cToplamKart.SetData(TotalCardIcon, TotalStockCardTitle, "0");
+                cStokluUrun.SetData(StockedCardIcon, StockedProductTitle, "0");
+                cKritik.SetData(CriticalCardIcon, "Kritik", "0");
+                cTukendi.SetData(EmptyCardIcon, EmptyStockTitle, "0");
                 return;
             }
 
-            cToplamKart.SetData("ÃƒÆ’Ã¢â‚¬ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡", "Stok KartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", GetInt(row, "ToplamStokKarti").ToString());
-            cStokluUrun.SetData("ÃƒÆ’Ã¢â‚¬ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦", "Stoklu ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n", GetInt(row, "StokluUrunSayisi").ToString());
-            cKritik.SetData("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ", "Kritik", GetInt(row, "KritikStokKarti").ToString());
-            cTukendi.SetData("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂºÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â", "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi", GetInt(row, "TukenmisStokKarti").ToString());
+            cToplamKart.SetData(TotalCardIcon, TotalStockCardTitle, GetInt(row, "ToplamStokKarti").ToString());
+            cStokluUrun.SetData(StockedCardIcon, StockedProductTitle, GetInt(row, "StokluUrunSayisi").ToString());
+            cKritik.SetData(CriticalCardIcon, "Kritik", GetInt(row, "KritikStokKarti").ToString());
+            cTukendi.SetData(EmptyCardIcon, EmptyStockTitle, GetInt(row, "TukenmisStokKarti").ToString());
         }
-
         private void PrepareStokTable(DataTable table)
         {
             if (table == null)
@@ -756,15 +759,15 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = Color.FromArgb(248, 250, 252)
             };
 
-            Label id = CreateStockCardLabel("Stok #" + GetText(row, "MagazaStokId", "-") + "  |  ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n #" + GetText(row, "UrunId", "-"), 8F, FontStyle.Bold, AppColors.Primary, 18);
+            Label id = CreateStockCardLabel("Stok #" + GetText(row, "MagazaStokId", "-") + "  |  Ürün #" + GetText(row, "UrunId", "-"), 8F, FontStyle.Bold, AppColors.Primary, 18);
             id.Location = new Point(82, 12);
             id.Width = card.Width - 98;
 
-            Label product = CreateStockCardLabel(GetText(row, "UrunAdi", "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n"), 10.5F, FontStyle.Bold, AppColors.TextPrimary, 24);
+            Label product = CreateStockCardLabel(GetText(row, "UrunAdi", "Ürün"), 10.5F, FontStyle.Bold, AppColors.TextPrimary, 24);
             product.Location = new Point(82, 34);
             product.Width = card.Width - 98;
 
-            Label store = CreateStockCardLabel(GetText(row, "MusteriAdi", "Bayi") + " / " + GetText(row, "MagazaAdi", "MaÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸aza"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 24);
+            Label store = CreateStockCardLabel(GetText(row, "MusteriAdi", "Bayi") + " / " + GetText(row, "MagazaAdi", "Mağaza"), 8.5F, FontStyle.Regular, AppColors.TextSecondary, 24);
             store.Location = new Point(82, 58);
             store.Width = card.Width - 98;
 
@@ -791,7 +794,6 @@ namespace eMarketing.AdminPanel.Pages
 
             return card;
         }
-
         private Panel CreateStockEmptyCard()
         {
             Panel card = new Panel
@@ -802,13 +804,12 @@ namespace eMarketing.AdminPanel.Pages
                 BackColor = Color.White
             };
             card.Paint += StockCard_Paint;
-            Label label = CreateStockCardLabel("Stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± bulunamadÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±.", 10F, FontStyle.Bold, AppColors.TextSecondary, 80);
+            Label label = CreateStockCardLabel("Stok kartı bulunamadı.", 10F, FontStyle.Bold, AppColors.TextSecondary, 80);
             label.Dock = DockStyle.Fill;
             label.TextAlign = ContentAlignment.MiddleCenter;
             card.Controls.Add(label);
             return card;
         }
-
         private Label CreateStockCardLabel(string text, float size, FontStyle style, Color color, int height)
         {
             return new Label
@@ -946,11 +947,10 @@ namespace eMarketing.AdminPanel.Pages
         private string NormalizeStockStatus(string status)
         {
             if (status == "Tukendi")
-                return "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi";
+                return EmptyStockTitle;
 
             return string.IsNullOrWhiteSpace(status) ? "Yeterli" : status;
         }
-
         private string FormatDate(string value)
         {
             DateTime date;
@@ -964,20 +964,18 @@ namespace eMarketing.AdminPanel.Pages
         {
             if (status == "Kritik")
                 return AppColors.WarningSoft;
-            if (status == "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi")
+            if (status == EmptyStockTitle)
                 return AppColors.DangerSoft;
             return AppColors.SuccessSoft;
         }
-
         private Color GetStockBadgeFore(string status)
         {
             if (status == "Kritik")
                 return AppColors.Warning;
-            if (status == "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi")
+            if (status == EmptyStockTitle)
                 return AppColors.Danger;
             return AppColors.Success;
         }
-
         private int? GetCurrentMagazaId()
         {
             if (IsTumMagazalar())
@@ -1036,7 +1034,7 @@ namespace eMarketing.AdminPanel.Pages
                 string text = Convert.ToString(e.Value);
 
                 if (text == "Tukendi")
-                    e.Value = "TÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼kendi";
+                    e.Value = EmptyStockTitle;
 
                 if (text == "Tukendi")
                     e.CellStyle.ForeColor = AppColors.Danger;
@@ -1049,7 +1047,6 @@ namespace eMarketing.AdminPanel.Pages
                 e.FormattingApplied = true;
             }
         }
-
         private void DgvStoklar_SelectionChanged(object sender, EventArgs e)
         {
             UpdateAdminSelection();
@@ -1061,9 +1058,9 @@ namespace eMarketing.AdminPanel.Pages
 
             if (row == null)
             {
-                lblSeciliStok.Text = "Bir stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± seÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in.";
+                lblSeciliStok.Text = SelectStockMessage;
                 txtMinimumStok.Clear();
-                HareketleriTemizle("Stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± seÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ildiÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸inde son hareketler burada gÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼nÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼r.");
+                HareketleriTemizle(StockHistoryIntro);
                 return;
             }
 
@@ -1078,7 +1075,6 @@ namespace eMarketing.AdminPanel.Pages
             RefreshStockCardSelection();
             HareketleriYukle(row, bayi, urun);
         }
-
         private async void HareketleriYukle(DataGridViewRow row, string bayi, string urun)
         {
             if (dgvHareketler == null)
@@ -1089,7 +1085,7 @@ namespace eMarketing.AdminPanel.Pages
 
             if (magazaId <= 0 || urunId <= 0)
             {
-                HareketleriTemizle("Hareket geÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§miÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸i iÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in bayi ve ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n bilgisi eksik.");
+                HareketleriTemizle("Hareket geçmişi için bayi ve ürün bilgisi eksik.");
                 return;
             }
 
@@ -1098,19 +1094,18 @@ namespace eMarketing.AdminPanel.Pages
                 DataTable hareketler = await GetStokHareketleriAsync(magazaId, urunId);
 
                 dgvHareketler.DataSource = hareketler;
-                ToggleGridEmptyState(dgvHareketler, ref lblHareketEmptyState, "SeÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ili stok iÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in hareket kaydÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± bulunamadÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±.");
+                ToggleGridEmptyState(dgvHareketler, ref lblHareketEmptyState, "Seçili stok için hareket kaydı bulunamadı.");
 
                 if (hareketler.Rows.Count == 0)
-                    lblHareketInfo.Text = bayi + " / " + urun + " iÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in henÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼z stok hareketi yok.";
+                    lblHareketInfo.Text = bayi + " / " + urun + " için henüz stok hareketi yok.";
                 else
-                    lblHareketInfo.Text = bayi + " / " + urun + " iÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in son " + hareketler.Rows.Count + " hareket";
+                    lblHareketInfo.Text = bayi + " / " + urun + " için son " + hareketler.Rows.Count + " hareket";
             }
             catch (Exception ex)
             {
-                HareketleriTemizle("Hareket geÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§miÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸i yÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼klenemedi: " + ex.Message);
+                HareketleriTemizle("Hareket geçmişi yüklenemedi: " + ex.Message);
             }
         }
-
         private void HareketleriTemizle(string message)
         {
             if (dgvHareketler != null)
@@ -1131,13 +1126,13 @@ namespace eMarketing.AdminPanel.Pages
 
             if (row == null)
             {
-                MessageBox.Show("LÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼tfen ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶nce bir bayi stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± seÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Lütfen önce bir bayi stok kartı seçin.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!TryGetPositiveInt(txtHareketMiktar.Text, out int miktar))
             {
-                MessageBox.Show("Stok miktarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± sÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±fÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±rdan bÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼yÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼k bir sayÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± olmalÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±dÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±r.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Stok miktarı sıfırdan büyük bir sayı olmalıdır.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtHareketMiktar.Focus();
                 return;
             }
@@ -1148,7 +1143,7 @@ namespace eMarketing.AdminPanel.Pages
 
             if (magazaId <= 0 || urunId <= 0)
             {
-                MessageBox.Show("SeÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ili stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± iÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in bayi veya ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼n bilgisi eksik.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Seçili stok kartı için bayi veya ürün bilgisi eksik.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -1156,14 +1151,14 @@ namespace eMarketing.AdminPanel.Pages
 
             if (cikisMi && miktar > mevcutStok)
             {
-                MessageBox.Show("Bayi stoÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸u eksiye dÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸emez. ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ miktarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±nÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± kontrol edin.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Bayi stoğu eksiye düşemez. Çıkış miktarını kontrol edin.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string islemAdi = cikisMi ? "stok ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±" : "stok giriÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸i";
+            string islemAdi = cikisMi ? "stok çıkışı" : "stok girişi";
             DialogResult result = MessageBox.Show(
-                "SeÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ili bayi iÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in " + miktar + " adet " + islemAdi + " yapÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±lacak. Devam edilsin mi?",
-                "Stok ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸lemi",
+                "Seçili bayi için " + miktar + " adet " + islemAdi + " yapılacak. Devam edilsin mi?",
+                "Stok İşlemi",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -1182,7 +1177,6 @@ namespace eMarketing.AdminPanel.Pages
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private async void BtnMinimumGuncelle_Click(object sender, EventArgs e)
         {
             if (!AppSession.AdminMi)
@@ -1192,13 +1186,13 @@ namespace eMarketing.AdminPanel.Pages
 
             if (row == null)
             {
-                MessageBox.Show("LÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼tfen ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶nce bir bayi stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± seÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§in.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Lütfen önce bir bayi stok kartı seçin.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!TryGetNonNegativeInt(txtMinimumStok.Text, out int minimumStok))
             {
-                MessageBox.Show("Minimum stok negatif olamaz.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Minimum stok negatif olamaz.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtMinimumStok.Focus();
                 return;
             }
@@ -1207,7 +1201,7 @@ namespace eMarketing.AdminPanel.Pages
 
             if (magazaStokId <= 0)
             {
-                MessageBox.Show("SeÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ili stok kartÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± bulunamadÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±.", "UyarÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Seçili stok kartı bulunamadı.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -1221,7 +1215,6 @@ namespace eMarketing.AdminPanel.Pages
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private async void BtnMerkezStokArtir_Click(object sender, EventArgs e)
         {
             if (!AppSession.AdminMi)
@@ -1231,13 +1224,13 @@ namespace eMarketing.AdminPanel.Pages
 
             if (row == null)
             {
-                MessageBox.Show("LÃ¼tfen Ã¶nce bir stok kartÄ± seÃ§in.", "UyarÄ±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Lütfen önce bir stok kartı seçin.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!TryGetPositiveInt(txtHareketMiktar.Text, out int miktar))
             {
-                MessageBox.Show("Merkez stok miktarı sıfırdan büyük bir sayı olmalıdır.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Merkez stok miktarı sıfırdan büyük bir sayı olmalıdır.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtHareketMiktar.Focus();
                 return;
             }
@@ -1247,12 +1240,12 @@ namespace eMarketing.AdminPanel.Pages
 
             if (urunId <= 0)
             {
-                MessageBox.Show("SeÃ§ili stok kartÄ± iÃ§in Ã¼rÃ¼n bilgisi eksik.", "UyarÄ±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Seçili stok kartı için ürün bilgisi eksik.", WarningTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             DialogResult result = MessageBox.Show(
-                urun + " iÃ§in merkez stoÄŸa " + miktar + " adet eklenecek. Bu iÅŸlem bayi stoÄŸunu deÄŸiÅŸtirmez. Devam edilsin mi?",
+                urun + " için merkez stoğa " + miktar + " adet eklenecek. Bu işlem bayi stoğunu değiştirmez. Devam edilsin mi?",
                 "Merkez Stok Artırma",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -1271,7 +1264,6 @@ namespace eMarketing.AdminPanel.Pages
                 MessageBox.Show(ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private Task<DataTable> GetStoklarAsync()
         {
             return apiClient.GetBayiStoklariAsync(
@@ -1384,25 +1376,13 @@ namespace eMarketing.AdminPanel.Pages
             if (columnName == "HareketYonu")
             {
                 string text = Convert.ToString(e.Value);
+                bool cikisMi = IsStockOutDirection(text);
+                e.Value = cikisMi ? "- " + DirectionOut : "+ " + DirectionIn;
                 e.CellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
-
-                if (text == "GiriÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸")
-                {
-                    e.Value = "+ GiriÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸";
-                    e.CellStyle.ForeColor = AppColors.Success;
-                    e.FormattingApplied = true;
-                }
-                else if (text == "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸")
-                {
-                    e.Value = "- ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸";
-                    e.CellStyle.ForeColor = AppColors.Danger;
-                    e.FormattingApplied = true;
-                }
-                else
-                    e.CellStyle.ForeColor = AppColors.TextSecondary;
+                e.CellStyle.ForeColor = cikisMi ? AppColors.Danger : AppColors.Success;
+                e.FormattingApplied = true;
             }
         }
-
         private void DgvStoklar_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0)
@@ -1447,9 +1427,10 @@ namespace eMarketing.AdminPanel.Pages
             e.Handled = true;
 
             string direction = Convert.ToString(e.FormattedValue);
-            string text = direction == "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸" ? "- ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸" : "+ GiriÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸";
-            Color backColor = direction == "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸" ? AppColors.DangerSoft : AppColors.SuccessSoft;
-            Color foreColor = direction == "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±kÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸" ? AppColors.Danger : AppColors.Success;
+            bool cikisMi = IsStockOutDirection(direction);
+            string text = cikisMi ? "- " + DirectionOut : "+ " + DirectionIn;
+            Color backColor = cikisMi ? AppColors.DangerSoft : AppColors.SuccessSoft;
+            Color foreColor = cikisMi ? AppColors.Danger : AppColors.Success;
 
             Rectangle badgeRect = new Rectangle(
                 e.CellBounds.X + (e.CellBounds.Width - 84) / 2,
@@ -1469,6 +1450,16 @@ namespace eMarketing.AdminPanel.Pages
             }
         }
 
+        private bool IsStockOutDirection(string direction)
+        {
+            if (string.IsNullOrWhiteSpace(direction))
+                return false;
+
+            return direction.IndexOf("Cikis", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   direction.IndexOf("Çıkış", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   direction.IndexOf("Cikis", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   direction.IndexOf("-", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
         private void UpdateFilterLayout()
         {
             if (filterPanel == null)
