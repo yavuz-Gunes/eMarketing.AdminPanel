@@ -1,0 +1,31 @@
+<FormSection Title="Kimlik">
+    <TextField Label="Bayi/Firma adı" Kind="person" MaxLength="300" @bind-Value="Model.FullName" />
+    <TextField Label="Ticari ünvan" MaxLength="300" @bind-Value="Model.CompanyName" />
+</FormSection>
+
+<FormSection Title="İletişim">
+    <TextField Label="Yetkili kişi" Kind="person" MaxLength="200" @bind-Value="Model.AuthorizedPerson" />
+    <TextField Label="Telefon" Kind="phone" MaxLength="60" @bind-Value="Model.Phone" />
+    <TextField Label="E-posta" Kind="email" MaxLength="400" @bind-Value="Model.Email" />
+    <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="Model.IsActive" />
+        Aktif bayi
+    </label>
+</FormSection>
+
+<FormSection Title="Vergi">
+    <TextField Label="Vergi no" Kind="numeric" MaxLength="50" @bind-Value="Model.TaxNumber" />
+    <TextField Label="Vergi dairesi" Kind="person" MaxLength="100" @bind-Value="Model.TaxOffice" />
+</FormSection>
+
+<FormSection Title="Adres">
+    <label class="md:col-span-2">
+        <span class="text-xs font-black uppercase text-slate-500">Adres</span>
+        <textarea class="mt-1 min-h-20 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+                  @bind="Model.Address"></textarea>
+    </label>
+</FormSection>
+
+@code {
+    [Parameter] public DealerSaveRequest Model { get; set; } = new();
+}

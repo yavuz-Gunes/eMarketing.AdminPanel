@@ -82,6 +82,7 @@ public sealed class DealerOperationService : IDealerOperationService
         await EnsureSupervisorAsync(storeId, cancellationToken);
         StoreMembership membership = await GetMembershipAsync(storeId, userStoreId, cancellationToken);
         EnsureNotSelf(membership.UserId, "Kendi mağaza görevinizi değiştiremezsiniz.");
+        EnsureStorePermissionTargetAllowed(membership);
         string normalizedDuty = NormalizeDuty(duty);
 
         if (string.Equals(membership.Duty, "Supervisor", StringComparison.OrdinalIgnoreCase)
@@ -100,6 +101,7 @@ public sealed class DealerOperationService : IDealerOperationService
 
         StoreMembership membership = await GetMembershipByUserAsync(storeId, userId, cancellationToken);
         EnsureNotSelf(membership.UserId, "Kendi sipariş yetkinizi değiştiremezsiniz.");
+        EnsureStorePermissionTargetAllowed(membership);
         int customerId = await GetCustomerIdAsync(storeId, cancellationToken);
         int? authorityId = await GetOrderAuthorityIdAsync(storeId, membership.UserId, cancellationToken);
 
@@ -128,6 +130,7 @@ public sealed class DealerOperationService : IDealerOperationService
         await EnsureSupervisorAsync(storeId, cancellationToken);
         StoreMembership membership = await GetMembershipAsync(storeId, userStoreId, cancellationToken);
         EnsureNotSelf(membership.UserId, "Kendi mağaza bağlantınızı kaldıramazsınız.");
+        EnsureStorePermissionTargetAllowed(membership);
         if (string.Equals(membership.Duty, "Supervisor", StringComparison.OrdinalIgnoreCase))
             await EnsureNotLastSupervisorAsync(storeId, membership.UserId, cancellationToken);
 
@@ -216,9 +219,14 @@ WHERE KullaniciId = @KullaniciId;", connection);
     {
         CurrentUser currentUser = _currentUserService.CurrentUser;
         if (currentUser.UserId.HasValue
-            && currentUser.UserId.Value == targetUserId
-            && !currentUser.IsAdmin)
+            && currentUser.UserId.Value == targetUserId)
             throw new UnauthorizedAccessException(message);
+    }
+
+    private void EnsureStorePermissionTargetAllowed(StoreMembership membership)
+    {
+        if (IsSystemAdmin(membership.Role, membership.UserName))
+            throw new UnauthorizedAccessException("Admin hesabının mağaza yetkileri bu ekrandan değiştirilemez.");
     }
 
     private async Task<StoreTeamContextDto> GetContextAsync(int storeId, CancellationToken cancellationToken)
@@ -371,11 +379,12 @@ ORDER BY
     {
         await using SqlConnection connection = _connectionFactory.CreateConnection();
         await using SqlCommand command = new(@"
-SELECT KullaniciMagazaId, KullaniciId, MagazaId, Gorev
-FROM dbo.KullaniciMagazalari
-WHERE KullaniciMagazaId = @KullaniciMagazaId
-  AND MagazaId = @MagazaId
-  AND AktifMi = 1;", connection);
+SELECT km.KullaniciMagazaId, km.KullaniciId, km.MagazaId, km.Gorev, k.KullaniciAdi, ISNULL(k.Rol, N'') AS Rol
+FROM dbo.KullaniciMagazalari km
+INNER JOIN dbo.Kullanicilar k ON k.KullaniciId = km.KullaniciId
+WHERE km.KullaniciMagazaId = @KullaniciMagazaId
+  AND km.MagazaId = @MagazaId
+  AND km.AktifMi = 1;", connection);
 
         command.CommandType = CommandType.Text;
         command.Parameters.Add("@KullaniciMagazaId", SqlDbType.Int).Value = userStoreId;
@@ -386,18 +395,19 @@ WHERE KullaniciMagazaId = @KullaniciMagazaId
         if (!await reader.ReadAsync(cancellationToken))
             throw new InvalidOperationException("Personel aktif mağazada bulunamadı.");
 
-        return new StoreMembership(reader.GetInt("KullaniciMagazaId"), reader.GetInt("KullaniciId"), reader.GetInt("MagazaId"), reader.GetText("Gorev"));
+        return new StoreMembership(reader.GetInt("KullaniciMagazaId"), reader.GetInt("KullaniciId"), reader.GetInt("MagazaId"), reader.GetText("Gorev"), reader.GetText("KullaniciAdi"), reader.GetText("Rol"));
     }
 
     private async Task<StoreMembership> GetMembershipByUserAsync(int storeId, int userId, CancellationToken cancellationToken)
     {
         await using SqlConnection connection = _connectionFactory.CreateConnection();
         await using SqlCommand command = new(@"
-SELECT KullaniciMagazaId, KullaniciId, MagazaId, Gorev
-FROM dbo.KullaniciMagazalari
-WHERE KullaniciId = @KullaniciId
-  AND MagazaId = @MagazaId
-  AND AktifMi = 1;", connection);
+SELECT km.KullaniciMagazaId, km.KullaniciId, km.MagazaId, km.Gorev, k.KullaniciAdi, ISNULL(k.Rol, N'') AS Rol
+FROM dbo.KullaniciMagazalari km
+INNER JOIN dbo.Kullanicilar k ON k.KullaniciId = km.KullaniciId
+WHERE km.KullaniciId = @KullaniciId
+  AND km.MagazaId = @MagazaId
+  AND km.AktifMi = 1;", connection);
 
         command.CommandType = CommandType.Text;
         command.Parameters.Add("@KullaniciId", SqlDbType.Int).Value = userId;
@@ -408,7 +418,7 @@ WHERE KullaniciId = @KullaniciId
         if (!await reader.ReadAsync(cancellationToken))
             throw new InvalidOperationException("Personel aktif mağazada bulunamadı.");
 
-        return new StoreMembership(reader.GetInt("KullaniciMagazaId"), reader.GetInt("KullaniciId"), reader.GetInt("MagazaId"), reader.GetText("Gorev"));
+        return new StoreMembership(reader.GetInt("KullaniciMagazaId"), reader.GetInt("KullaniciId"), reader.GetInt("MagazaId"), reader.GetText("Gorev"), reader.GetText("KullaniciAdi"), reader.GetText("Rol"));
     }
 
     private async Task EnsureNotLastSupervisorAsync(int storeId, int userId, CancellationToken cancellationToken)
@@ -471,5 +481,11 @@ WHERE KullaniciId = @KullaniciId
         return duty is "MagazaMuduru" or "Supervisor" or "Personel" ? duty : "Personel";
     }
 
-    private sealed record StoreMembership(int UserStoreId, int UserId, int StoreId, string Duty);
+    private static bool IsSystemAdmin(string role, string userName)
+    {
+        return string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(userName, "admin", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record StoreMembership(int UserStoreId, int UserId, int StoreId, string Duty, string UserName, string Role);
 }

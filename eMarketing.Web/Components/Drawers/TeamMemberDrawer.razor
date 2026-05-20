@@ -88,12 +88,6 @@
                                                disabled />
                                     </label>
                                 </div>
-                                <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                                        disabled="@(!CanManageProfile || Busy)"
-                                        @onclick="SaveProfileAsync">
-                                    <AppIcon Name="check" CssClass="h-4 w-4" />
-                                    Bilgileri Kaydet
-                                </button>
                             </div>
                         }
                         else if (ActiveTab == "security")
@@ -105,13 +99,23 @@
                                 </div>
                                 <label class="block max-w-md">
                                     <span class="text-xs font-black uppercase text-slate-500">Yeni Şifre</span>
-                                    <input type="password"
-                                           class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400"
+                                    <span class="relative mt-1 block">
+                                        <input type="@(ShowPassword ? "text" : "password")"
+                                           class="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-12 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400"
                                            @bind="PasswordForm.YeniSifre"
                                            disabled="@(!CanManagePassword || Busy)"
                                            placeholder="En az 4 karakter" />
+                                        <button type="button"
+                                                class="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                                                style="right:0.5rem; top:50%; transform:translateY(-50%);"
+                                                title="@PasswordToggleTitle"
+                                                disabled="@(!CanManagePassword || Busy)"
+                                                @onclick="TogglePasswordVisibility">
+                                            <AppIcon Name="@(ShowPassword ? "eye-off" : "eye")" CssClass="h-4 w-4" />
+                                        </button>
+                                    </span>
                                 </label>
-                                <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                <button class="hidden"
                                         disabled="@(!CanManagePassword || Busy)"
                                         @onclick="SavePasswordAsync">
                                     <AppIcon Name="shield" CssClass="h-4 w-4" />
@@ -189,8 +193,35 @@
                 </div>
             </div>
 
-            <footer class="flex justify-end gap-2 border-t border-slate-100 bg-white p-3">
+            <footer class="flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white p-3">
                 <button class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" @onclick="Close">Vazgeç</button>
+                @if (ActiveTab == "identity")
+                {
+                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            disabled="@(!CanManageProfile || Busy)"
+                            @onclick="SaveProfileAsync">
+                        <AppIcon Name="check" CssClass="h-4 w-4" />
+                        Bilgileri Kaydet
+                    </button>
+                }
+                else if (ActiveTab == "security")
+                {
+                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            disabled="@(!CanManagePassword || Busy)"
+                            @onclick="SavePasswordAsync">
+                        <AppIcon Name="shield" CssClass="h-4 w-4" />
+                        @PasswordSaveText
+                    </button>
+                }
+                else
+                {
+                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            disabled="@(!CanManagePermissions || Busy)"
+                            @onclick="UpdateDutyAsync">
+                        <AppIcon Name="briefcase" CssClass="h-4 w-4" />
+                        Yetkileri Kaydet
+                    </button>
+                }
             </footer>
         </section>
     </div>
@@ -210,6 +241,7 @@
     private string Message { get; set; } = string.Empty;
     private bool IsError { get; set; }
     private bool Busy { get; set; }
+    private bool ShowPassword { get; set; }
     private int? LoadedMemberId { get; set; }
 
     private bool IsSelf => Member is not null && Auth.User?.KullaniciId == Member.KullaniciId;
@@ -220,6 +252,8 @@
     private bool CanManagePassword => Member is not null && (IsSelf || Auth.IsAdmin);
     private bool CanManagePermissions => Member is not null && !IsSelf && !IsTargetAdmin && Context?.GorevYonetebilir == true;
     private bool CanManageAuthority => Member is not null && !IsSelf && !IsTargetAdmin && Context?.SiparisYetkisiYonetebilir == true;
+    private string PasswordToggleTitle => ShowPassword ? "Şifreyi gizle" : "Şifreyi göster";
+    private string PasswordSaveText => IsSelf ? "Şifreyi Kaydet" : "Şifreyi Sıfırla";
     private string ProfileHelpText => CanManageProfile ? "Ad soyad, telefon ve e-posta bilgileri güncellenebilir." : "Bu bilgileri yalnızca personelin kendisi veya admin güncelleyebilir.";
     private string PasswordHelpText => CanManagePassword ? "Personel kendi şifresini değiştirebilir; admin şifre sıfırlayabilir." : "Şifre yönetimi yalnızca personelin kendisi veya admin tarafından yapılır.";
     private string PermissionHelpText => CanManagePermissions || CanManageAuthority ? "Görev ve sipariş yetkisi aktif mağaza kapsamında uygulanır." : "Kendi yetkinizi veya bu personelin mağaza yetkisini değiştiremezsiniz.";
@@ -253,6 +287,7 @@
             Email = Member.Email
         };
         PasswordForm = new StorePersonnelPasswordUpdateRequest();
+        ShowPassword = false;
         SelectedDuty = Member.MagazaGorev;
     }
 
@@ -271,6 +306,7 @@
 
         await RunAsync(() => TeamApi.UpdatePasswordAsync(Member.KullaniciId, PasswordForm), "Şifre güncellendi.");
         PasswordForm = new StorePersonnelPasswordUpdateRequest();
+        ShowPassword = false;
     }
 
     private async Task SetAuthorityAsync(bool active)
@@ -279,6 +315,11 @@
             return;
 
         await RunAsync(() => TeamApi.SetOrderAuthorityAsync(StoreId, Member.KullaniciId, active, string.Empty), active ? "Sipariş yetkisi verildi." : "Sipariş yetkisi kaldırıldı.");
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        ShowPassword = !ShowPassword;
     }
 
     private async Task UpdateDutyAsync()

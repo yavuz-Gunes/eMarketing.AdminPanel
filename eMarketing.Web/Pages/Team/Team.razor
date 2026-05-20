@@ -372,7 +372,19 @@
     }
 
     private void CloseNewPersonnel() => ShowNewPersonnel = false;
-    private void CloseDrawer() => SelectedMember = null;
+    private void CloseDrawer()
+    {
+        SelectedMember = null;
+        ResetFilters();
+    }
+
+    private void ResetFilters()
+    {
+        Search = string.Empty;
+        DutyFilter = "all";
+        StatusFilter = "all";
+        AuthorityFilter = "all";
+    }
 
     private bool MatchesSearch(StoreTeamMemberDto member)
     {
