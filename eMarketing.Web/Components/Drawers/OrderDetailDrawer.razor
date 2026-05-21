@@ -1,5 +1,6 @@
 @inject OrderApiClient OrdersApi
 @inject AuthSession Auth
+@inject ActionFeedbackService Feedback
 
 @if (OrderId.HasValue)
 {
@@ -30,7 +31,7 @@
         <div class="space-y-2.5 p-2.5">
             @if (!string.IsNullOrWhiteSpace(Message))
             {
-                <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700">@Message</div>
+                <div class="hidden">@Message</div>
             }
 
             @if (Detail is null && string.IsNullOrWhiteSpace(Message))
@@ -135,39 +136,15 @@
                         {
                             <div class="mt-3 grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-center">
                                 <span>Bu sipariş teslim edildi. Bayi stok girişi tamamlandı.</span>
-                                <button type="button"
-                                        class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-rose-50 px-3 text-xs font-black text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                        disabled='@(!CanSetStatus("Iptal") || Saving)'
-                                        @onclick='() => SaveStatusAsync("Iptal")'>
-                                    <AppIcon Name="x" CssClass="h-4 w-4" />
-                                    İptal Et
-                                </button>
+                                <CommandButton Text="İptal Et" BusyText="İşleniyor..." Icon="x" Tone="danger" Busy="Saving" Disabled='@(!CanSetStatus("Iptal"))' OnClick='@(() => SaveStatusAsync("Iptal"))' />
                             </div>
                         }
                         else
                         {
                             <div class="mt-3 grid gap-2 sm:grid-cols-3">
-                                <button type="button"
-                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                        disabled='@(!CanSetStatus("Kargoda") || Saving)'
-                                        @onclick='() => SaveStatusAsync("Kargoda")'>
-                                    <AppIcon Name="truck" CssClass="h-4 w-4" />
-                                    Kargoda Yap
-                                </button>
-                                <button type="button"
-                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 text-sm font-black text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                        disabled='@(!CanSetStatus("Teslim Edildi") || Saving)'
-                                        @onclick='() => SaveStatusAsync("Teslim Edildi")'>
-                                    <AppIcon Name="check-circle" CssClass="h-4 w-4" />
-                                    Teslim Edildi
-                                </button>
-                                <button type="button"
-                                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-rose-50 px-3 text-sm font-black text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                        disabled='@(!CanSetStatus("Iptal") || Saving)'
-                                        @onclick='() => SaveStatusAsync("Iptal")'>
-                                    <AppIcon Name="x" CssClass="h-4 w-4" />
-                                    İptal Et
-                                </button>
+                                <CommandButton Text="Kargoda Yap" BusyText="İşleniyor..." Icon="truck" Tone="soft" Busy="Saving" Disabled='@(!CanSetStatus("Kargoda"))' OnClick='@(() => SaveStatusAsync("Kargoda"))' />
+                                <CommandButton Text="Teslim Edildi" BusyText="İşleniyor..." Icon="check-circle" Tone="success" Busy="Saving" Disabled='@(!CanSetStatus("Teslim Edildi"))' OnClick='@(() => SaveStatusAsync("Teslim Edildi"))' />
+                                <CommandButton Text="İptal Et" BusyText="İşleniyor..." Icon="x" Tone="danger" Busy="Saving" Disabled='@(!CanSetStatus("Iptal"))' OnClick='@(() => SaveStatusAsync("Iptal"))' />
                             </div>
                         }
                     </section>
@@ -347,11 +324,13 @@
                 await OrdersApi.UpdateOrderStatusAsync(Detail.Order.SiparisId, nextStatus);
 
             await LoadOrderAsync(Detail.Order.SiparisId);
+            Feedback.Success("Sipariş durumu güncellendi", DisplayStatus(nextStatus));
             await OnChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
             Message = UserFriendlyError(ex, "Durum güncellenemedi. Sipariş mağaza erişimini veya mevcut durumunu kontrol edin.");
+            Feedback.Error("Durum güncellenemedi", Message);
         }
         finally
         {

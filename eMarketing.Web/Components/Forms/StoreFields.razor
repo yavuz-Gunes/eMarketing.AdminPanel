@@ -4,10 +4,10 @@
             <p class="text-xs font-black uppercase tracking-wide text-blue-700">Temel bilgiler</p>
             <p class="mt-1 text-xs font-semibold text-slate-500">Mağaza adı ve konum bilgileri bayi kartlarında ve aktif bayi seçiminde gösterilir.</p>
         </div>
-        <TextField Label="Mağaza adı" Kind="person" MaxLength="300" @bind-Value="Model.StoreName" />
-        <TextField Label="Şehir" Kind="person" MaxLength="100" @bind-Value="Model.City" />
-        <TextField Label="İlçe" Kind="person" MaxLength="100" @bind-Value="Model.District" />
-        <TextField Label="Telefon" Kind="phone" MaxLength="60" Hint="Sadece telefon karakterleri girilebilir." @bind-Value="Model.Phone" />
+        <TextField Label="Mağaza adı" Kind="person" MaxLength="300" Required="RequireStoreName" IsInvalid="@StoreNameInvalid" ErrorText="@StoreNameError" @bind-Value="Model.StoreName" />
+        <TextField Label="Şehir" Kind="person" MaxLength="100" IsInvalid="@CityInvalid" ErrorText="@CityError" @bind-Value="Model.City" />
+        <TextField Label="İlçe" Kind="person" MaxLength="100" IsInvalid="@DistrictInvalid" ErrorText="@DistrictError" @bind-Value="Model.District" />
+        <TextField Label="Telefon" Kind="phone" MaxLength="60" MinDigits="10" MaxDigits="12" Hint="Sadece telefon karakterleri girilebilir." IsInvalid="@PhoneInvalid" ErrorText="@PhoneError" @bind-Value="Model.Phone" />
     </section>
 
     <section class="rounded-xl border border-slate-200 bg-white p-4">
@@ -79,6 +79,8 @@
     [Parameter] public bool PersonnelLoading { get; set; }
     [Parameter] public string PersonnelEmptyText { get; set; } = "Mağaza kaydedildikten sonra personel bağlanabilir.";
     [Parameter] public string PersonnelHelpText { get; set; } = "Bayiye bağlı aktif personelden seçilir.";
+    [Parameter] public bool ShowValidation { get; set; }
+    [Parameter] public bool RequireStoreName { get; set; } = true;
 
     private string PersonnelSearch { get; set; } = string.Empty;
     private string ResponsibleSelectValue => Model.SorumluKullaniciId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
@@ -86,6 +88,14 @@
     private IEnumerable<StoreTeamMemberDto> FilteredPersonnel => Personnel
         .Where(member => string.IsNullOrWhiteSpace(PersonnelSearch)
             || $"{member.AdSoyad} {member.KullaniciAdi} {member.Telefon} {member.MagazaGorevGorunenAd}".Contains(PersonnelSearch, StringComparison.CurrentCultureIgnoreCase));
+    private string StoreNameError => ShowValidation && RequireStoreName ? FormValidators.RequiredError(Model.StoreName, "Mağaza adı") ?? string.Empty : string.Empty;
+    private string CityError => ShowValidation ? FormValidators.PersonError(Model.City, "Şehir") ?? string.Empty : string.Empty;
+    private string DistrictError => ShowValidation ? FormValidators.PersonError(Model.District, "İlçe") ?? string.Empty : string.Empty;
+    private string PhoneError => ShowValidation ? FormValidators.PhoneError(Model.Phone) ?? string.Empty : string.Empty;
+    private bool StoreNameInvalid => !string.IsNullOrWhiteSpace(StoreNameError);
+    private bool CityInvalid => !string.IsNullOrWhiteSpace(CityError);
+    private bool DistrictInvalid => !string.IsNullOrWhiteSpace(DistrictError);
+    private bool PhoneInvalid => !string.IsNullOrWhiteSpace(PhoneError);
 
     private void OnResponsibleChanged(ChangeEventArgs args)
     {

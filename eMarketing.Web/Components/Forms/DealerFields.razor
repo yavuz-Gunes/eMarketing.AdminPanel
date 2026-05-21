@@ -1,12 +1,12 @@
 <FormSection Title="Kimlik">
-    <TextField Label="Bayi/Firma adı" Kind="person" MaxLength="300" @bind-Value="Model.FullName" />
+    <TextField Label="Bayi/Firma adı" Kind="person" MaxLength="300" Required="true" IsInvalid="@FullNameInvalid" ErrorText="@FullNameError" @bind-Value="Model.FullName" />
     <TextField Label="Ticari ünvan" MaxLength="300" @bind-Value="Model.CompanyName" />
 </FormSection>
 
 <FormSection Title="İletişim">
-    <TextField Label="Yetkili kişi" Kind="person" MaxLength="200" @bind-Value="Model.AuthorizedPerson" />
-    <TextField Label="Telefon" Kind="phone" MaxLength="60" @bind-Value="Model.Phone" />
-    <TextField Label="E-posta" Kind="email" MaxLength="400" @bind-Value="Model.Email" />
+    <TextField Label="Yetkili kişi" Kind="person" MaxLength="200" IsInvalid="@AuthorizedPersonInvalid" ErrorText="@AuthorizedPersonError" @bind-Value="Model.AuthorizedPerson" />
+    <TextField Label="Telefon" Kind="phone" MaxLength="60" MinDigits="10" MaxDigits="12" IsInvalid="@PhoneInvalid" ErrorText="@PhoneError" @bind-Value="Model.Phone" />
+    <TextField Label="E-posta" Kind="email" MaxLength="400" IsInvalid="@EmailInvalid" ErrorText="@EmailError" @bind-Value="Model.Email" />
     <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
         <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="Model.IsActive" />
         Aktif bayi
@@ -14,8 +14,8 @@
 </FormSection>
 
 <FormSection Title="Vergi">
-    <TextField Label="Vergi no" Kind="numeric" MaxLength="50" @bind-Value="Model.TaxNumber" />
-    <TextField Label="Vergi dairesi" Kind="person" MaxLength="100" @bind-Value="Model.TaxOffice" />
+    <TextField Label="Vergi no" Kind="numeric" MaxLength="11" MaxDigits="11" IsInvalid="@TaxNumberInvalid" ErrorText="@TaxNumberError" @bind-Value="Model.TaxNumber" />
+    <TextField Label="Vergi dairesi" Kind="person" MaxLength="100" IsInvalid="@TaxOfficeInvalid" ErrorText="@TaxOfficeError" @bind-Value="Model.TaxOffice" />
 </FormSection>
 
 <FormSection Title="Adres">
@@ -28,4 +28,18 @@
 
 @code {
     [Parameter] public DealerSaveRequest Model { get; set; } = new();
+    [Parameter] public bool ShowValidation { get; set; }
+
+    private string FullNameError => ShowValidation ? FormValidators.RequiredError(Model.FullName, "Bayi/Firma adı") ?? string.Empty : string.Empty;
+    private string AuthorizedPersonError => ShowValidation ? FormValidators.PersonError(Model.AuthorizedPerson, "Yetkili kişi") ?? string.Empty : string.Empty;
+    private string PhoneError => ShowValidation ? FormValidators.PhoneError(Model.Phone) ?? string.Empty : string.Empty;
+    private string EmailError => ShowValidation ? FormValidators.EmailError(Model.Email) ?? string.Empty : string.Empty;
+    private string TaxNumberError => ShowValidation ? FormValidators.MaxDigitsError(Model.TaxNumber, 11, "Vergi no") ?? string.Empty : string.Empty;
+    private string TaxOfficeError => ShowValidation ? FormValidators.PersonError(Model.TaxOffice, "Vergi dairesi") ?? string.Empty : string.Empty;
+    private bool FullNameInvalid => !string.IsNullOrWhiteSpace(FullNameError);
+    private bool AuthorizedPersonInvalid => !string.IsNullOrWhiteSpace(AuthorizedPersonError);
+    private bool PhoneInvalid => !string.IsNullOrWhiteSpace(PhoneError);
+    private bool EmailInvalid => !string.IsNullOrWhiteSpace(EmailError);
+    private bool TaxNumberInvalid => !string.IsNullOrWhiteSpace(TaxNumberError);
+    private bool TaxOfficeInvalid => !string.IsNullOrWhiteSpace(TaxOfficeError);
 }

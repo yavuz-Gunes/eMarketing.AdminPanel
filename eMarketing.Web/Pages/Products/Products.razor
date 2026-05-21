@@ -9,6 +9,7 @@
 @inject IJSRuntime JS
 @inject IWebHostEnvironment Environment
 @inject NavigationManager Navigation
+@inject ActionFeedbackService Feedback
 
 <PageTitle>Ürünler - eMarketing</PageTitle>
 
@@ -188,8 +189,7 @@
                             </span>
                             <span><span class="@ProductStatusBadgeClass(product)">@ProductStatusText(product)</span></span>
                             <div class="flex justify-end gap-2 text-xs font-black">
-                                <button class="rounded-lg bg-blue-600 px-3 py-2 text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-                                        disabled="@IsAddToCartDisabled(product, stock)"
+                                <button class="@AddToCartButtonClass(product, stock)"
                                         @onclick="() => AddToCart(WithSelectedStoreStock(product, stock))">
                                     Sepete ekle
                                 </button>
@@ -1012,12 +1012,34 @@
 
     private void AddToCart(ProductDto product)
     {
-        if (!StoreState.SelectedStoreId.HasValue || product.Stok <= 0 || !product.AktifMi)
+        if (!StoreState.SelectedStoreId.HasValue)
+        {
+            IsError = true;
+            Message = "Önce aktif bayi seçin.";
+            Feedback.Warning("Önce aktif bayi seçin", "Sepete ekleme seçili bayi stoklarına göre çalışır.");
             return;
+        }
+
+        if (!product.AktifMi)
+        {
+            IsError = true;
+            Message = "Pasif ürün sepete eklenemez.";
+            Feedback.Warning("Pasif ürün sepete eklenemez", product.UrunAdi);
+            return;
+        }
+
+        if (product.Stok <= 0)
+        {
+            IsError = true;
+            Message = "Seçili bayide stok yok.";
+            Feedback.Warning("Seçili bayide stok yok", product.UrunAdi);
+            return;
+        }
 
         Cart.Add(product);
         IsError = false;
         Message = $"{product.UrunAdi} sepete eklendi.";
+        Feedback.Success("Sepete eklendi", product.UrunAdi);
     }
 
     private bool MatchesStatusFilter(ProductDto product)
@@ -1033,6 +1055,13 @@
     private bool IsAddToCartDisabled(ProductDto product, StockItemDto stock)
     {
         return !StoreState.SelectedStoreId.HasValue || !product.AktifMi || stock.BayiStok <= 0;
+    }
+
+    private string AddToCartButtonClass(ProductDto product, StockItemDto stock)
+    {
+        return IsAddToCartDisabled(product, stock)
+            ? "rounded-lg bg-slate-300 px-3 py-2 text-white shadow-none transition hover:bg-slate-400"
+            : "rounded-lg bg-blue-600 px-3 py-2 text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700";
     }
 
     private string CategoryChipClass(int? categoryId)

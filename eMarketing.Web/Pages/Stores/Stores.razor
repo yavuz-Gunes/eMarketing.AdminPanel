@@ -4,6 +4,7 @@
 @inject DealerApiClient DealerApi
 @inject TeamApiClient TeamApi
 @inject AuthSession Auth
+@inject ActionFeedbackService Feedback
 
 <PageTitle>Bayiler - eMarketing</PageTitle>
 
@@ -20,11 +21,7 @@
                 <ActiveStoreBadge Compact="true" />
                 @if (Auth.IsAdmin)
                 {
-                    <button class="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
-                            @onclick="OpenNewDealer">
-                        <AppIcon Name="plus" CssClass="h-4 w-4" />
-                        Yeni Bayi
-                    </button>
+                    <CommandButton Text="Yeni Bayi" Icon="plus" Tone="primary" Size="lg" OnClick="@OpenNewDealer" />
                 }
             </div>
         </div>
@@ -36,7 +33,7 @@
 
         @if (Auth.IsAdmin)
         {
-            <section class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-[1fr_170px_auto]">
+            <section class="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/70 lg:grid-cols-[1fr_170px_auto]">
                 <label class="relative block">
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                         <AppIcon Name="search" CssClass="h-5 w-5" />
@@ -54,10 +51,7 @@
                     <option value="0">Pasif</option>
                 </select>
 
-                <button class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
-                        @onclick="LoadDealersAsync">
-                    Yenile
-                </button>
+                <CommandButton Text="Yenile" Icon="search" Tone="secondary" Size="lg" Busy="Loading" OnClick="@LoadDealersAsync" />
             </section>
         }
 
@@ -70,7 +64,11 @@
                 }
                 else if (!FilteredDealers.Any())
                 {
-                    <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500">Bayi bulunamadı.</div>
+                    <AppEmptyState Icon="briefcase"
+                                   Title="Henüz bayi bulunamadı"
+                                   Message="İlk bayiyi oluşturarak mağaza, stok ve ekip operasyonunu başlatın.">
+                        <CommandButton Text="Yeni Bayi" Icon="plus" Tone="primary" OnClick="@OpenNewDealer" />
+                    </AppEmptyState>
                 }
                 else
                 {
@@ -79,7 +77,7 @@
                         IReadOnlyList<DealerStoreDto> stores = StoresFor(dealer.CustomerId);
                         bool expanded = ExpandedDealerId == dealer.CustomerId;
 
-                        <article class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
                             <div class="@DealerRowClass(stores)"
                                  role="button"
                                  tabindex="0"
@@ -167,10 +165,11 @@
                                                     <p class="mt-3 line-clamp-1 text-xs text-slate-500">@EmptyText(store.Address)</p>
 
                                                     <div class="mt-3 flex flex-wrap gap-2" @onclick:stopPropagation="true">
-                                                        <button class="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100"
-                                                                @onclick="() => SelectStoreAsync(store.CustomerStoreId)">
-                                                            Aktif Bayi Yap
-                                                        </button>
+                                                        <CommandButton Text="Aktif Bayi Yap"
+                                                                       Icon="check"
+                                                                       Tone="soft"
+                                                                       Size="sm"
+                                                                       OnClick="@(() => SelectStoreAsync(store.CustomerStoreId))" />
                                                         <button class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
                                                                 @onclick="() => OpenEditStore(store)">
                                                             Düzenle
@@ -232,8 +231,8 @@
 
     @if (ShowDealerForm || ShowStoreForm)
     {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-6" @onclick="CloseForms">
-            <section class="flex max-h-[82vh] w-full flex-col overflow-hidden rounded-xl border border-white/70 bg-white shadow-2xl shadow-slate-950/25"
+        <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-md sm:p-6" @onclick="CloseForms">
+            <section class="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-3xl border border-white/80 bg-white shadow-2xl shadow-slate-950/30"
                      style="@StoreModalStyle"
                      @onclick:stopPropagation="true">
                 <div class="border-b border-slate-100 bg-white p-4">
@@ -299,7 +298,7 @@
                             </aside>
 
                             <div class="min-w-0 space-y-5">
-                                <DealerFields Model="DealerForm" />
+                                <DealerFields Model="DealerForm" ShowValidation="@DealerValidationVisible" />
                                 <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
                                     <label class="mb-3 flex items-center gap-2 text-sm font-black text-slate-800">
                                         <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="CreateInitialStore" />
@@ -311,7 +310,9 @@
                                                      Personnel="StorePersonnel"
                                                      PersonnelLoading="StorePersonnelLoading"
                                                      PersonnelEmptyText="@StorePersonnelEmptyText"
-                                                     PersonnelHelpText="@StorePersonnelHelpText" />
+                                                     PersonnelHelpText="@StorePersonnelHelpText"
+                                                     ShowValidation="@StoreValidationVisible"
+                                                     RequireStoreName="CreateInitialStore" />
                                     }
                                 </div>
                             </div>
@@ -370,14 +371,14 @@
                         }
 
                         <FormSection Title="Kimlik">
-                            <TextField Label="Bayi/Firma adı" Kind="person" MaxLength="300" @bind-Value="DealerForm.FullName" />
+                            <TextField Label="Bayi/Firma adı" Kind="person" MaxLength="300" Required="true" IsInvalid="@DealerFullNameInvalid" ErrorText="@DealerFullNameError" @bind-Value="DealerForm.FullName" />
                             <TextField Label="Ticari ünvan" MaxLength="300" @bind-Value="DealerForm.CompanyName" />
                         </FormSection>
 
                         <FormSection Title="İletişim">
-                            <TextField Label="Yetkili kişi" Kind="person" MaxLength="200" @bind-Value="DealerForm.AuthorizedPerson" />
-                            <TextField Label="Telefon" Kind="phone" MaxLength="60" @bind-Value="DealerForm.Phone" />
-                            <TextField Label="E-posta" Kind="email" MaxLength="400" @bind-Value="DealerForm.Email" />
+                            <TextField Label="Yetkili kişi" Kind="person" MaxLength="200" IsInvalid="@DealerAuthorizedPersonInvalid" ErrorText="@DealerAuthorizedPersonError" @bind-Value="DealerForm.AuthorizedPerson" />
+                            <TextField Label="Telefon" Kind="phone" MaxLength="60" MinDigits="10" MaxDigits="12" IsInvalid="@DealerPhoneInvalid" ErrorText="@DealerPhoneError" @bind-Value="DealerForm.Phone" />
+                            <TextField Label="E-posta" Kind="email" MaxLength="400" IsInvalid="@DealerEmailInvalid" ErrorText="@DealerEmailError" @bind-Value="DealerForm.Email" />
                             <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
                                 <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600" @bind="DealerForm.IsActive" />
                                 Aktif bayi
@@ -385,8 +386,8 @@
                         </FormSection>
 
                         <FormSection Title="Vergi">
-                            <TextField Label="Vergi no" Kind="numeric" MaxLength="50" @bind-Value="DealerForm.TaxNumber" />
-                            <TextField Label="Vergi dairesi" Kind="person" MaxLength="100" @bind-Value="DealerForm.TaxOffice" />
+                            <TextField Label="Vergi no" Kind="numeric" MaxLength="11" MaxDigits="11" IsInvalid="@DealerTaxNumberInvalid" ErrorText="@DealerTaxNumberError" @bind-Value="DealerForm.TaxNumber" />
+                            <TextField Label="Vergi dairesi" Kind="person" MaxLength="100" IsInvalid="@DealerTaxOfficeInvalid" ErrorText="@DealerTaxOfficeError" @bind-Value="DealerForm.TaxOffice" />
                         </FormSection>
 
                         <FormSection Title="Adres">
@@ -410,7 +411,9 @@
                                                  Personnel="StorePersonnel"
                                                  PersonnelLoading="StorePersonnelLoading"
                                                  PersonnelEmptyText="@StorePersonnelEmptyText"
-                                                 PersonnelHelpText="@StorePersonnelHelpText" />
+                                                 PersonnelHelpText="@StorePersonnelHelpText"
+                                                 ShowValidation="@StoreValidationVisible"
+                                                 RequireStoreName="CreateInitialStore" />
                                 }
                             </div>
                         }
@@ -437,23 +440,21 @@
                                          Personnel="StorePersonnel"
                                          PersonnelLoading="StorePersonnelLoading"
                                          PersonnelEmptyText="@StorePersonnelEmptyText"
-                                         PersonnelHelpText="@StorePersonnelHelpText" />
+                                         PersonnelHelpText="@StorePersonnelHelpText"
+                                         ShowValidation="@StoreValidationVisible"
+                                         RequireStoreName="true" />
                         </div>
                     }
                 </div>
 
-                <div class="flex justify-end gap-2 border-t border-slate-100 bg-white p-3">
+                <div class="sticky bottom-0 flex justify-end gap-2 border-t border-slate-100 bg-white/95 p-3 backdrop-blur">
                     @if (ShowDealerForm && !EditingDealerId.HasValue)
                     {
                         <button class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-400" disabled>Geri</button>
                         <button class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-black text-blue-700" disabled>Devam</button>
                     }
-                    <button class="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50" @onclick="CloseForms">Vazgeç</button>
-                    <button class="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            disabled="@Saving"
-                            @onclick="SaveCurrentFormAsync">
-                        Kaydet
-                    </button>
+                    <CommandButton Text="Vazgeç" Icon="x" Tone="secondary" Size="lg" Disabled="Saving" OnClick="@CloseForms" />
+                    <CommandButton Text="@SaveButtonText" BusyText="Kaydediliyor..." Icon="check" Tone="primary" Size="lg" Busy="Saving" OnClick="@SaveCurrentFormAsync" />
                 </div>
             </section>
         </div>
@@ -484,6 +485,8 @@
     private bool StorePersonnelLoading { get; set; }
     private string StorePersonnelEmptyText { get; set; } = "Mağaza kaydedildikten sonra personel bağlanabilir.";
     private string StorePersonnelHelpText { get; set; } = "Bayiye bağlı aktif personelden seçilir.";
+    private bool DealerValidationVisible { get; set; }
+    private bool StoreValidationVisible { get; set; }
 
     private string MessageClass => IsError
         ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700"
@@ -512,6 +515,21 @@
         : $"{DealerNameById(StoreFormCustomerId)} · {EmptyText(StoreForm.City)} / {EmptyText(StoreForm.District)}";
 
     private bool CurrentFormActive => ShowDealerForm ? DealerForm.IsActive : StoreForm.IsActive;
+    private string SaveButtonText => ShowDealerForm
+        ? (EditingDealerId.HasValue ? "Bayiyi Güncelle" : "Bayiyi Oluştur")
+        : (EditingStoreId.HasValue ? "Mağazayı Güncelle" : "Mağazayı Oluştur");
+    private string DealerFullNameError => DealerValidationVisible ? FormValidators.RequiredError(DealerForm.FullName, "Bayi/Firma adı") ?? string.Empty : string.Empty;
+    private string DealerAuthorizedPersonError => DealerValidationVisible ? FormValidators.PersonError(DealerForm.AuthorizedPerson, "Yetkili kişi") ?? string.Empty : string.Empty;
+    private string DealerPhoneError => DealerValidationVisible ? FormValidators.PhoneError(DealerForm.Phone) ?? string.Empty : string.Empty;
+    private string DealerEmailError => DealerValidationVisible ? FormValidators.EmailError(DealerForm.Email) ?? string.Empty : string.Empty;
+    private string DealerTaxNumberError => DealerValidationVisible ? FormValidators.MaxDigitsError(DealerForm.TaxNumber, 11, "Vergi no") ?? string.Empty : string.Empty;
+    private string DealerTaxOfficeError => DealerValidationVisible ? FormValidators.PersonError(DealerForm.TaxOffice, "Vergi dairesi") ?? string.Empty : string.Empty;
+    private bool DealerFullNameInvalid => !string.IsNullOrWhiteSpace(DealerFullNameError);
+    private bool DealerAuthorizedPersonInvalid => !string.IsNullOrWhiteSpace(DealerAuthorizedPersonError);
+    private bool DealerPhoneInvalid => !string.IsNullOrWhiteSpace(DealerPhoneError);
+    private bool DealerEmailInvalid => !string.IsNullOrWhiteSpace(DealerEmailError);
+    private bool DealerTaxNumberInvalid => !string.IsNullOrWhiteSpace(DealerTaxNumberError);
+    private bool DealerTaxOfficeInvalid => !string.IsNullOrWhiteSpace(DealerTaxOfficeError);
 
     private IEnumerable<DealerDetailDto> FilteredDealers => Dealers
         .Where(dealer => StatusFilter < 0 || dealer.IsActive == (StatusFilter == 1))
@@ -544,6 +562,7 @@
         {
             IsError = true;
             Message = ex.Message;
+            Feedback.Error("Bayiler yüklenemedi", ex.Message);
         }
         finally
         {
@@ -571,6 +590,7 @@
         await StoreState.SelectAsync(storeId);
         IsError = false;
         Message = "Aktif bayi güncellendi.";
+        Feedback.Success("Aktif bayi güncellendi", "Seçili mağaza kapsamı yenilendi.");
     }
 
     private void OpenNewDealer()
@@ -670,9 +690,11 @@
 
     private async Task SaveDealerAsync()
     {
-        if (string.IsNullOrWhiteSpace(DealerForm.FullName))
+        DealerValidationVisible = true;
+        StoreValidationVisible = CreateInitialStore;
+        if (!IsDealerFormValid())
         {
-            ShowError("Bayi adı zorunludur.");
+            ShowValidationError();
             return;
         }
 
@@ -702,6 +724,7 @@
 
                     IsError = false;
                     Message = "Bayi ve ilk mağaza kaydedildi. Personel bağlamak için Ekibim ekranından devam edebilirsiniz.";
+                    Feedback.Success("Bayi ve mağaza kaydedildi", "Personel bağlantısı için ekip ekranından devam edebilirsiniz.");
                     CloseForms();
                     return;
                 }
@@ -722,9 +745,10 @@
 
     private async Task SaveStoreAsync()
     {
-        if (string.IsNullOrWhiteSpace(StoreForm.StoreName))
+        StoreValidationVisible = true;
+        if (!IsStoreFormValid(requireStoreName: true))
         {
-            ShowError("Mağaza adı zorunludur.");
+            ShowValidationError();
             return;
         }
 
@@ -784,6 +808,7 @@
 
         IsError = false;
         Message = message;
+        Feedback.Success("İşlem başarılı", message);
     }
 
     private void CloseForms()
@@ -792,7 +817,39 @@
         ShowStoreForm = false;
         EditingDealerId = null;
         EditingStoreId = null;
+        DealerValidationVisible = false;
+        StoreValidationVisible = false;
         ResetStorePersonnel("Mağaza kaydedildikten sonra personel bağlanabilir.", "Bayiye bağlı aktif personelden seçilir.");
+    }
+
+    private bool IsDealerFormValid()
+    {
+        bool dealerValid = string.IsNullOrWhiteSpace(DealerFullNameError)
+            && string.IsNullOrWhiteSpace(DealerAuthorizedPersonError)
+            && string.IsNullOrWhiteSpace(DealerPhoneError)
+            && string.IsNullOrWhiteSpace(DealerEmailError)
+            && string.IsNullOrWhiteSpace(DealerTaxNumberError)
+            && string.IsNullOrWhiteSpace(DealerTaxOfficeError);
+
+        if (!dealerValid)
+            return false;
+
+        return !CreateInitialStore || IsStoreFormValid(requireStoreName: true);
+    }
+
+    private bool IsStoreFormValid(bool requireStoreName)
+    {
+        return (!requireStoreName || string.IsNullOrWhiteSpace(FormValidators.RequiredError(StoreForm.StoreName, "Mağaza adı")))
+            && string.IsNullOrWhiteSpace(FormValidators.PersonError(StoreForm.City, "Şehir"))
+            && string.IsNullOrWhiteSpace(FormValidators.PersonError(StoreForm.District, "İlçe"))
+            && string.IsNullOrWhiteSpace(FormValidators.PhoneError(StoreForm.Phone));
+    }
+
+    private void ShowValidationError()
+    {
+        IsError = true;
+        Message = "Eksik veya hatalı alanlar var.";
+        Feedback.Warning("Eksik veya hatalı alanlar var", "Lütfen kırmızı işaretli alanları kontrol edin.");
     }
 
     private async Task LoadDealerPersonnelAsync(int customerId)
@@ -880,6 +937,7 @@
     {
         IsError = true;
         Message = message;
+        Feedback.Error("İşlem tamamlanamadı", message);
     }
 
     private string StoreClass(StoreDto store)

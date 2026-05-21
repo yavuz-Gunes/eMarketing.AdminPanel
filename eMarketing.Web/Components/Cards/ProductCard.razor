@@ -52,8 +52,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <button class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-                        disabled="@(AvailableStock <= 0 || !Product.AktifMi)"
+                <button class="@AddButtonClass"
                         @onclick="() => OnAdd.InvokeAsync(Product)">
                     Sepete ekle
                 </button>
@@ -109,6 +108,9 @@
         : AvailableStock <= 0
             ? "rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-black text-rose-700 ring-1 ring-rose-100"
             : "rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100";
+    private string AddButtonClass => AvailableStock <= 0 || !Product.AktifMi
+        ? "rounded-lg bg-slate-300 px-3 py-2 text-xs font-black text-white shadow-none transition hover:bg-slate-400"
+        : "rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700";
     private string MenuStatusClass => Product.AktifMi
         ? "block w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50"
         : "block w-full px-3 py-2 text-left text-emerald-700 hover:bg-emerald-50";

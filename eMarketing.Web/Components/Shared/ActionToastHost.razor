@@ -1,0 +1,98 @@
+@implements IDisposable
+@inject ActionFeedbackService Feedback
+
+<div class="pointer-events-none fixed right-3 top-3 z-[120] flex w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-2 sm:right-5 sm:top-5">
+    @foreach (ActionToast toast in Toasts)
+    {
+        <article class="@ToastClass(toast.Tone)">
+            <span class="@IconShellClass(toast.Tone)">
+                <AppIcon Name="@IconName(toast.Tone)" CssClass="h-5 w-5" />
+            </span>
+            <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-black">@toast.Title</span>
+                @if (!string.IsNullOrWhiteSpace(toast.Message))
+                {
+                    <span class="mt-0.5 block text-xs font-semibold leading-5 text-slate-300">@toast.Message</span>
+                }
+            </span>
+            <button type="button"
+                    class="pointer-events-auto -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white"
+                    aria-label="Bildirimi kapat"
+                    @onclick="() => Dismiss(toast.Id)">
+                <AppIcon Name="x" CssClass="h-4 w-4" />
+            </button>
+        </article>
+    }
+</div>
+
+@code {
+    private readonly List<ActionToast> Toasts = new();
+
+    protected override void OnInitialized()
+    {
+        Feedback.ToastRequested += OnToastRequested;
+    }
+
+    private void OnToastRequested(ActionToast toast)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            Toasts.Insert(0, toast);
+            if (Toasts.Count > 4)
+                Toasts.RemoveRange(4, Toasts.Count - 4);
+
+            StateHasChanged();
+            await Task.Delay(4200);
+            Dismiss(toast.Id);
+        });
+    }
+
+    private void Dismiss(Guid id)
+    {
+        ActionToast? toast = Toasts.FirstOrDefault(item => item.Id == id);
+        if (toast is null)
+            return;
+
+        Toasts.Remove(toast);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private static string ToastClass(string tone)
+    {
+        string ring = tone switch
+        {
+            "success" => "ring-emerald-400/25",
+            "error" => "ring-rose-400/25",
+            "warning" => "ring-amber-400/25",
+            _ => "ring-blue-400/25"
+        };
+
+        return $"pointer-events-auto flex items-start gap-3 rounded-2xl bg-slate-950/95 p-3 text-white shadow-2xl shadow-slate-950/30 ring-1 {ring} backdrop-blur-md";
+    }
+
+    private static string IconShellClass(string tone)
+    {
+        string color = tone switch
+        {
+            "success" => "bg-emerald-400/15 text-emerald-300",
+            "error" => "bg-rose-400/15 text-rose-300",
+            "warning" => "bg-amber-400/15 text-amber-300",
+            _ => "bg-blue-400/15 text-blue-300"
+        };
+
+        return $"mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {color}";
+    }
+
+    private static string IconName(string tone) => tone switch
+    {
+        "success" => "check-circle",
+        "error" => "alert",
+        "warning" => "alert",
+        _ => "message"
+    };
+
+    public void Dispose()
+    {
+        Feedback.ToastRequested -= OnToastRequested;
+    }
+}

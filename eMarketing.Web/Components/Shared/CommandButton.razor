@@ -1,0 +1,58 @@
+<button type="@Type"
+        class="@CssClass"
+        disabled="@(Disabled || Busy)"
+        title="@Title"
+        @onclick="HandleClick">
+    @if (Busy)
+    {
+        <span class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+        <span>@BusyText</span>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(Icon))
+        {
+            <AppIcon Name="@Icon" CssClass="h-4 w-4" />
+        }
+        <span>@Text</span>
+    }
+</button>
+
+@code {
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public string BusyText { get; set; } = "İşleniyor...";
+    [Parameter] public string Icon { get; set; } = string.Empty;
+    [Parameter] public string Tone { get; set; } = "primary";
+    [Parameter] public string Size { get; set; } = "md";
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private string CssClass => $"{BaseClass} {SizeClass} {ToneClass}";
+
+    private string BaseClass => "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-black transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60";
+
+    private string SizeClass => Size switch
+    {
+        "sm" => "h-9 px-3",
+        "lg" => "h-12 px-5",
+        _ => "h-10 px-4"
+    };
+
+    private string ToneClass => Tone switch
+    {
+        "secondary" => "border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 focus:ring-slate-200",
+        "soft" => "border border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100 focus:ring-blue-100",
+        "success" => "bg-emerald-600 text-white shadow-sm shadow-emerald-200 hover:bg-emerald-700 focus:ring-emerald-100",
+        "danger" => "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:ring-rose-100",
+        "ghost" => "bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-100",
+        _ => "bg-slate-950 text-white shadow-sm shadow-slate-300 hover:bg-slate-800 focus:ring-slate-200"
+    };
+
+    private Task HandleClick()
+    {
+        return Disabled || Busy ? Task.CompletedTask : OnClick.InvokeAsync();
+    }
+}

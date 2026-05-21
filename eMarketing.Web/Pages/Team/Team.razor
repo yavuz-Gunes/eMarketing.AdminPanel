@@ -138,7 +138,7 @@
                                                         <Avatar Member="member" Size="md" />
                                                         <div class="min-w-0">
                                                             <p class="truncate text-sm font-black text-slate-950">@member.AdSoyad</p>
-                                                            <p class="truncate text-xs font-bold text-slate-500">@DutyName(member.MagazaGorev)</p>
+                                                            <p class="truncate text-xs font-bold text-slate-500">@DisplayDutyName(member)</p>
                                                         </div>
                                                     </div>
                                                     <div class="mt-3 grid gap-1 text-xs text-slate-500">
@@ -162,7 +162,7 @@
                                         </div>
 
                                         <div class="text-left">
-                                            <StatusBadge Text="@DutyName(member.MagazaGorev)" Tone="@(admin ? "info" : DutyTone(member.MagazaGorev))" />
+                                            <StatusBadge Text="@DisplayDutyName(member)" Tone="@(admin ? "info" : DutyTone(member.MagazaGorev))" />
                                         </div>
 
                                         <div class="grid min-w-0 gap-1 text-left text-sm text-slate-500">
@@ -223,7 +223,7 @@
                                       Context="@TeamResponse.Context"
                                       Member="@SelectedMember"
                                       OnClose="CloseDrawer"
-                                      OnChanged="LoadTeamAsync" />
+                                      OnChanged="ReloadTeamKeepingPanelAsync" />
                 }
             </div>
         }
@@ -426,6 +426,7 @@
 
     private static string EmptyText(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value;
     private static string StatusText(StoreTeamMemberDto member) => member.AktifMi ? "Aktif" : "Pasif";
+    private static string DisplayDutyName(StoreTeamMemberDto member) => IsAdmin(member) ? "Admin" : DutyName(member.MagazaGorev);
 
     private static string DutyName(string duty) => duty switch
     {

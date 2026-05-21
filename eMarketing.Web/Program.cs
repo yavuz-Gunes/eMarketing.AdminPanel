@@ -31,6 +31,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthSession>();
 builder.Services.AddScoped<ActiveStoreState>();
 builder.Services.AddScoped<CartState>();
+builder.Services.AddScoped<ActionFeedbackService>();
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<StoreApiClient>();
 builder.Services.AddScoped<DealerApiClient>();

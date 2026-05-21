@@ -1,5 +1,6 @@
 @inject TeamApiClient TeamApi
 @inject AuthSession Auth
+@inject ActionFeedbackService Feedback
 
 @if (Member is not null)
 {
@@ -32,7 +33,7 @@
 
                 @if (!string.IsNullOrWhiteSpace(Message))
                 {
-                    <div class="@MessageClass">@Message</div>
+                    <div class="hidden">@Message</div>
                 }
 
                 <div class="grid gap-3 lg:grid-cols-[210px_minmax(0,1fr)_230px]">
@@ -78,9 +79,9 @@
                                     <p class="mt-1 text-xs font-semibold text-slate-500">@ProfileHelpText</p>
                                 </div>
                                 <div class="grid gap-3 md:grid-cols-2">
-                                    <TextField Label="Ad Soyad" Kind="person" MaxLength="150" @bind-Value="ProfileForm.AdSoyad" />
-                                    <TextField Label="Telefon" Kind="phone" MaxLength="60" @bind-Value="ProfileForm.Telefon" />
-                                    <TextField Label="E-posta" Kind="email" MaxLength="400" @bind-Value="ProfileForm.Email" />
+                                    <TextField Label="Ad Soyad" Kind="person" MaxLength="150" Required="true" IsInvalid="@ProfileNameInvalid" ErrorText="@ProfileNameError" @bind-Value="ProfileForm.AdSoyad" />
+                                    <TextField Label="Telefon" Kind="phone" MaxLength="60" MinDigits="10" MaxDigits="12" IsInvalid="@ProfilePhoneInvalid" ErrorText="@ProfilePhoneError" @bind-Value="ProfileForm.Telefon" />
+                                    <TextField Label="E-posta" Kind="email" MaxLength="400" IsInvalid="@ProfileEmailInvalid" ErrorText="@ProfileEmailError" @bind-Value="ProfileForm.Email" />
                                     <label class="block">
                                         <span class="text-xs font-black uppercase text-slate-500">Kullanıcı adı</span>
                                         <input class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 text-sm font-bold text-slate-500"
@@ -95,16 +96,59 @@
                             <div class="space-y-4">
                                 <div>
                                     <h3 class="text-base font-black text-slate-950">Güvenlik</h3>
-                                    <p class="mt-1 text-xs font-semibold text-slate-500">@PasswordHelpText</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">Şifre bilgileri rol yetkisine göre güvenli şekilde yönetilir.</p>
                                 </div>
-                                <label class="block max-w-md">
+                                <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/70">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div class="flex min-w-0 items-start gap-3">
+                                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                                                <AppIcon Name="shield" CssClass="h-5 w-5" />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <h4 class="text-sm font-black text-slate-950">Şifre Yönetimi</h4>
+                                                <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">Admin geçici şifre atar; personel kendi şifresini değiştirir.</p>
+                                            </div>
+                                        </div>
+                                        <span class="inline-flex h-8 items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 text-xs font-black text-emerald-700">
+                                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                            Güvenli
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+                                        <div class="space-y-4">
+                                            <label class="block max-w-md">
+                                                <span class="flex items-center gap-2 text-xs font-black uppercase text-slate-500">
+                                                    Mevcut şifre
+                                                    <span class="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-black normal-case text-blue-700">Gizli tutulur</span>
+                                                </span>
+                                                <span class="relative mt-1 block">
+                                                    <input type="password"
+                                                           class="h-12 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-4 pr-12 text-sm font-black tracking-[0.18em] text-slate-500 outline-none"
+                                                           value="••••••••"
+                                                           readonly
+                                                           disabled />
+                                                    <span class="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400"
+                                                          style="right:0.5rem; top:50%; transform:translateY(-50%);">
+                                                        <AppIcon Name="eye-off" CssClass="h-4 w-4" />
+                                                    </span>
+                                                </span>
+                                                <span class="mt-1 block text-xs font-semibold text-slate-500">Güvenlik için mevcut şifre gösterilmez.</span>
+                                            </label>
+
+                                            <label class="block max-w-md" @key="PasswordInputVersion">
                                     <span class="text-xs font-black uppercase text-slate-500">Yeni Şifre</span>
                                     <span class="relative mt-1 block">
                                         <input type="@(ShowPassword ? "text" : "password")"
-                                           class="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-12 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400"
-                                           @bind="PasswordForm.YeniSifre"
-                                           disabled="@(!CanManagePassword || Busy)"
-                                           placeholder="En az 4 karakter" />
+                                               class="@PasswordInputClass"
+                                               value="@PasswordForm.YeniSifre"
+                                               @oninput="OnPasswordInput"
+                                               name="@PasswordInputName"
+                                               autocomplete="new-password"
+                                               autocapitalize="off"
+                                               spellcheck="false"
+                                               disabled="@(!CanManagePassword || Busy)"
+                                               placeholder="En az 4 karakter" />
                                         <button type="button"
                                                 class="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
                                                 style="right:0.5rem; top:50%; transform:translateY(-50%);"
@@ -114,13 +158,41 @@
                                             <AppIcon Name="@(ShowPassword ? "eye-off" : "eye")" CssClass="h-4 w-4" />
                                         </button>
                                     </span>
+                                    <span class="mt-1 block text-xs font-semibold text-slate-500">En az 4 karakter olmalı. Kayıt sonrası bu alan temizlenir.</span>
+                                    @if (!string.IsNullOrWhiteSpace(PasswordError))
+                                    {
+                                        <span class="mt-1 block text-xs font-bold text-rose-600">@PasswordError</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(PasswordSuccessMessage))
+                                    {
+                                        <span class="mt-1 block text-xs font-bold text-emerald-600">@PasswordSuccessMessage</span>
+                                    }
                                 </label>
-                                <button class="hidden"
-                                        disabled="@(!CanManagePassword || Busy)"
-                                        @onclick="SavePasswordAsync">
-                                    <AppIcon Name="shield" CssClass="h-4 w-4" />
-                                    Şifreyi Kaydet
-                                </button>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <CommandButton Text="@PasswordSaveText"
+                                                   BusyText="Kaydediliyor..."
+                                                   Icon="shield"
+                                                   Tone="primary"
+                                                   Busy="Busy"
+                                                   Disabled="@(!CanManagePassword)"
+                                                   OnClick="@SavePasswordAsync" />
+                                                <span class="text-xs font-semibold text-slate-500">@PasswordActionHelpText</span>
+                                            </div>
+                                        </div>
+
+                                        <aside class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <p class="text-xs font-black uppercase text-slate-500">Güvenlik Durumu</p>
+                                                <span class="rounded-full border border-emerald-100 bg-white px-2 py-1 text-[10px] font-black text-emerald-700">Güvenli</span>
+                                            </div>
+                                            <div class="mt-3 space-y-3 text-sm">
+                                                <InfoRow Label="Son işlem" Value="Bugün" />
+                                                <InfoRow Label="Alan durumu" Value="Kayıt sonrası temizlenir" />
+                                                <InfoRow Label="Yetki" Value="@PermissionOwnerText" />
+                                            </div>
+                                        </aside>
+                                    </div>
+                                </section>
                             </div>
                         }
                         else
@@ -141,6 +213,10 @@
                                             <option value="MagazaMuduru">Mağaza Müdürü</option>
                                             <option value="Supervisor">Supervisor</option>
                                         </select>
+                                        @if (IsTargetAdmin)
+                                        {
+                                            <span class="mt-1 block text-xs font-bold text-blue-700">Admin sistem rolüdür; mağaza görevi bu ekrandan değiştirilemez.</span>
+                                        }
                                     </label>
 
                                     <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -155,18 +231,8 @@
                                 </div>
 
                                 <div class="flex flex-wrap gap-2">
-                                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                                            disabled="@(!CanManagePermissions || Busy)"
-                                            @onclick="UpdateDutyAsync">
-                                        <AppIcon Name="briefcase" CssClass="h-4 w-4" />
-                                        Görevi Kaydet
-                                    </button>
-                                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-4 text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                            disabled="@(!CanManagePermissions || Busy)"
-                                            @onclick="RemoveAsync">
-                                        <AppIcon Name="user-x" CssClass="h-4 w-4" />
-                                        Bayiden Çıkar
-                                    </button>
+                                    <CommandButton Text="Görevi Kaydet" BusyText="Kaydediliyor..." Icon="briefcase" Tone="primary" Busy="Busy" Disabled="@(!CanManagePermissions)" OnClick="@UpdateDutyAsync" />
+                                    <CommandButton Text="Bayiden Çıkar" BusyText="İşleniyor..." Icon="user-x" Tone="danger" Busy="Busy" Disabled="@(!CanManagePermissions)" OnClick="@RemoveAsync" />
                                 </div>
                             </div>
                         }
@@ -194,33 +260,14 @@
             </div>
 
             <footer class="flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white p-3">
-                <button class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" @onclick="Close">Vazgeç</button>
+                <CommandButton Text="Vazgeç" Icon="x" Tone="secondary" Disabled="Busy" OnClick="@Close" />
                 @if (ActiveTab == "identity")
                 {
-                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            disabled="@(!CanManageProfile || Busy)"
-                            @onclick="SaveProfileAsync">
-                        <AppIcon Name="check" CssClass="h-4 w-4" />
-                        Bilgileri Kaydet
-                    </button>
+                    <CommandButton Text="Bilgileri Kaydet" BusyText="Kaydediliyor..." Icon="check" Tone="primary" Busy="Busy" Disabled="@(!CanManageProfile)" OnClick="@SaveProfileAsync" />
                 }
-                else if (ActiveTab == "security")
+                else if (ActiveTab != "security")
                 {
-                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            disabled="@(!CanManagePassword || Busy)"
-                            @onclick="SavePasswordAsync">
-                        <AppIcon Name="shield" CssClass="h-4 w-4" />
-                        @PasswordSaveText
-                    </button>
-                }
-                else
-                {
-                    <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            disabled="@(!CanManagePermissions || Busy)"
-                            @onclick="UpdateDutyAsync">
-                        <AppIcon Name="briefcase" CssClass="h-4 w-4" />
-                        Yetkileri Kaydet
-                    </button>
+                    <CommandButton Text="Yetkileri Kaydet" BusyText="Kaydediliyor..." Icon="briefcase" Tone="primary" Busy="Busy" Disabled="@(!CanManagePermissions)" OnClick="@UpdateDutyAsync" />
                 }
             </footer>
         </section>
@@ -243,6 +290,10 @@
     private bool Busy { get; set; }
     private bool ShowPassword { get; set; }
     private int? LoadedMemberId { get; set; }
+    private int PasswordInputVersion { get; set; }
+    private bool ProfileValidationVisible { get; set; }
+    private bool PasswordValidationVisible { get; set; }
+    private string PasswordSuccessMessage { get; set; } = string.Empty;
 
     private bool IsSelf => Member is not null && Auth.User?.KullaniciId == Member.KullaniciId;
     private bool IsTargetAdmin => Member is not null
@@ -253,7 +304,9 @@
     private bool CanManagePermissions => Member is not null && !IsSelf && !IsTargetAdmin && Context?.GorevYonetebilir == true;
     private bool CanManageAuthority => Member is not null && !IsSelf && !IsTargetAdmin && Context?.SiparisYetkisiYonetebilir == true;
     private string PasswordToggleTitle => ShowPassword ? "Şifreyi gizle" : "Şifreyi göster";
-    private string PasswordSaveText => IsSelf ? "Şifreyi Kaydet" : "Şifreyi Sıfırla";
+    private string PasswordSaveText => "Yeni Şifreyi Kaydet";
+    private string PasswordInputName => $"team-password-{Member?.KullaniciId ?? 0}-{PasswordInputVersion}";
+    private string PasswordActionHelpText => IsSelf ? "Yeni şifrenizi kaydeder." : "Seçili personel için yeni geçici şifre belirler.";
     private string ProfileHelpText => CanManageProfile ? "Ad soyad, telefon ve e-posta bilgileri güncellenebilir." : "Bu bilgileri yalnızca personelin kendisi veya admin güncelleyebilir.";
     private string PasswordHelpText => CanManagePassword ? "Personel kendi şifresini değiştirebilir; admin şifre sıfırlayabilir." : "Şifre yönetimi yalnızca personelin kendisi veya admin tarafından yapılır.";
     private string PermissionHelpText => CanManagePermissions || CanManageAuthority ? "Görev ve sipariş yetkisi aktif mağaza kapsamında uygulanır." : "Kendi yetkinizi veya bu personelin mağaza yetkisini değiştiremezsiniz.";
@@ -261,6 +314,16 @@
     private string MessageClass => IsError
         ? "mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700"
         : "mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700";
+    private string ProfileNameError => ProfileValidationVisible ? FormValidators.RequiredError(ProfileForm.AdSoyad, "Ad Soyad") ?? FormValidators.PersonError(ProfileForm.AdSoyad, "Ad Soyad") ?? string.Empty : string.Empty;
+    private string ProfilePhoneError => ProfileValidationVisible ? FormValidators.PhoneError(ProfileForm.Telefon) ?? string.Empty : string.Empty;
+    private string ProfileEmailError => ProfileValidationVisible ? FormValidators.EmailError(ProfileForm.Email) ?? string.Empty : string.Empty;
+    private bool ProfileNameInvalid => !string.IsNullOrWhiteSpace(ProfileNameError);
+    private bool ProfilePhoneInvalid => !string.IsNullOrWhiteSpace(ProfilePhoneError);
+    private bool ProfileEmailInvalid => !string.IsNullOrWhiteSpace(ProfileEmailError);
+    private string PasswordError => PasswordValidationVisible ? ValidatePassword() ?? string.Empty : string.Empty;
+    private string PasswordInputClass => !string.IsNullOrWhiteSpace(PasswordError)
+        ? "h-12 w-full rounded-xl border border-rose-300 bg-rose-50/40 px-4 pr-12 text-sm font-bold text-slate-900 outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100 disabled:bg-slate-100 disabled:text-slate-400"
+        : "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-12 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400";
     private string AuthorityButtonClass => Member?.SiparisYetkilisiMi == true
         ? "relative inline-flex h-6 w-11 rounded-full bg-blue-600 align-middle transition disabled:cursor-not-allowed disabled:opacity-60"
         : "relative inline-flex h-6 w-11 rounded-full bg-slate-300 align-middle transition disabled:cursor-not-allowed disabled:opacity-60";
@@ -280,6 +343,9 @@
         ActiveTab = "identity";
         Message = string.Empty;
         IsError = false;
+        ProfileValidationVisible = false;
+        PasswordValidationVisible = false;
+        PasswordSuccessMessage = string.Empty;
         ProfileForm = new StorePersonnelProfileUpdateRequest
         {
             AdSoyad = Member.AdSoyad,
@@ -287,6 +353,7 @@
             Email = Member.Email
         };
         PasswordForm = new StorePersonnelPasswordUpdateRequest();
+        PasswordInputVersion++;
         ShowPassword = false;
         SelectedDuty = Member.MagazaGorev;
     }
@@ -296,6 +363,13 @@
         if (Member is null || !CanManageProfile)
             return;
 
+        ProfileValidationVisible = true;
+        if (!IsProfileValid())
+        {
+            ShowValidationError();
+            return;
+        }
+
         await RunAsync(() => TeamApi.UpdateProfileAsync(Member.KullaniciId, ProfileForm), "Profil bilgileri güncellendi.");
     }
 
@@ -304,9 +378,44 @@
         if (Member is null || !CanManagePassword)
             return;
 
-        await RunAsync(() => TeamApi.UpdatePasswordAsync(Member.KullaniciId, PasswordForm), "Şifre güncellendi.");
-        PasswordForm = new StorePersonnelPasswordUpdateRequest();
-        ShowPassword = false;
+        PasswordValidationVisible = true;
+        PasswordSuccessMessage = string.Empty;
+        if (!string.IsNullOrWhiteSpace(PasswordError))
+        {
+            ShowValidationError();
+            return;
+        }
+
+        try
+        {
+            Busy = true;
+            int memberId = Member.KullaniciId;
+            StorePersonnelPasswordUpdateRequest request = new()
+            {
+                YeniSifre = PasswordForm.YeniSifre.Trim()
+            };
+            await TeamApi.UpdatePasswordAsync(memberId, request);
+
+            ClearPasswordInput();
+            ShowPassword = false;
+            PasswordValidationVisible = false;
+            IsError = false;
+            Message = "Şifre güncellendi.";
+            PasswordSuccessMessage = "Yeni şifre kaydedildi. Güvenlik için alan temizlendi.";
+            Feedback.Success("Şifre güncellendi", "Yeni şifre kaydedildi.");
+            await InvokeAsync(StateHasChanged);
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            IsError = true;
+            Message = ex.Message;
+            Feedback.Error("İşlem tamamlanamadı", ex.Message);
+        }
+        finally
+        {
+            Busy = false;
+        }
     }
 
     private async Task SetAuthorityAsync(bool active)
@@ -320,6 +429,18 @@
     private void TogglePasswordVisibility()
     {
         ShowPassword = !ShowPassword;
+    }
+
+    private void OnPasswordInput(ChangeEventArgs args)
+    {
+        PasswordForm.YeniSifre = args.Value?.ToString() ?? string.Empty;
+        PasswordSuccessMessage = string.Empty;
+    }
+
+    private void ClearPasswordInput()
+    {
+        PasswordForm = new StorePersonnelPasswordUpdateRequest { YeniSifre = string.Empty };
+        PasswordInputVersion++;
     }
 
     private async Task UpdateDutyAsync()
@@ -347,17 +468,44 @@
             await action();
             IsError = false;
             Message = success;
+            Feedback.Success("İşlem başarılı", success);
             await OnChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
             IsError = true;
             Message = ex.Message;
+            Feedback.Error("İşlem tamamlanamadı", ex.Message);
         }
         finally
         {
             Busy = false;
         }
+    }
+
+    private bool IsProfileValid()
+    {
+        return string.IsNullOrWhiteSpace(ProfileNameError)
+            && string.IsNullOrWhiteSpace(ProfilePhoneError)
+            && string.IsNullOrWhiteSpace(ProfileEmailError);
+    }
+
+    private string? ValidatePassword()
+    {
+        if (string.IsNullOrWhiteSpace(PasswordForm.YeniSifre))
+            return "Şifre zorunludur.";
+
+        if (PasswordForm.YeniSifre.Trim().Length < 4)
+            return "Şifre en az 4 karakter olmalı.";
+
+        return null;
+    }
+
+    private void ShowValidationError()
+    {
+        IsError = true;
+        Message = "Eksik veya hatalı alanlar var.";
+        Feedback.Warning("Eksik veya hatalı alanlar var", "Lütfen kırmızı işaretli alanları kontrol edin.");
     }
 
     private async Task Close()

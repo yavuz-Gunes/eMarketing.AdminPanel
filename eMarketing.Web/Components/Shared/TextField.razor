@@ -1,16 +1,17 @@
 <label class="block">
-    <span class="text-xs font-black uppercase text-slate-500">@Label</span>
-    <input class="mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+    <span class="@LabelClass">@Label</span>
+    <input class="@InputClass"
            value="@Value"
            @oninput="OnInput"
+           @onblur="OnBlur"
            placeholder="@Placeholder"
            type="@InputType"
            inputmode="@InputMode"
            pattern="@Pattern"
            maxlength="@MaxLength" />
-    @if (!string.IsNullOrWhiteSpace(Hint))
+    @if (!string.IsNullOrWhiteSpace(DisplayHelp))
     {
-        <span class="mt-1 block text-xs font-semibold text-slate-500">@Hint</span>
+        <span class="@HelpClass">@DisplayHelp</span>
     }
 </label>
 
@@ -21,7 +22,33 @@
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public string Kind { get; set; } = "text";
     [Parameter] public string Hint { get; set; } = string.Empty;
+    [Parameter] public string HelperText { get; set; } = string.Empty;
+    [Parameter] public string ErrorText { get; set; } = string.Empty;
     [Parameter] public int? MaxLength { get; set; }
+    [Parameter] public int? MaxDigits { get; set; }
+    [Parameter] public int? MinDigits { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool IsInvalid { get; set; }
+
+    private bool Touched { get; set; }
+    private string LocalNotice { get; set; } = string.Empty;
+
+    private bool ShowLocalValidation => Touched || IsInvalid;
+    private string LocalError => ShowLocalValidation ? BuildLocalError() : string.Empty;
+    private string ActiveError => !string.IsNullOrWhiteSpace(ErrorText) ? ErrorText : LocalError;
+    private bool HasError => IsInvalid || !string.IsNullOrWhiteSpace(ActiveError);
+    private string DisplayHelp => HasError ? ActiveError : (!string.IsNullOrWhiteSpace(LocalNotice) ? LocalNotice : (!string.IsNullOrWhiteSpace(HelperText) ? HelperText : Hint));
+    private string LabelClass => HasError
+        ? "text-xs font-black uppercase text-rose-600"
+        : "text-xs font-black uppercase text-slate-500";
+    private string InputClass => HasError
+        ? "mt-1 h-12 w-full rounded-xl border border-rose-300 bg-rose-50/40 px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-rose-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+        : "mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100";
+    private string HelpClass => HasError
+        ? "mt-1 block text-xs font-bold text-rose-600"
+        : !string.IsNullOrWhiteSpace(LocalNotice)
+            ? "mt-1 block text-xs font-bold text-amber-600"
+            : "mt-1 block text-xs font-semibold text-slate-500";
 
     private string InputType => Kind == "email" ? "email" : "text";
     private string InputMode => Kind switch
@@ -46,20 +73,96 @@
 
     private Task OnInput(ChangeEventArgs args)
     {
-        return ValueChanged.InvokeAsync(Sanitize(args.Value?.ToString() ?? string.Empty));
+        string rawValue = args.Value?.ToString() ?? string.Empty;
+        string sanitized = Sanitize(rawValue);
+        LocalNotice = BuildSanitizeNotice(rawValue, sanitized);
+        return ValueChanged.InvokeAsync(sanitized);
+    }
+
+    private void OnBlur(FocusEventArgs args)
+    {
+        Touched = true;
     }
 
     private string Sanitize(string value)
     {
         return Kind switch
         {
-            "numeric" => new string(value.Where(char.IsDigit).ToArray()),
+            "numeric" => LimitDigits(new string(value.Where(char.IsDigit).ToArray())),
             "decimal" => SanitizeDecimal(value),
             "expiry" => SanitizeExpiry(value),
-            "phone" => new string(value.Where(IsPhoneCharacter).ToArray()),
+            "phone" => LimitPhoneDigits(new string(value.Where(IsPhoneCharacter).ToArray())),
             "person" => new string(value.Where(character => !char.IsDigit(character)).ToArray()),
             _ => value
         };
+    }
+
+    private string BuildLocalError()
+    {
+        if (Required && string.IsNullOrWhiteSpace(Value))
+            return $"{Label} zorunludur.";
+
+        if (Kind == "email" && !FormValidators.IsValidEmail(Value))
+            return "Geçerli bir e-posta adresi girin.";
+
+        if (Kind == "phone" && !string.IsNullOrWhiteSpace(Value))
+        {
+            int digits = FormValidators.DigitCount(Value);
+            int minDigits = MinDigits ?? FormValidators.DefaultPhoneMinDigits;
+            int maxDigits = MaxDigits ?? FormValidators.DefaultPhoneMaxDigits;
+            if (digits < minDigits)
+                return $"Telefon numarası en az {minDigits} rakam olmalı.";
+            if (digits > maxDigits)
+                return "Telefon numarası çok uzun.";
+        }
+
+        if ((Kind == "numeric" || Kind == "phone") && MaxDigits is int maxDigitsValue && FormValidators.DigitCount(Value) > maxDigitsValue)
+            return $"{Label} en fazla {maxDigitsValue} rakam olmalı.";
+
+        return string.Empty;
+    }
+
+    private string BuildSanitizeNotice(string rawValue, string sanitized)
+    {
+        if (rawValue == sanitized)
+            return string.Empty;
+
+        return Kind switch
+        {
+            "numeric" => "Bu alana sadece sayı girilebilir.",
+            "phone" => "Telefon alanında sadece geçerli telefon karakterleri kullanılır.",
+            "person" => "Bu alana sayı girilemez.",
+            "expiry" => "Son kullanma tarihi AA/YY formatında olmalı.",
+            _ => string.Empty
+        };
+    }
+
+    private string LimitDigits(string value)
+    {
+        return MaxDigits is int maxDigits ? new string(value.Take(maxDigits).ToArray()) : value;
+    }
+
+    private string LimitPhoneDigits(string value)
+    {
+        if (MaxDigits is not int maxDigits)
+            return value;
+
+        int digits = 0;
+        var result = new List<char>();
+        foreach (char character in value)
+        {
+            if (char.IsDigit(character))
+            {
+                if (digits >= maxDigits)
+                    continue;
+
+                digits++;
+            }
+
+            result.Add(character);
+        }
+
+        return new string(result.ToArray());
     }
 
     private static string SanitizeDecimal(string value)

@@ -1,7 +1,8 @@
 @inject TeamApiClient TeamApi
+@inject ActionFeedbackService Feedback
 
 <aside class="sticky top-24 flex max-h-[calc(100vh-7rem)] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
-    <EditForm Model="Model" OnValidSubmit="SubmitAsync" class="flex min-h-0 flex-1 flex-col">
+    <EditForm Model="Model" OnSubmit="SubmitAsync" class="flex min-h-0 flex-1 flex-col">
         <DataAnnotationsValidator />
 
         <header class="border-b border-slate-200 px-5 py-4">
@@ -38,30 +39,22 @@
 
             <section class="space-y-3">
                 <h3 class="text-xs font-black uppercase tracking-wide text-slate-500">Kimlik</h3>
-                <label class="block space-y-1 text-sm font-bold text-slate-700">
-                    <span>Ad Soyad</span>
-                    <InputText class="@InputClass" @bind-Value="Model.AdSoyad" placeholder="Ad Soyad" />
-                </label>
-                <label class="block space-y-1 text-sm font-bold text-slate-700">
-                    <span>Kullanıcı adı</span>
-                    <InputText class="@InputClass" @bind-Value="Model.KullaniciAdi" placeholder="Kullanıcı adı" />
-                </label>
-                <label class="block space-y-1 text-sm font-bold text-slate-700">
-                    <span>Geçici şifre</span>
-                    <InputText type="password" class="@InputClass" @bind-Value="Model.Sifre" placeholder="Şifre" />
+                <TextField Label="Ad Soyad" Kind="person" MaxLength="150" Required="true" IsInvalid="@NameInvalid" ErrorText="@NameError" Placeholder="Ad Soyad" @bind-Value="Model.AdSoyad" />
+                <TextField Label="Kullanıcı adı" MaxLength="100" Required="true" IsInvalid="@UsernameInvalid" ErrorText="@UsernameError" Placeholder="Kullanıcı adı" @bind-Value="Model.KullaniciAdi" />
+                <label class="block">
+                    <span class="@PasswordLabelClass">Geçici şifre</span>
+                    <InputText type="password" class="@PasswordInputClass" @bind-Value="Model.Sifre" placeholder="Şifre" />
+                    @if (!string.IsNullOrWhiteSpace(PasswordError))
+                    {
+                        <span class="mt-1 block text-xs font-bold text-rose-600">@PasswordError</span>
+                    }
                 </label>
             </section>
 
             <section class="space-y-3">
                 <h3 class="text-xs font-black uppercase tracking-wide text-slate-500">İletişim</h3>
-                <label class="block space-y-1 text-sm font-bold text-slate-700">
-                    <span>Telefon</span>
-                    <InputText class="@InputClass" @bind-Value="Model.Telefon" placeholder="05XX XXX XX XX" />
-                </label>
-                <label class="block space-y-1 text-sm font-bold text-slate-700">
-                    <span>E-posta</span>
-                    <InputText class="@InputClass" @bind-Value="Model.Email" placeholder="ornek@domain.com" />
-                </label>
+                <TextField Label="Telefon" Kind="phone" MaxLength="60" MinDigits="10" MaxDigits="12" IsInvalid="@PhoneInvalid" ErrorText="@PhoneError" Placeholder="05XX XXX XX XX" @bind-Value="Model.Telefon" />
+                <TextField Label="E-posta" Kind="email" MaxLength="400" IsInvalid="@EmailInvalid" ErrorText="@EmailError" Placeholder="ornek@domain.com" @bind-Value="Model.Email" />
             </section>
 
             <section class="space-y-3">
@@ -83,15 +76,8 @@
         </div>
 
         <footer class="flex gap-2 border-t border-slate-200 bg-white px-5 py-4">
-            <button type="button"
-                    class="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-                    @onclick="Cancel">
-                İptal
-            </button>
-            <button class="h-11 flex-1 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 disabled:bg-slate-300 disabled:shadow-none"
-                    disabled="@Busy">
-                Kaydet
-            </button>
+            <CommandButton Text="İptal" Icon="x" Tone="secondary" Size="lg" Disabled="Busy" OnClick="@Cancel" />
+            <CommandButton Text="Kaydet" BusyText="Kaydediliyor..." Icon="check" Tone="primary" Size="lg" Type="submit" Busy="Busy" />
         </footer>
     </EditForm>
 </aside>
@@ -106,26 +92,54 @@
     private string Message { get; set; } = string.Empty;
     private bool IsError { get; set; }
     private bool Busy { get; set; }
+    private bool ValidationVisible { get; set; }
 
     private const string InputClass = "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100";
 
     private string MessageClass => IsError
         ? "rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700"
         : "rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700";
+    private string NameError => ValidationVisible ? FormValidators.RequiredError(Model.AdSoyad, "Ad Soyad") ?? FormValidators.PersonError(Model.AdSoyad, "Ad Soyad") ?? string.Empty : string.Empty;
+    private string UsernameError => ValidationVisible ? FormValidators.RequiredError(Model.KullaniciAdi, "Kullanıcı adı") ?? string.Empty : string.Empty;
+    private string PasswordError => ValidationVisible ? ValidatePassword() ?? string.Empty : string.Empty;
+    private string PhoneError => ValidationVisible ? FormValidators.PhoneError(Model.Telefon) ?? string.Empty : string.Empty;
+    private string EmailError => ValidationVisible ? FormValidators.EmailError(Model.Email) ?? string.Empty : string.Empty;
+    private bool NameInvalid => !string.IsNullOrWhiteSpace(NameError);
+    private bool UsernameInvalid => !string.IsNullOrWhiteSpace(UsernameError);
+    private bool PhoneInvalid => !string.IsNullOrWhiteSpace(PhoneError);
+    private bool EmailInvalid => !string.IsNullOrWhiteSpace(EmailError);
+    private string PasswordLabelClass => !string.IsNullOrWhiteSpace(PasswordError)
+        ? "text-xs font-black uppercase text-rose-600"
+        : "text-xs font-black uppercase text-slate-500";
+    private string PasswordInputClass => !string.IsNullOrWhiteSpace(PasswordError)
+        ? "mt-1 h-12 w-full rounded-xl border border-rose-300 bg-rose-50/40 px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-rose-300 focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+        : "mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100";
 
     private async Task SubmitAsync()
     {
+        ValidationVisible = true;
+        if (!IsFormValid())
+        {
+            Message = "Eksik veya hatalı alanlar var.";
+            IsError = true;
+            Feedback.Warning("Eksik veya hatalı alanlar var", "Lütfen kırmızı işaretli alanları kontrol edin.");
+            return;
+        }
+
         Busy = true;
         try
         {
             await TeamApi.CreatePersonnelAsync(StoreId, Model);
             Model = new StorePersonnelCreateRequest();
+            ValidationVisible = false;
+            Feedback.Success("Personel eklendi", "Yeni personel aktif bayi kapsamına bağlandı.");
             await OnSaved.InvokeAsync();
         }
         catch (Exception ex)
         {
             Message = ex.Message;
             IsError = true;
+            Feedback.Error("Personel eklenemedi", ex.Message);
         }
         finally
         {
@@ -134,4 +148,24 @@
     }
 
     private Task Cancel() => OnCancel.InvokeAsync();
+
+    private bool IsFormValid()
+    {
+        return string.IsNullOrWhiteSpace(NameError)
+            && string.IsNullOrWhiteSpace(UsernameError)
+            && string.IsNullOrWhiteSpace(PasswordError)
+            && string.IsNullOrWhiteSpace(PhoneError)
+            && string.IsNullOrWhiteSpace(EmailError);
+    }
+
+    private string? ValidatePassword()
+    {
+        if (string.IsNullOrWhiteSpace(Model.Sifre))
+            return "Şifre zorunludur.";
+
+        if (Model.Sifre.Trim().Length < 4)
+            return "Şifre en az 4 karakter olmalı.";
+
+        return null;
+    }
 }
